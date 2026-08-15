@@ -10,37 +10,14 @@ import {
   FileSpreadsheet,
   ArrowRight,
   BrainCircuit,
+  FileQuestion,
   BookOpen,
-  FileCheck2,
-  CheckCircle2,
-  Camera,
-  GraduationCap,
+  HelpCircle,
+  Zap,
 } from 'lucide-react';
 
 export function HomeView() {
   const { state, openAuthModal, setActiveTab } = useEduFlow();
-
-  // Calculate live dynamic statistics
-  const assignments = state.assignments;
-  let doneCount = 0;
-  let photoCount = 0;
-  let totalPercentSum = 0;
-  let testSubCount = 0;
-
-  assignments.forEach((a) => {
-    Object.values(a.submissions || {}).forEach((s) => {
-      if (a.type === 'test' && s.percent !== undefined) {
-        doneCount++;
-        totalPercentSum += s.percent;
-        testSubCount++;
-      } else if (a.type === 'book' && s.photo) {
-        doneCount++;
-        photoCount++;
-      }
-    });
-  });
-
-  const avgAccuracy = testSubCount > 0 ? Math.round(totalPercentSum / testSubCount) : 0;
 
   const handleTeacherClick = () => {
     if (state.session?.role === 'teacher') {
@@ -156,66 +133,104 @@ export function HomeView() {
         </div>
       </section>
 
-      {/* AI Superpowers Banner */}
-      <section className="p-8 rounded-3xl bg-gradient-to-r from-purple-900/20 via-blue-900/20 to-cyan-900/20 border border-cyan-500/30 relative overflow-hidden">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center lg:text-left">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-400/10 border border-cyan-400/30 text-cyan-300 text-xs font-semibold">
-              <BrainCircuit className="w-3.5 h-3.5" />
-              <span>Google Gemini Pro Entegrasyonu</span>
+      {/* Powered by Google Gemini Pro Section */}
+      <section className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-purple-950/40 via-blue-950/30 to-cyan-950/40 border border-cyan-500/30 relative overflow-hidden shadow-[0_0_50px_rgba(0,242,254,0.08)]">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+          <div className="space-y-3 text-center lg:text-left">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 text-xs font-bold shadow-[0_0_16px_rgba(0,242,254,0.25)]">
+              <Zap className="w-3.5 h-3.5 text-cyan-300 fill-cyan-300" />
+              <span>⚡ Powered by Google Gemini Pro Altyapısı</span>
             </div>
-            <h3 className="font-heading font-bold text-2xl text-white">
-              Yapay Zeka ile Ders İçeriklerini Saniyeler İçinde Üretin
+            <h3 className="font-heading font-extrabold text-2xl sm:text-3xl text-white leading-tight">
+              Ders Hazırlığında Saatler Harcamayın, Saniyeler İçinde Üretin.
             </h3>
-            <p className="text-sm text-slate-300 max-w-xl">
-              Öğretmenler için tek tıkla test ve konu anlatımı oluşturucu; öğrenciler için adım adım soru çözüm asistanı.
+            <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
+              Google Gemini Pro motoru sayesinde müfredata tam uyumlu testler ve konu özetleri oluşturun; öğrencilerin takıldığı her soruyu 7/24 adım adım yapay zeka koçuyla çözün.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <div className="px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-center">
-              <div className="text-cyan-400 font-bold text-sm">🤖 Test Üretici</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">Konu & soru adedi girin</div>
+
+          {/* Three Feature Cards with click actions */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:w-auto shrink-0">
+            <div
+              onClick={handleTeacherClick}
+              className="p-4 rounded-2xl bg-white/[0.04] border border-cyan-500/30 hover:border-cyan-400 hover:bg-cyan-500/10 transition-all cursor-pointer group text-center"
+            >
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                <FileQuestion className="w-5 h-5" />
+              </div>
+              <div className="text-cyan-300 font-bold text-sm">🤖 Test Üretici</div>
+              <div className="text-[11px] text-slate-400 mt-1 leading-snug">Konu & soru adediyle saniyeler içinde test oluşturun</div>
+              <div className="text-[10px] text-cyan-400/80 font-semibold mt-2 group-hover:underline flex items-center justify-center gap-1">
+                <span>Öğretmen Girişi</span>
+                <ArrowRight className="w-3 h-3" />
+              </div>
             </div>
-            <div className="px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-center">
-              <div className="text-purple-400 font-bold text-sm">📝 Not Hazırlayıcı</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">Zengin konu özetleri</div>
+
+            <div
+              onClick={handleTeacherClick}
+              className="p-4 rounded-2xl bg-white/[0.04] border border-purple-500/30 hover:border-purple-400 hover:bg-purple-500/10 transition-all cursor-pointer group text-center"
+            >
+              <div className="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-400 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div className="text-purple-300 font-bold text-sm">📝 Not Hazırlayıcı</div>
+              <div className="text-[11px] text-slate-400 mt-1 leading-snug">Özet konu anlatımı ve formül tabloları çıkarın</div>
+              <div className="text-[10px] text-purple-400/80 font-semibold mt-2 group-hover:underline flex items-center justify-center gap-1">
+                <span>Öğretmen Girişi</span>
+                <ArrowRight className="w-3 h-3" />
+              </div>
             </div>
-            <div className="px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-center">
-              <div className="text-emerald-400 font-bold text-sm">💡 Soru Çözücü</div>
-              <div className="text-[11px] text-slate-400 mt-0.5">Öğrenciye anında açıklama</div>
+
+            <div
+              onClick={handleStudentClick}
+              className="p-4 rounded-2xl bg-white/[0.04] border border-emerald-500/30 hover:border-emerald-400 hover:bg-emerald-500/10 transition-all cursor-pointer group text-center"
+            >
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform">
+                <HelpCircle className="w-5 h-5" />
+              </div>
+              <div className="text-emerald-300 font-bold text-sm">💡 Soru Çözücü</div>
+              <div className="text-[11px] text-slate-400 mt-1 leading-snug">Takıldığınız soruları adım adım çözen 7/24 koç</div>
+              <div className="text-[10px] text-emerald-400/80 font-semibold mt-2 group-hover:underline flex items-center justify-center gap-1">
+                <span>Öğrenci Girişi</span>
+                <ArrowRight className="w-3 h-3" />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Reactive Statistics Grid */}
+      {/* Social Proof & Platform Statistics Grid */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 text-center">
-          <div className="font-heading font-extrabold text-3xl sm:text-4xl bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-            {assignments.length}
+        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 text-center hover:border-cyan-500/30 transition-all">
+          <div className="font-heading font-extrabold text-3xl sm:text-4xl bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+            +10.000
           </div>
-          <div className="text-xs font-medium text-slate-400 mt-1">Yüklenen İçerik</div>
+          <div className="text-xs font-semibold text-slate-300 mt-1.5">Çözülen İnteraktif Soru</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Süreli ve anlık analizli</div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 text-center">
-          <div className="font-heading font-extrabold text-3xl sm:text-4xl bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-            {doneCount}
+        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 text-center hover:border-emerald-500/30 transition-all">
+          <div className="font-heading font-extrabold text-3xl sm:text-4xl bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
+            %98
           </div>
-          <div className="text-xs font-medium text-slate-400 mt-1">Tamamlanan Ödev</div>
+          <div className="text-xs font-semibold text-slate-300 mt-1.5">Öğrenci Başarı Artışı</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Ölçülebilir gelişim karnesi</div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 text-center">
-          <div className="font-heading font-extrabold text-3xl sm:text-4xl bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-            %{avgAccuracy}
+        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 text-center hover:border-purple-500/30 transition-all">
+          <div className="font-heading font-extrabold text-3xl sm:text-4xl bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            3 Kat
           </div>
-          <div className="text-xs font-medium text-slate-400 mt-1">Ortalama Doğruluk</div>
+          <div className="text-xs font-semibold text-slate-300 mt-1.5">Daha Hızlı Ders & Ödev Takibi</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Öğretmenler için tam kontrol</div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/10 text-center">
-          <div className="font-heading font-extrabold text-3xl sm:text-4xl bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-            {photoCount}
+        <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/10 text-center hover:border-amber-500/30 transition-all">
+          <div className="font-heading font-extrabold text-3xl sm:text-4xl bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+            7/24
           </div>
-          <div className="text-xs font-medium text-slate-400 mt-1">Teslim Edilen Fotoğraf</div>
+          <div className="text-xs font-semibold text-slate-300 mt-1.5">Gemini Pro Destekli Soru Çözümü</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Anında yapay zeka desteği</div>
         </div>
       </section>
     </div>

@@ -7,7 +7,6 @@ import { HomeView } from '@/components/HomeView';
 import { TeacherView } from '@/components/TeacherView';
 import { StudentView } from '@/components/StudentView';
 import { AiAssistantModal } from '@/components/AiAssistantModal';
-import { Sparkles, Heart } from 'lucide-react';
 
 export default function App() {
   const { activeTab, state, openAuthModal } = useEduFlow();

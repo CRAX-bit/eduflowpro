@@ -21,6 +21,14 @@ export async function POST(req: NextRequest) {
     const body: AiRequestBody = await req.json();
     const { action } = body;
 
+    const allowedActions = ['generate_quiz', 'generate_notes', 'generate_feedback', 'explain_question', 'chat_assistant'];
+    if (!action || !allowedActions.includes(action)) {
+      return NextResponse.json(
+        { success: false, error: 'Geçersiz veya yetkisiz istek türü.' },
+        { status: 400 }
+      );
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
 
     // If API Key is present, call Google Gemini via @google/genai

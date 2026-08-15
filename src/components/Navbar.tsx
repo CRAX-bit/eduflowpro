@@ -8,8 +8,6 @@ import {
   UserCheck,
   LogOut,
   LogIn,
-  Sparkles,
-  Bot,
 } from 'lucide-react';
 import { initials, cn } from '@/lib/utils';
 
@@ -96,25 +94,25 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
         </nav>
 
         {/* Right Actions & Auth Area */}
-        <div className="flex items-center gap-2.5">
-          {/* AI Assistant Button */}
-          <button
-            onClick={onOpenAiAssistant}
-            title="Gemini AI Asistanı"
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-500/15 to-cyan-500/15 border border-purple-500/30 hover:border-cyan-400/50 text-cyan-300 text-xs font-semibold hover:shadow-[0_0_20px_rgba(0,242,254,0.25)] transition-all cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
-            <span className="hidden sm:inline">Gemini AI</span>
-          </button>
-
+        <div className="flex items-center gap-2">
           {!session ? (
-            <button
-              onClick={() => openAuthModal('teacher')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-white/5 border border-white/10 hover:border-cyan-500/40 text-slate-200 hover:text-white hover:shadow-[0_0_20px_rgba(0,242,254,0.2)] transition-all"
-            >
-              <LogIn className="w-4 h-4 text-cyan-400" />
-              <span>Giriş Yap</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => openAuthModal('teacher')}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white/[0.04] border border-white/10 hover:border-cyan-500/40 text-slate-200 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
+              >
+                <LogIn className="w-4 h-4 text-cyan-400" />
+                <span>Giriş Yap</span>
+              </button>
+
+              <button
+                onClick={() => openAuthModal('teacher')}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_28px_rgba(16,185,129,0.5)] hover:scale-[1.02] transition-all cursor-pointer"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Öğretmen / Öğrenci Girişi</span>
+              </button>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2.5 p-1.5 pr-3 bg-white/[0.04] border border-white/[0.08] rounded-xl">
