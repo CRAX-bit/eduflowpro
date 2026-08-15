@@ -104,7 +104,7 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
             <span className="tracking-wide text-[11px] sm:text-xs">Sistem Canlı | Gemini Pro v2</span>
           </div>
 
-          {session && (
+          {session ? (
             <div className="flex items-center gap-2 ml-1">
               <div className="flex items-center gap-2 p-1 pr-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl">
                 <div
@@ -116,10 +116,12 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
                         : currentStudent?.color || '#3b82f6',
                   }}
                 >
-                  {session.role === 'teacher' ? 'ÖĞ' : initials(currentStudent?.name || '?')}
+                  {session.role === 'teacher'
+                    ? session.name ? initials(session.name) : 'ÖĞ'
+                    : initials(session.name || currentStudent?.name || '?')}
                 </div>
                 <span className="text-xs font-semibold text-white hidden sm:inline">
-                  {session.role === 'teacher' ? 'Öğretmen' : currentStudent?.name?.split(' ')[0] || 'Öğrenci'}
+                  {session.name || (session.role === 'teacher' ? 'Öğretmen' : currentStudent?.name?.split(' ')[0] || 'Öğrenci')}
                 </span>
               </div>
 
@@ -131,6 +133,14 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
+          ) : (
+            <button
+              onClick={() => openAuthModal('teacher')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer ml-1"
+            >
+              <LogIn className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Giriş Yap</span>
+            </button>
           )}
         </div>
       </div>

@@ -10,6 +10,7 @@ import {
   ToastMessage,
   UserSession,
   Submission,
+  Role,
 } from '@/types';
 import { STORAGE_KEY, AVATAR_COLORS, uid, slugUser, norm } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -39,6 +40,7 @@ interface EduFlowContextType {
   closeAuthModal: () => void;
   loginTeacher: (u: string, p: string) => boolean;
   loginStudent: (u: string, p: string) => boolean;
+  loginSupabaseUser: (params: { role: Role; name: string; email: string; supabaseId?: string }) => void;
   logout: () => void;
   addStudent: (name: string, password: string) => boolean;
   deleteStudent: (id: string) => void;
@@ -178,6 +180,155 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state, isLoaded]);
 
+  // Email Verification Callback & URL Cleanup
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+
+      const isEmailVerified =
+        hash.includes('type=signup') ||
+        hash.includes('type=email_change') ||
+        hash.includes('type=recovery') ||
+        (hash.includes('access_token') && (hash.includes('token_type=bearer') || hash.includes('type='))) ||
+        search.includes('verified=true') ||
+        search.includes('type=signup');
+
+      if (isEmailVerified) {
+        showToast('🎉 E-posta adresiniz başarıyla doğrulandı! Giriş yapabilirsiniz.', 'success');
+
+        // Clean URL cleanly without reload
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState(null, '', cleanUrl);
+      }
+    } catch (e) {
+      console.error('Error handling auth callback from URL', e);
+    }
+  }, [showToast]);
+
+  // Sync Supabase Auth Session & Optimize Re-renders
+  useEffect(() => {
+    let isMounted = true;
+
+    // Fast initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted || !session?.user) return;
+
+      const metadata = session.user.user_metadata || {};
+      const role = (metadata.role as Role) || 'student';
+      const name = metadata.full_name || session.user.email?.split('@')[0] || 'Kullanıcı';
+      const email = session.user.email || '';
+
+      setState((prev) => {
+        // If already in sync with this Supabase user, skip re-render
+        if (prev.session?.supabaseId === session.user.id && prev.session?.role === role) {
+          return prev;
+        }
+
+        let studentId: string | undefined = undefined;
+        let nextStudents = [...prev.students];
+
+        if (role === 'student') {
+          let foundStudent = nextStudents.find(
+            (s) => s.name.toLowerCase() === name.toLowerCase()
+          );
+          if (!foundStudent) {
+            const username = slugUser(name, nextStudents.map((s) => s.username));
+            foundStudent = {
+              id: session.user.id || uid(),
+              name,
+              username,
+              color: AVATAR_COLORS[nextStudents.length % AVATAR_COLORS.length],
+            };
+            nextStudents.push(foundStudent);
+          }
+          studentId = foundStudent.id;
+        }
+
+        return {
+          ...prev,
+          students: nextStudents,
+          session: {
+            role,
+            studentId,
+            email,
+            name,
+            supabaseId: session.user.id,
+          },
+          currentStudentId: role === 'student' ? (studentId || null) : null,
+        };
+      });
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+
+      if (event === 'SIGNED_OUT') {
+        setState((prev) => {
+          if (!prev.session && !prev.currentStudentId) return prev;
+          return {
+            ...prev,
+            session: null,
+            currentStudentId: null,
+          };
+        });
+      } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+        if (session?.user) {
+          const metadata = session.user.user_metadata || {};
+          const role = (metadata.role as Role) || 'student';
+          const name = metadata.full_name || session.user.email?.split('@')[0] || 'Kullanıcı';
+          const email = session.user.email || '';
+
+          setState((prev) => {
+            if (prev.session?.supabaseId === session.user.id && prev.session?.role === role) {
+              return prev;
+            }
+
+            let studentId: string | undefined = undefined;
+            let nextStudents = [...prev.students];
+
+            if (role === 'student') {
+              let foundStudent = nextStudents.find(
+                (s) => s.name.toLowerCase() === name.toLowerCase()
+              );
+              if (!foundStudent) {
+                const username = slugUser(name, nextStudents.map((s) => s.username));
+                foundStudent = {
+                  id: session.user.id || uid(),
+                  name,
+                  username,
+                  color: AVATAR_COLORS[nextStudents.length % AVATAR_COLORS.length],
+                };
+                nextStudents.push(foundStudent);
+              }
+              studentId = foundStudent.id;
+            }
+
+            return {
+              ...prev,
+              students: nextStudents,
+              session: {
+                role,
+                studentId,
+                email,
+                name,
+                supabaseId: session.user.id,
+              },
+              currentStudentId: role === 'student' ? (studentId || null) : null,
+            };
+          });
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
   const openAuthModal = useCallback((role: 'teacher' | 'student' = 'teacher') => {
     setAuthModalInitialRole(role);
     setIsAuthModalOpen(true);
@@ -191,7 +342,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     if (u === state.auth.teacherUser && p === state.auth.teacherPass) {
       setState((prev) => ({
         ...prev,
-        session: { role: 'teacher' },
+        session: { role: 'teacher', name: 'Öğretmen' },
         currentStudentId: null,
       }));
       setIsAuthModalOpen(false);
@@ -208,7 +359,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     if (student) {
       setState((prev) => ({
         ...prev,
-        session: { role: 'student', studentId: student.id },
+        session: { role: 'student', studentId: student.id, name: student.name },
         currentStudentId: student.id,
       }));
       setIsAuthModalOpen(false);
@@ -219,6 +370,71 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     showToast('Öğrenci kullanıcı adı veya şifre hatalı.', 'warn');
     return false;
   }, [state.students, showToast]);
+
+  const loginSupabaseUser = useCallback(
+    ({
+      role,
+      name,
+      email,
+      supabaseId,
+    }: {
+      role: Role;
+      name: string;
+      email: string;
+      supabaseId?: string;
+    }) => {
+      let studentId: string | undefined = undefined;
+
+      setState((prev) => {
+        let nextStudents = [...prev.students];
+
+        if (role === 'student') {
+          let foundStudent = nextStudents.find(
+            (s) =>
+              (s.username && s.username.toLowerCase() === slugUser(name, []).toLowerCase()) ||
+              s.name.toLowerCase() === name.toLowerCase()
+          );
+
+          if (!foundStudent) {
+            const existingUsernames = nextStudents.map((s) => s.username);
+            const username = slugUser(name, existingUsernames);
+            const color = AVATAR_COLORS[nextStudents.length % AVATAR_COLORS.length];
+            foundStudent = {
+              id: supabaseId || uid(),
+              name: name.trim(),
+              username,
+              color,
+            };
+            nextStudents.push(foundStudent);
+          }
+          studentId = foundStudent.id;
+        }
+
+        return {
+          ...prev,
+          students: nextStudents,
+          session: {
+            role,
+            studentId,
+            email,
+            name,
+            supabaseId,
+          },
+          currentStudentId: role === 'student' ? (studentId || null) : null,
+        };
+      });
+
+      setIsAuthModalOpen(false);
+      if (role === 'teacher') {
+        setActiveTab('teacher');
+        showToast(`Hoş geldiniz, ${name}! 👋`, 'success');
+      } else {
+        setActiveTab('student');
+        showToast(`Hoş geldin, ${name.split(' ')[0]}! 🎓`, 'success');
+      }
+    },
+    [showToast]
+  );
 
   const logout = useCallback(() => {
     try {
@@ -483,6 +699,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         closeAuthModal,
         loginTeacher,
         loginStudent,
+        loginSupabaseUser,
         logout,
         addStudent,
         deleteStudent,

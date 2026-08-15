@@ -51,6 +51,9 @@ export interface Assignment {
 export interface UserSession {
   role: Role;
   studentId?: string;
+  email?: string;
+  name?: string;
+  supabaseId?: string;
 }
 
 export interface AuthState {
