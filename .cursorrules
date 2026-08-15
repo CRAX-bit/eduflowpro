@@ -1,0 +1,5 @@
+﻿# Git and Commit Rules
+- NEVER execute 'git commit' or 'git push' commands automatically in the background.
+- ONLY edit and create project files.
+- The user will handle all Git staging, committing, and pushing manually via the terminal.
+- Always respect the global git author: CRAX-bit <yunusemreozkusen070601@gmail.com>.
