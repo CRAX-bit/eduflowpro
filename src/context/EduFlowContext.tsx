@@ -12,6 +12,7 @@ import {
   Submission,
 } from '@/types';
 import { STORAGE_KEY, AVATAR_COLORS, uid, slugUser, norm } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 interface CreateAssignmentParams {
   type: AssignmentType;
@@ -220,6 +221,9 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
   }, [state.students, showToast]);
 
   const logout = useCallback(() => {
+    try {
+      supabase.auth.signOut();
+    } catch (e) {}
     setState((prev) => ({
       ...prev,
       session: null,

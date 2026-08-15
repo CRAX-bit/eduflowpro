@@ -93,31 +93,22 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
           )}
         </nav>
 
-        {/* Right Actions & Auth Area */}
+        {/* Right Status Badge & Session Area */}
         <div className="flex items-center gap-2">
-          {!session ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => openAuthModal('teacher')}
-                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-white/[0.04] border border-white/10 hover:border-cyan-500/40 text-slate-200 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer"
-              >
-                <LogIn className="w-4 h-4 text-cyan-400" />
-                <span>Giriş Yap</span>
-              </button>
+          {/* Live SaaS Status Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md text-emerald-300 text-xs font-semibold shadow-[0_0_16px_rgba(16,185,129,0.15)] select-none">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+            </span>
+            <span className="tracking-wide text-[11px] sm:text-xs">Sistem Canlı | Gemini Pro v2</span>
+          </div>
 
-              <button
-                onClick={() => openAuthModal('teacher')}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_28px_rgba(16,185,129,0.5)] hover:scale-[1.02] transition-all cursor-pointer"
-              >
-                <UserCheck className="w-4 h-4" />
-                <span>Öğretmen / Öğrenci Girişi</span>
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2.5 p-1.5 pr-3 bg-white/[0.04] border border-white/[0.08] rounded-xl">
+          {session && (
+            <div className="flex items-center gap-2 ml-1">
+              <div className="flex items-center gap-2 p-1 pr-2.5 bg-white/[0.04] border border-white/[0.08] rounded-xl">
                 <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center font-heading font-bold text-xs text-white shadow-md"
+                  className="w-7 h-7 rounded-lg flex items-center justify-center font-heading font-bold text-xs text-white shadow-md"
                   style={{
                     backgroundColor:
                       session.role === 'teacher'
@@ -127,22 +118,17 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
                 >
                   {session.role === 'teacher' ? 'ÖĞ' : initials(currentStudent?.name || '?')}
                 </div>
-                <div className="text-left hidden sm:block">
-                  <div className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 leading-tight">
-                    {session.role === 'teacher' ? 'Öğretmen' : 'Öğrenci'}
-                  </div>
-                  <div className="text-xs font-semibold text-white leading-tight">
-                    {session.role === 'teacher' ? state.auth.teacherUser : currentStudent?.name || '—'}
-                  </div>
-                </div>
+                <span className="text-xs font-semibold text-white hidden sm:inline">
+                  {session.role === 'teacher' ? 'Öğretmen' : currentStudent?.name?.split(' ')[0] || 'Öğrenci'}
+                </span>
               </div>
 
               <button
                 onClick={logout}
                 title="Çıkış Yap"
-                className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all"
+                className="p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-all cursor-pointer"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           )}

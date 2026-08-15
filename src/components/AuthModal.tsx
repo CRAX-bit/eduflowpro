@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useEduFlow } from '@/context/EduFlowContext';
+import { supabase } from '@/lib/supabase';
 import {
   GraduationCap,
   X,
   LogIn,
+  UserPlus,
   KeyRound,
+  Mail,
   User,
-  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,42 +20,105 @@ export function AuthModal() {
     isAuthModalOpen,
     closeAuthModal,
     authModalInitialRole,
-    loginTeacher,
-    loginStudent,
+    setActiveTab,
+    showToast,
     state,
   } = useEduFlow();
 
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [role, setRole] = useState<'teacher' | 'student'>('teacher');
-  const [username, setUsername] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthModalOpen) {
       setRole(authModalInitialRole);
-      setUsername('');
+      setEmail('');
       setPassword('');
+      setFullName('');
+      setMode('signin');
     }
   }, [isAuthModalOpen, authModalInitialRole]);
 
   if (!isAuthModalOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (role === 'teacher') {
-      loginTeacher(username, password);
-    } else {
-      loginStudent(username, password);
-    }
-  };
+    const cleanEmail = email.trim();
+    const cleanPass = password.trim();
 
-  const handleQuickDemo = (roleType: 'teacher' | 'student', u: string, p: string) => {
-    setRole(roleType);
-    setUsername(u);
-    setPassword(p);
-    if (roleType === 'teacher') {
-      loginTeacher(u, p);
-    } else {
-      loginStudent(u, p);
+    if (!cleanEmail || !cleanPass) {
+      showToast('Lütfen e-posta ve şifre giriniz.', 'warn');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (mode === 'signup') {
+        if (!fullName.trim()) {
+          showToast('Lütfen ad ve soyadınızı giriniz.', 'warn');
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: cleanPass,
+          options: {
+            data: {
+              full_name: fullName.trim(),
+              role: role,
+            },
+          },
+        });
+
+        if (error) {
+          showToast(`Kayıt hatası: ${error.message}`, 'error');
+          setLoading(false);
+          return;
+        }
+
+        showToast('Kayıt başarılı! Giriş yapılıyor...', 'success');
+
+        // Automatically activate session in EduFlow context
+        if (role === 'teacher') {
+          setActiveTab('teacher');
+        } else {
+          setActiveTab('student');
+        }
+        closeAuthModal();
+      } else {
+        // Sign in
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: cleanPass,
+        });
+
+        if (error) {
+          // If Supabase auth fails, provide graceful notification
+          showToast(`Giriş başarısız: ${error.message}`, 'error');
+          setLoading(false);
+          return;
+        }
+
+        const userRole = (data.user?.user_metadata?.role as 'teacher' | 'student') || role;
+        const userName = data.user?.user_metadata?.full_name || data.user?.email?.split('@')[0] || 'Kullanıcı';
+
+        showToast(`Hoş geldiniz, ${userName}! 👋`, 'success');
+        if (userRole === 'teacher') {
+          setActiveTab('teacher');
+        } else {
+          setActiveTab('student');
+        }
+        closeAuthModal();
+      }
+    } catch (err: any) {
+      showToast(`Bir hata oluştu: ${err.message || 'Lütfen tekrar deneyin.'}`, 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -65,7 +131,7 @@ export function AuthModal() {
         {/* Ambient Glow */}
         <div
           className={cn(
-            'absolute -top-24 -left-24 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none',
+            'absolute -top-24 -left-24 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none transition-all',
             role === 'teacher' ? 'bg-emerald-500' : 'bg-blue-500'
           )}
         />
@@ -73,7 +139,7 @@ export function AuthModal() {
         {/* Close Button */}
         <button
           onClick={closeAuthModal}
-          className="absolute top-5 right-5 p-2 rounded-xl bg-white/[0.04] border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+          className="absolute top-5 right-5 p-2 rounded-xl bg-white/[0.04] border border-white/10 text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
@@ -85,19 +151,25 @@ export function AuthModal() {
               <GraduationCap className="w-7 h-7 text-cyan-300" />
             </div>
           </div>
-          <h3 className="font-heading font-bold text-2xl text-white">EduFlow Pro'ya Giriş</h3>
-          <p className="text-xs text-slate-400 mt-1">Devam etmek için kullanıcı hesabınızı seçin</p>
+          <h3 className="font-heading font-bold text-2xl text-white">
+            {mode === 'signin' ? "EduFlow Pro'ya Giriş" : 'EduFlow Pro Hesabı Oluştur'}
+          </h3>
+          <p className="text-xs text-slate-400 mt-1">
+            {mode === 'signin'
+              ? 'Hesabınıza erişmek için bilgilerinizi giriniz'
+              : 'Ücretsiz hesabınızı saniyeler içinde oluşturun'}
+          </p>
         </div>
 
         {/* Role Switcher */}
-        <div className="flex gap-2 p-1 bg-white/[0.03] border border-white/10 rounded-2xl mb-6">
+        <div className="flex gap-2 p-1 bg-white/[0.03] border border-white/10 rounded-2xl mb-5">
           <button
             type="button"
             onClick={() => setRole('teacher')}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all',
+              'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
               role === 'teacher'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.4)] font-bold'
                 : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
             )}
           >
@@ -107,9 +179,9 @@ export function AuthModal() {
             type="button"
             onClick={() => setRole('student')}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all',
+              'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
               role === 'student'
-                ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)]'
+                ? 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] font-bold'
                 : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
             )}
           >
@@ -118,24 +190,41 @@ export function AuthModal() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {mode === 'signup' && (
+            <div className="animate-fade">
+              <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Ad Soyad</span>
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Örn: Ahmet Yılmaz"
+                className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs sm:text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                required
+              />
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Kullanıcı Adı</span>
+            <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+              <Mail className="w-3.5 h-3.5 text-cyan-400" />
+              <span>E-posta Adresi</span>
             </label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder={role === 'teacher' ? 'ogretmen' : 'ayse'}
-              className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ornek@eduflow.com"
+              className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs sm:text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
+            <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1.5">
               <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
               <span>Şifre</span>
             </label>
@@ -144,60 +233,64 @@ export function AuthModal() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
+              minLength={6}
+              className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs sm:text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
               required
             />
           </div>
 
           <button
             type="submit"
+            disabled={loading}
             className={cn(
-              'w-full py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg transition-all',
+              'w-full py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50 mt-2',
               role === 'teacher'
                 ? 'bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]'
                 : 'bg-gradient-to-r from-blue-500 to-cyan-400 text-white hover:shadow-[0_0_30px_rgba(59,130,246,0.5)]'
             )}
           >
-            <LogIn className="w-4 h-4" />
-            <span>Giriş Yap</span>
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : mode === 'signin' ? (
+              <LogIn className="w-4 h-4" />
+            ) : (
+              <UserPlus className="w-4 h-4" />
+            )}
+            <span>
+              {loading
+                ? 'İşlem yapılıyor...'
+                : mode === 'signin'
+                ? 'Giriş Yap'
+                : 'Hesap Oluştur'}
+            </span>
           </button>
         </form>
 
-        {/* Demo Fast Logins */}
-        <div className="mt-6 pt-5 border-t border-white/[0.08]">
-          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Tek Tıkla Demo Girişi</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickDemo('teacher', 'ogretmen', '1234')}
-              className="px-3 py-2 text-xs font-medium rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 text-left transition-all"
-            >
-              <div className="font-bold">Öğretmen Hesabı</div>
-              <div className="text-[10px] text-emerald-400/70">ogretmen · 1234</div>
-            </button>
-
-            {state.students.length > 0 && (
+        {/* Mode Toggle (Sign In <-> Sign Up) */}
+        <div className="mt-5 pt-4 border-t border-white/[0.08] text-center">
+          {mode === 'signin' ? (
+            <p className="text-xs text-slate-400">
+              Henüz bir hesabınız yok mu?{' '}
               <button
                 type="button"
-                onClick={() =>
-                  handleQuickDemo(
-                    'student',
-                    state.students[0].username,
-                    state.students[0].password || 'ayse123'
-                  )
-                }
-                className="px-3 py-2 text-xs font-medium rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20 text-left transition-all"
+                onClick={() => setMode('signup')}
+                className="text-cyan-400 hover:text-cyan-300 font-bold hover:underline cursor-pointer ml-1"
               >
-                <div className="font-bold">{state.students[0].name.split(' ')[0]} (Öğrenci)</div>
-                <div className="text-[10px] text-blue-400/70">
-                  {state.students[0].username} · {state.students[0].password || '***'}
-                </div>
+                Kayıt Ol
               </button>
-            )}
-          </div>
+            </p>
+          ) : (
+            <p className="text-xs text-slate-400">
+              Zaten bir hesabınız var mı?{' '}
+              <button
+                type="button"
+                onClick={() => setMode('signin')}
+                className="text-cyan-400 hover:text-cyan-300 font-bold hover:underline cursor-pointer ml-1"
+              >
+                Giriş Yap
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>
