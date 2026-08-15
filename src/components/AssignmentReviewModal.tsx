@@ -18,6 +18,11 @@ import {
   ExternalLink,
   ChevronRight,
   BookOpen,
+  FileText,
+  Camera,
+  FileUp,
+  Download,
+  Eye,
 } from 'lucide-react';
 import { initials, cn } from '@/lib/utils';
 
@@ -213,27 +218,83 @@ export function AssignmentReviewModal({
                   </span>
                 </div>
 
-                {/* Student Response Text & Photo */}
-                <div className="space-y-2">
+                {/* Student Response Text & File Attachment */}
+                <div className="space-y-3">
                   <div className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                     <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Öğrencinin Teslim Ettiği Yanıt</span>
+                    <span>Öğrencinin Teslim Ettiği Yanıt & Belgeler</span>
                   </div>
-                  <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs sm:text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
-                    {activeSubmission.responseText || '(Metin yanıtı girilmedi)'}
-                  </div>
-                  {activeSubmission.photo && (
-                    <div className="p-2 bg-slate-950/60 rounded-2xl border border-slate-800 inline-block">
+
+                  {activeSubmission.responseText && (
+                    <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs sm:text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">
+                      {activeSubmission.responseText}
+                    </div>
+                  )}
+
+                  {/* Uploaded File Card */}
+                  {activeSubmission.fileUrl && (
+                    <div className="p-4 rounded-2xl bg-slate-950 border border-indigo-500/30 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                          {activeSubmission.fileType?.includes('pdf') || activeSubmission.fileName?.toLowerCase().endsWith('.pdf') ? (
+                            <FileText className="w-6 h-6 text-rose-400" />
+                          ) : activeSubmission.fileType?.startsWith('image') ? (
+                            <Camera className="w-6 h-6 text-cyan-400" />
+                          ) : (
+                            <FileUp className="w-6 h-6 text-indigo-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs sm:text-sm font-bold text-white truncate">
+                            {activeSubmission.fileName || 'Öğrenci Teslim Dosyası'}
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            {activeSubmission.fileSize
+                              ? activeSubmission.fileSize < 1024 * 1024
+                                ? `${(activeSubmission.fileSize / 1024).toFixed(1)} KB`
+                                : `${(activeSubmission.fileSize / (1024 * 1024)).toFixed(1)} MB`
+                              : 'Ekli Dosya'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={activeSubmission.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Önizle / Aç</span>
+                        </a>
+
+                        <a
+                          href={activeSubmission.fileUrl}
+                          download={activeSubmission.fileName || 'ogrenci_odev'}
+                          className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-all"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>İndir</span>
+                        </a>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fallback Image preview */}
+                  {(activeSubmission.photo || (activeSubmission.fileUrl && activeSubmission.fileType?.startsWith('image'))) && (
+                    <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 space-y-2">
+                      <div className="text-[11px] font-semibold text-slate-400">Görsel Önizlemesi:</div>
                       <img
-                        src={activeSubmission.photo}
+                        src={activeSubmission.photo || activeSubmission.fileUrl}
                         alt="Ödev fotoğrafı"
-                        className="max-h-60 rounded-xl object-contain"
+                        className="max-h-72 rounded-xl object-contain border border-slate-800/80 mx-auto"
                       />
                     </div>
                   )}
                 </div>
 
-                {/* Gemini AI Auto-Grading & Feedback Card */}
+                {/* Akıllı Asistan Taslak Önerisi & Kontrol Paneli */}
                 {activeSubmission.aiScore !== undefined && (
                   <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-purple-950/30 to-slate-900 border border-indigo-500/30 shadow-lg space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -242,21 +303,54 @@ export function AssignmentReviewModal({
                           {activeSubmission.aiScore}
                         </div>
                         <div>
-                          <div className="text-xs font-bold uppercase tracking-wider text-indigo-300">
-                            Gemini AI Önerilen Puan
+                          <div className="text-xs font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                            <span>Akıllı Asistan Taslak Önerisi</span>
                           </div>
-                          <div className="text-xs text-slate-400">100 Üzerinden Otomatik Analiz</div>
+                          <div className="text-[11px] text-slate-400">100 Üzerinden Önerilen Puan (Taslak)</div>
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={handleApproveAiScore}
-                        className="px-3.5 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                        <span>AI Puanını Seç</span>
-                      </button>
+                      {/* 3 Clear Action Buttons for Teacher */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScoreInput(activeSubmission.aiScore || 85);
+                            if (activeSubmission.aiFeedback) setFeedbackInput(activeSubmission.aiFeedback);
+                            showToast(`AI puanı (%${activeSubmission.aiScore}) ve yorumu onay için forma aktarıldı.`, 'info');
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>AI Önerisini Onayla</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScoreInput(activeSubmission.aiScore || 85);
+                            if (activeSubmission.aiFeedback) setFeedbackInput(activeSubmission.aiFeedback);
+                            showToast('AI taslağı düzenleme için yüklendi.', 'info');
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <MessageSquareQuote className="w-3.5 h-3.5" />
+                          <span>Yorumu/Notu Düzenle</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScoreInput(80);
+                            setFeedbackInput('');
+                            showToast('AI taslağı yoksayıldı, manuel giriş modu aktif.', 'info');
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <span>Manuel Notlandır (AI'ı Yoksay)</span>
+                        </button>
+                      </div>
                     </div>
 
                     {activeSubmission.aiFeedback && (

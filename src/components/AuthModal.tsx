@@ -526,8 +526,8 @@ export function AuthModal() {
               </div>
             )}
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} method="POST" action="#" autoComplete="on" className="space-y-3.5">
+            {/* Form with Autofill Blocking */}
+            <form onSubmit={handleSubmit} method="POST" action="#" autoComplete="off" className="space-y-3.5">
               {/* Full Name (Sign Up only) */}
               {mode === 'signup' && (
                 <div className="animate-fade">
@@ -543,9 +543,12 @@ export function AuthModal() {
                   </label>
                   <input
                     id="auth-fullname"
-                    name="fullName"
+                    name="eduflow_reg_fullname_field"
                     type="text"
-                    autoComplete="name"
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
                     required
                     disabled={loading}
                     value={fullName}
@@ -573,9 +576,12 @@ export function AuthModal() {
                 </label>
                 <input
                   id="auth-email"
-                  name="email"
+                  name={mode === 'signup' ? 'eduflow_reg_email_field' : 'eduflow_auth_identity_field'}
                   type={mode === 'signup' ? 'email' : 'text'}
-                  autoComplete={mode === 'signup' ? 'email' : 'username email'}
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
                   required
                   disabled={loading}
                   value={email}
@@ -609,9 +615,12 @@ export function AuthModal() {
                 <div className="relative">
                   <input
                     id="auth-password"
-                    name="password"
+                    name={mode === 'signup' ? 'eduflow_reg_secret_field' : 'eduflow_auth_secret_field'}
                     type={showPassword ? 'text' : 'password'}
-                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
                     required
                     disabled={loading}
                     minLength={6}

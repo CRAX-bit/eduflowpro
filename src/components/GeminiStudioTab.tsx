@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useEduFlow } from '@/context/EduFlowContext';
+import { Question } from '@/types';
 import {
   Sparkles,
   BrainCircuit,
@@ -17,6 +18,7 @@ import {
   HelpCircle,
   Copy,
   Check,
+  Compass,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -45,7 +47,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
     {
       role: 'assistant',
-      text: 'Merhaba Hocam! Ben EduFlow Pro Yapay Zeka Eğitim Asistanı. Soru hazırlama, müfredat planlama, ders notu özetleri ve pedagojik tavsiyeler için 7/24 hizmetinizdeyim. Nasıl yardımcı olabilirim? 🎓✨',
+      text: 'Merhaba Hocam, soru hazırlama, müfredat planlama, ders notu özetleri ve pedagojik analizler için asistanınız hazır. Nasıl yardımcı olabilirim?',
     },
   ]);
   const [chatInput, setChatInput] = useState('');
@@ -92,7 +94,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
       const data = await res.json();
       if (data.success && data.data) {
         setGeneratedQuiz(data.data);
-        showToast('Gemini AI soruları başarıyla üretti! 🎉', 'success');
+        showToast('Soru taslağı başarıyla oluşturuldu.', 'success');
       } else {
         showToast('Test oluşturulamadı. Lütfen tekrar deneyin.', 'error');
       }
@@ -125,7 +127,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
       const data = await res.json();
       if (data.success && data.data) {
         setGeneratedNote(data.data);
-        showToast('Ders notu ve özeti oluşturuldu! 📝', 'success');
+        showToast('Ders notu ve özeti oluşturuldu.', 'success');
       } else {
         showToast('Ders notu oluşturulamadı.', 'error');
       }
@@ -160,13 +162,13 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
       } else {
         setChatMessages((prev) => [
           ...prev,
-          { role: 'assistant', text: 'Üzgünüm, şu an yanıt üretirken bir sorun oluştu.' },
+          { role: 'assistant', text: 'Yanıt üretilirken bir sorun oluştu. Lütfen tekrar iletin.' },
         ]);
       }
     } catch (e) {
       setChatMessages((prev) => [
         ...prev,
-        { role: 'assistant', text: 'Bağlantı hatası oluştu. Lütfen tekrar deneyin.' },
+        { role: 'assistant', text: 'Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin.' },
       ]);
     } finally {
       setIsChatLoading(false);
@@ -176,67 +178,66 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
-    showToast('Panoya kopyalandı! 📋', 'info');
+    showToast('Panoya kopyalandı.', 'info');
     setTimeout(() => setCopiedId(null), 2000);
   };
 
   return (
     <div className="space-y-6 animate-fade">
       {/* Studio Subtabs */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-[#111827]/80 border border-slate-800 backdrop-blur-xl">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveSubTab('quiz')}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
+              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer',
               activeSubTab === 'quiz'
-                ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-500/25'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-slate-800 text-white font-semibold border border-slate-700 shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
             )}
           >
-            <FileQuestion className="w-4 h-4 text-purple-300" />
-            <span>🤖 AI Sınav & Test Üretici</span>
+            <FileQuestion className="w-4 h-4 text-purple-400" />
+            <span>Test & Soru Hazırlama</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('note')}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
+              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer',
               activeSubTab === 'note'
-                ? 'bg-gradient-to-r from-indigo-500 to-cyan-500 text-white shadow-lg shadow-indigo-500/25'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-slate-800 text-white font-semibold border border-slate-700 shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
             )}
           >
-            <BookOpen className="w-4 h-4 text-cyan-300" />
-            <span>📝 AI Ders Notu & Özet</span>
+            <BookOpen className="w-4 h-4 text-cyan-400" />
+            <span>Ders Notu & Özet</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('chat')}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
+              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer',
               activeSubTab === 'chat'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-lg shadow-emerald-500/25'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-slate-800 text-white font-semibold border border-slate-700 shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
             )}
           >
             <MessageSquare className="w-4 h-4 text-emerald-400" />
-            <span>💡 Pedagoji & Asistan Chat</span>
+            <span>Eğitim Danışmanı (Sohbet)</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Gemini Pro v1.5 Engine Active</span>
+        <div className="text-xs text-slate-400 font-medium">
+          Akıllı Asistan Aktif
         </div>
       </div>
 
-      {/* Subtab 1: AI Quiz Generator */}
+      {/* Subtab 1: Quiz Generator */}
       {activeSubTab === 'quiz' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Controls */}
-          <div className="lg:col-span-5 p-6 rounded-3xl bg-[#111827]/80 border border-slate-800/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.37)] space-y-4">
-            <div className="flex items-center gap-2 text-purple-400 text-xs font-bold uppercase tracking-wider">
+          <div className="lg:col-span-5 p-6 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-4">
+            <div className="flex items-center gap-2 text-indigo-400 text-xs font-semibold">
               <Sparkles className="w-4 h-4" />
               <span>Sınav Yapılandırıcı</span>
             </div>
@@ -251,14 +252,14 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                   value={quizTopic}
                   onChange={(e) => setQuizTopic(e.target.value)}
                   placeholder="Örn: İngilizce Present Perfect Tense"
-                  className="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-800 focus:border-purple-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
                 />
               </div>
 
               {/* Suggestions */}
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 block mb-1.5">
-                  Popüler Konu Örnekleri:
+                <span className="text-[11px] font-medium text-slate-400 block mb-1.5">
+                  Örnek Konular:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {quizSuggestions.map((s, idx) => (
@@ -266,7 +267,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                       key={idx}
                       type="button"
                       onClick={() => handleGenerateQuiz(s)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-purple-400 text-[11px] text-slate-300 hover:text-purple-300 transition-all cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-[11px] text-slate-300 hover:text-white transition-all cursor-pointer"
                     >
                       {s}
                     </button>
@@ -282,7 +283,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                   <select
                     value={quizCount}
                     onChange={(e) => setQuizCount(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 focus:border-purple-400 rounded-xl text-white text-xs focus:outline-none"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs focus:outline-none"
                   >
                     <option value={3}>3 Soru (Hızlı Test)</option>
                     <option value={5}>5 Soru (Standart)</option>
@@ -297,11 +298,11 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                   <select
                     value={quizGrade}
                     onChange={(e) => setQuizGrade(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900/90 border border-slate-800 focus:border-purple-400 rounded-xl text-white text-xs focus:outline-none"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs focus:outline-none"
                   >
                     <option value="Ortaokul / LGS">Ortaokul / LGS</option>
                     <option value="Lise / YKS">Lise / YKS</option>
-                    <option value="Üniversite / Genel">Üniversite / Genel</option>
+                    <option value="Üniversite / Genel">Genel</option>
                   </select>
                 </div>
               </div>
@@ -310,17 +311,17 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                 type="button"
                 disabled={isQuizLoading}
                 onClick={() => handleGenerateQuiz()}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 transition-all cursor-pointer disabled:opacity-50 mt-2"
+                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 mt-2"
               >
                 {isQuizLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Gemini Soruları Hazırlıyor...</span>
+                    <span>Sorular Hazırlanıyor...</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Test Sorularını Üret</span>
+                    <span>Test Sorularını Oluştur</span>
                   </>
                 )}
               </button>
@@ -328,10 +329,10 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
           </div>
 
           {/* Results Preview */}
-          <div className="lg:col-span-7 p-6 rounded-3xl bg-[#111827]/80 border border-slate-800/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.37)] space-y-4">
+          <div className="lg:col-span-7 p-6 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
-                <FileQuestion className="w-5 h-5 text-purple-400" />
+              <h3 className="font-heading font-semibold text-base text-white flex items-center gap-2">
+                <FileQuestion className="w-5 h-5 text-indigo-400" />
                 <span>Üretilen Test Önizlemesi</span>
               </h3>
 
@@ -347,107 +348,72 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                       questions: generatedQuiz.questions,
                     })
                   }
-                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>Bu Testi Ödev Olarak Yayınla</span>
+                  <span>Ödev Olarak Yayınla</span>
                 </button>
               )}
             </div>
 
-            {isQuizLoading ? (
-              <div className="py-16 text-center space-y-3">
-                <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto" />
-                <p className="text-xs text-slate-400">
-                  Google Gemini Pro müfredata tam uyumlu soruları ve çözümleri yapılandırıyor...
-                </p>
+            {!generatedQuiz ? (
+              <div className="p-12 text-center text-slate-400 text-xs border border-dashed border-slate-800 rounded-xl space-y-2">
+                <BrainCircuit className="w-8 h-8 mx-auto text-slate-500" />
+                <p>Sol taraftaki panelden bir konu belirleyip "Test Sorularını Oluştur" butonuna basınız.</p>
               </div>
-            ) : generatedQuiz ? (
+            ) : (
               <div className="space-y-4 animate-fade">
-                <div className="p-4 rounded-2xl bg-purple-950/20 border border-purple-500/30 space-y-1">
-                  <div className="font-heading font-bold text-base text-white">
-                    {generatedQuiz.title}
-                  </div>
-                  <div className="text-xs text-purple-300">
-                    Klasör: <b>{generatedQuiz.folder}</b> · Süre:{' '}
-                    <b>{Math.round((generatedQuiz.timeLimit || 120) / 60)} dakika</b>
-                  </div>
-                  {generatedQuiz.desc && (
-                    <p className="text-xs text-slate-400 mt-1">{generatedQuiz.desc}</p>
-                  )}
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                  <div className="text-xs font-semibold text-indigo-400">Ünite: {generatedQuiz.folder}</div>
+                  <h4 className="font-bold text-base text-white">{generatedQuiz.title}</h4>
+                  <p className="text-xs text-slate-300">{generatedQuiz.desc}</p>
                 </div>
 
                 <div className="space-y-3">
-                  {generatedQuiz.questions?.map((q: any, i: number) => (
-                    <div
-                      key={i}
-                      className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2 relative group"
-                    >
-                      <div className="flex items-center justify-between text-xs text-slate-400 font-semibold">
-                        <span className="text-purple-400 font-bold">Soru {i + 1}</span>
-                        <button
-                          onClick={() => copyToClipboard(`Soru: ${q.q}\nCevap: ${q.a}`, `q-${i}`)}
-                          className="opacity-0 group-hover:opacity-100 text-[11px] text-slate-400 hover:text-white flex items-center gap-1 transition-opacity"
-                        >
-                          {copiedId === `q-${i}` ? (
-                            <Check className="w-3 h-3 text-emerald-400" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                          <span>Kopyala</span>
-                        </button>
-                      </div>
-                      <div className="text-xs text-white font-medium">{q.q}</div>
-                      <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                  {generatedQuiz.questions?.map((q: Question, idx: number) => (
+                    <div key={idx} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                      <div className="text-xs font-semibold text-slate-400">Soru {idx + 1}</div>
+                      <p className="text-xs sm:text-sm text-slate-100 font-medium leading-relaxed">{q.q}</p>
+                      <div className="p-2.5 rounded-lg bg-emerald-950/20 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span>
-                          Doğru Cevap: <b>{q.a}</b>
-                        </span>
+                        <span>Doğru Yanıt: <b>{q.a}</b></span>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            ) : (
-              <div className="py-16 text-center rounded-2xl border border-dashed border-slate-800 space-y-2">
-                <BrainCircuit className="w-10 h-10 text-slate-600 mx-auto" />
-                <h4 className="text-sm font-bold text-white">Henüz Bir Test Üretilmedi</h4>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Sol paneldeki formdan konu başlığını belirleyin veya önerilen konulardan birine tıklayarak anında test üretin.
-                </p>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Subtab 2: AI Lesson Notes */}
+      {/* Subtab 2: Notes Generator */}
       {activeSubTab === 'note' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Controls */}
-          <div className="lg:col-span-5 p-6 rounded-3xl bg-[#111827]/80 border border-slate-800/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.37)] space-y-4">
-            <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider">
-              <Sparkles className="w-4 h-4" />
+          <div className="lg:col-span-5 p-6 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-4">
+            <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold">
+              <BookOpen className="w-4 h-4" />
               <span>Ders Notu & Özet Yapılandırıcı</span>
             </div>
 
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Özet Çıkarılacak Konu
+                  Ders & Konu Başlığı
                 </label>
                 <input
                   type="text"
                   value={noteTopic}
                   onChange={(e) => setNoteTopic(e.target.value)}
-                  placeholder="Örn: Mitoz ve Mayoz Bölünme Farkları"
-                  className="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
+                  placeholder="Örn: Newton Hareket Yasaları"
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 focus:border-cyan-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
                 />
               </div>
 
               {/* Suggestions */}
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 block mb-1.5">
+                <span className="text-[11px] font-medium text-slate-400 block mb-1.5">
                   Örnek Konu Başlıkları:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -456,7 +422,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                       key={idx}
                       type="button"
                       onClick={() => handleGenerateNote(s)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-400 text-[11px] text-slate-300 hover:text-cyan-300 transition-all cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-[11px] text-slate-300 hover:text-white transition-all cursor-pointer"
                     >
                       {s}
                     </button>
@@ -468,7 +434,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                 type="button"
                 disabled={isNoteLoading}
                 onClick={() => handleGenerateNote()}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer disabled:opacity-50 mt-2"
+                className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 mt-2"
               >
                 {isNoteLoading ? (
                   <>
@@ -478,7 +444,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Ders Notu & Özet Çıkar</span>
+                    <span>Ders Notunu Oluştur</span>
                   </>
                 )}
               </button>
@@ -486,11 +452,11 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
           </div>
 
           {/* Results Preview */}
-          <div className="lg:col-span-7 p-6 rounded-3xl bg-[#111827]/80 border border-slate-800/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.37)] space-y-4">
+          <div className="lg:col-span-7 p-6 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
+              <h3 className="font-heading font-semibold text-base text-white flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-cyan-400" />
-                <span>Üretilen Ders Notu Önizlemesi</span>
+                <span>Hazırlanan Ders Notu</span>
               </h3>
 
               {generatedNote && (
@@ -503,115 +469,88 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                       desc: generatedNote.content,
                     })
                   }
-                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <PlusCircle className="w-4 h-4" />
-                  <span>Ders Notu Olarak Yayınla</span>
+                  <span>Öğrencilerle Paylaş</span>
                 </button>
               )}
             </div>
 
-            {isNoteLoading ? (
-              <div className="py-16 text-center space-y-3">
-                <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mx-auto" />
-                <p className="text-xs text-slate-400">
-                  Gemini AI anlaşılır, formüllü ve örnekli ders notu özetini oluşturuyor...
-                </p>
-              </div>
-            ) : generatedNote ? (
-              <div className="space-y-4 animate-fade">
-                <div className="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/30 space-y-1">
-                  <div className="font-heading font-bold text-base text-white">
-                    {generatedNote.title}
-                  </div>
-                  <div className="text-xs text-cyan-300">
-                    Klasör / Ünite: <b>{generatedNote.folder}</b>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-sans max-h-96 overflow-y-auto">
-                  {generatedNote.content}
-                </div>
+            {!generatedNote ? (
+              <div className="p-12 text-center text-slate-400 text-xs border border-dashed border-slate-800 rounded-xl space-y-2">
+                <BookOpen className="w-8 h-8 mx-auto text-slate-500" />
+                <p>Sol taraftaki alandan bir konu girerek ders notu ve özet oluşturabilirsiniz.</p>
               </div>
             ) : (
-              <div className="py-16 text-center rounded-2xl border border-dashed border-slate-800 space-y-2">
-                <BookOpen className="w-10 h-10 text-slate-600 mx-auto" />
-                <h4 className="text-sm font-bold text-white">Henüz Ders Notu Üretilmedi</h4>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Sol panelden dilediğiniz konuyu yazarak saniyeler içinde zengin ders özetleri çıkarın.
-                </p>
+              <div className="space-y-3 animate-fade">
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
+                  <div className="text-xs font-semibold text-cyan-400">Ünite: {generatedNote.folder}</div>
+                  <h4 className="font-bold text-lg text-white mt-1">{generatedNote.title}</h4>
+                </div>
+
+                <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">
+                  {generatedNote.content}
+                </div>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Subtab 3: Pedagogy & Chat Assistant */}
+      {/* Subtab 3: Chat Assistant */}
       {activeSubTab === 'chat' && (
-        <div className="p-6 rounded-3xl bg-[#111827]/80 border border-slate-800/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.37)] space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-emerald-400" />
-              <span>Gemini AI Eğitim & Pedagoji Danışmanı</span>
-            </h3>
-            <span className="text-xs text-slate-400">7/24 Öğretmen Asistanı</span>
+        <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
+            <MessageSquare className="w-5 h-5 text-emerald-400" />
+            <div>
+              <h3 className="font-heading font-semibold text-base text-white">
+                Öğretmen Danışman Asistanı
+              </h3>
+              <p className="text-xs text-slate-400">
+                Müfredat kazanımları, rubrik kriterleri ve ders planlaması hakkında danışabilirsiniz.
+              </p>
+            </div>
           </div>
 
-          {/* Messages */}
-          <div className="space-y-3 min-h-[280px] max-h-[420px] overflow-y-auto pr-2">
-            {chatMessages.map((msg, i) => (
+          {/* Messages Container */}
+          <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+            {chatMessages.map((m, idx) => (
               <div
-                key={i}
+                key={idx}
                 className={cn(
-                  'flex gap-3',
-                  msg.role === 'user' ? 'justify-end' : 'justify-start'
+                  'p-4 rounded-xl text-xs sm:text-sm leading-relaxed max-w-[85%]',
+                  m.role === 'user'
+                    ? 'ml-auto bg-indigo-600 text-white'
+                    : 'bg-slate-950 border border-slate-800 text-slate-200'
                 )}
               >
-                {msg.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                )}
-                <div
-                  className={cn(
-                    'p-3.5 rounded-2xl text-xs sm:text-sm max-w-xl leading-relaxed whitespace-pre-wrap',
-                    msg.role === 'user'
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-medium'
-                      : 'bg-slate-900/90 border border-slate-800 text-slate-200'
-                  )}
-                >
-                  {msg.text}
-                </div>
+                {m.text}
               </div>
             ))}
             {isChatLoading && (
-              <div className="flex gap-3 items-center">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0 animate-pulse">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 text-xs text-slate-400 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                  <span>Gemini yanıt hazırlıyor...</span>
-                </div>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 flex items-center gap-2 w-fit">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Asistan yanıt hazırlıyor...</span>
               </div>
             )}
           </div>
 
-          {/* Input Box */}
-          <form onSubmit={handleSendChat} className="flex gap-2 pt-2 border-t border-slate-800">
+          {/* Chat Input */}
+          <form onSubmit={handleSendChat} className="flex gap-2 pt-2">
             <input
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Örn: 8. sınıf öğrencilerini motive etmek için 3 pedagojik taktik önerir misin?"
-              className="flex-1 px-4 py-3 bg-slate-900/90 border border-slate-800 focus:border-emerald-400 rounded-xl text-white text-xs sm:text-sm placeholder:text-slate-500 focus:outline-none"
+              placeholder="Sorunuzu buraya yazınız (örn: 8. sınıf LGS Pisagor konusu için 3 aşamalı ders planı önerir misin?)..."
+              className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
             />
             <button
               type="submit"
-              disabled={isChatLoading || !chatInput.trim()}
-              className="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all cursor-pointer disabled:opacity-50"
+              disabled={!chatInput.trim() || isChatLoading}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-3.5 h-3.5" />
               <span>Gönder</span>
             </button>
           </form>

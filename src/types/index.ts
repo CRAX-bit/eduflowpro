@@ -29,6 +29,10 @@ export interface Submission {
   percent?: number;
   photo?: string;
   responseText?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
   feedback?: string;
   finalScore?: number;
   aiScore?: number;

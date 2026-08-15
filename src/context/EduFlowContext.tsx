@@ -32,6 +32,7 @@ interface CreateAssignmentParams {
 }
 
 interface EduFlowContextType {
+  isLoaded: boolean;
   state: EduFlowState;
   activeTab: 'home' | 'teacher' | 'student';
   setActiveTab: (tab: 'home' | 'teacher' | 'student') => void;
@@ -55,7 +56,16 @@ interface EduFlowContextType {
   submitTestAnswers: (assignmentId: string, answers: string[], timedOut?: boolean) => { correct: number; total: number; percent: number };
   retryTest: (assignmentId: string) => void;
   submitHomeworkPhoto: (assignmentId: string, photoDataUrl: string) => void;
-  submitAssignmentResponse: (assignmentId: string, responseText: string, photoDataUrl?: string) => Promise<{ success: boolean; aiScore?: number; aiFeedback?: string }>;
+  uploadAssignmentFile: (
+    assignmentId: string,
+    file: File
+  ) => Promise<{ success: boolean; fileAttachment?: { fileUrl: string; fileName: string; fileType: string; fileSize: number }; error?: string }>;
+  submitAssignmentResponse: (
+    assignmentId: string,
+    responseText: string,
+    fileAttachment?: { fileUrl: string; fileName: string; fileType: string; fileSize: number },
+    photoDataUrl?: string
+  ) => Promise<{ success: boolean; aiScore?: number; aiFeedback?: string }>;
   reviewSubmission: (assignmentId: string, studentId: string, finalScore: number, feedback: string) => Promise<void>;
   saveFeedback: (assignmentId: string, studentId: string, feedback: string) => void;
   getStudentById: (id?: string | null) => Student | undefined;
@@ -520,13 +530,17 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       if (role === 'teacher') {
         setActiveTab('teacher');
         if (typeof window !== 'undefined') {
-          window.history.pushState(null, '', '/teacher-dashboard');
+          if (!window.location.pathname.includes('teacher-dashboard')) {
+            window.location.href = '/teacher-dashboard';
+          }
         }
         showToast(`Hoş geldiniz, ${name}! 👋`, 'success');
       } else {
         setActiveTab('student');
         if (typeof window !== 'undefined') {
-          window.history.pushState(null, '', '/student-dashboard');
+          if (!window.location.pathname.includes('student-dashboard')) {
+            window.location.href = '/student-dashboard';
+          }
         }
         showToast(`Hoş geldin, ${name.split(' ')[0]}! 🎓`, 'success');
       }
@@ -554,10 +568,10 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       session: null,
       currentStudentId: null,
     }));
-    if (typeof window !== 'undefined') {
-      window.history.pushState(null, '', '/');
-    }
     setActiveTab('home');
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
     showToast('Başarıyla çıkış yapıldı.', 'info');
   }, [showToast]);
 
@@ -982,10 +996,76 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     [state.currentStudentId, showToast]
   );
 
+  const uploadAssignmentFile = useCallback(
+    async (
+      assignmentId: string,
+      file: File
+    ): Promise<{ success: boolean; fileAttachment?: { fileUrl: string; fileName: string; fileType: string; fileSize: number }; error?: string }> => {
+      const sid = state.currentStudentId || state.session?.studentId || state.session?.supabaseId || 'student';
+      const fileExt = file.name.split('.').pop() || 'dat';
+      const cleanFileName = file.name;
+      const filePath = `${sid}/${assignmentId}_${Date.now()}.${fileExt}`;
+
+      try {
+        // 1. Try uploading to Supabase Storage 'assignments' bucket
+        const { data, error } = await supabase.storage
+          .from('assignments')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: true,
+          });
+
+        if (!error && data) {
+          const { data: urlData } = supabase.storage
+            .from('assignments')
+            .getPublicUrl(filePath);
+
+          const publicUrl = urlData?.publicUrl || '';
+          return {
+            success: true,
+            fileAttachment: {
+              fileUrl: publicUrl,
+              fileName: cleanFileName,
+              fileType: file.type || fileExt,
+              fileSize: file.size,
+            },
+          };
+        }
+      } catch (err) {
+        console.warn('Supabase storage upload fallback notice:', err);
+      }
+
+      // Fallback: Convert to Data URL (base64) so submission is never blocked
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          resolve({
+            success: true,
+            fileAttachment: {
+              fileUrl: reader.result as string,
+              fileName: cleanFileName,
+              fileType: file.type || fileExt,
+              fileSize: file.size,
+            },
+          });
+        };
+        reader.onerror = () => {
+          resolve({
+            success: false,
+            error: 'Dosya okunamadı.',
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    },
+    [state.currentStudentId, state.session]
+  );
+
   const submitAssignmentResponse = useCallback(
     async (
       assignmentId: string,
       responseText: string,
+      fileAttachment?: { fileUrl: string; fileName: string; fileType: string; fileSize: number },
       photoDataUrl?: string
     ): Promise<{ success: boolean; aiScore?: number; aiFeedback?: string }> => {
       const sid = state.currentStudentId || state.session?.studentId || state.session?.supabaseId;
@@ -1005,7 +1085,11 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       // 1. Initial pending submission state
       const initialSub: Submission = {
         responseText: responseText.trim(),
-        photo: photoDataUrl || undefined,
+        fileUrl: fileAttachment?.fileUrl,
+        fileName: fileAttachment?.fileName,
+        fileType: fileAttachment?.fileType,
+        fileSize: fileAttachment?.fileSize,
+        photo: photoDataUrl || (fileAttachment?.fileType?.startsWith('image') ? fileAttachment.fileUrl : undefined),
         at: Date.now(),
         status: 'pending',
       };
@@ -1041,7 +1125,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
             assignmentTitle: assignment.title,
             assignmentDesc: assignment.desc,
             folder: assignment.folder,
-            studentAnswer: responseText.trim(),
+            studentAnswer: responseText.trim() || (fileAttachment ? `Öğrenci ${fileAttachment.fileName} dosyasını yükledi.` : 'Yanıt yüklendi.'),
             studentName,
           }),
         });
@@ -1094,7 +1178,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         console.warn('Supabase submissions update note:', e);
       }
 
-      showToast(`🎉 Ödev teslim edildi! Gemini Notu: %${aiScore}`, 'success');
+      showToast('Ödeviniz başarıyla teslim edildi!', 'success');
       return { success: true, aiScore, aiFeedback };
     },
     [state.assignments, state.currentStudentId, state.session, showToast]
@@ -1199,6 +1283,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
   return (
     <EduFlowContext.Provider
       value={{
+        isLoaded,
         state,
         activeTab,
         setActiveTab,
@@ -1222,6 +1307,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         submitTestAnswers,
         retryTest,
         submitHomeworkPhoto,
+        uploadAssignmentFile,
         submitAssignmentResponse,
         reviewSubmission,
         saveFeedback,
