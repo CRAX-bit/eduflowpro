@@ -5,21 +5,22 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0a0f1d;
-  --bg-2: #0d1424;
-  --cyan: #00f2fe;
-  --purple: #9d4edd;
+  --bg: #0B0F17;
+  --bg-2: #111827;
+  --indigo: #6366f1;
+  --purple: #8b5cf6;
+  --cyan: #06b6d4;
   --emerald: #10b981;
   --mint: #6ee7b7;
   --blue: #3b82f6;
   --sky: #60a5fa;
   --amber: #f59e0b;
   --orange: #ff512f;
-  --pink: #dd2476;
+  --pink: #ec4899;
   --red: #ef4444;
   --yellow: #facc15;
-  --text: #e8edf7;
-  --muted: #8b96ad;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
 }
 
 * {

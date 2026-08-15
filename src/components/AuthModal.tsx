@@ -85,28 +85,16 @@ export function AuthModal() {
   const [resendLoading, setResendLoading] = useState(false);
   const cooldownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load remembered email and initialize form on modal open
+  // Load and initialize form on modal open
   useEffect(() => {
     if (isAuthModalOpen) {
       setRole(authModalInitialRole);
+      setEmail('');
       setPassword('');
       setFullName('');
       setShowPassword(false);
       setErrorMessage(null);
       setMode('signin');
-
-      try {
-        const remembered = localStorage.getItem(REMEMBER_EMAIL_KEY);
-        if (remembered) {
-          setEmail(remembered);
-          setRememberMe(true);
-        } else {
-          setEmail('');
-          setRememberMe(false);
-        }
-      } catch (e) {
-        setEmail('');
-      }
     }
   }, [isAuthModalOpen, authModalInitialRole]);
 
@@ -158,8 +146,10 @@ export function AuthModal() {
   // Switch back to Sign In
   const handleBackToSignIn = () => {
     setMode('signin');
-    setErrorMessage(null);
+    setEmail('');
     setPassword('');
+    setFullName('');
+    setErrorMessage(null);
   };
 
   // Form Submit Handler
@@ -175,15 +165,6 @@ export function AuthModal() {
       showToast('Lütfen tüm zorunlu alanları doldurunuz.', 'warn');
       return;
     }
-
-    // Save or remove Remember Me preference
-    try {
-      if (rememberMe) {
-        localStorage.setItem(REMEMBER_EMAIL_KEY, cleanEmail);
-      } else {
-        localStorage.removeItem(REMEMBER_EMAIL_KEY);
-      }
-    } catch (e) {}
 
     setLoading(true);
 
@@ -224,7 +205,7 @@ export function AuthModal() {
           return;
         }
 
-        // If session exists immediately (e.g. email confirmation disabled on Supabase)
+        // If session exists immediately
         if (data.session && data.user) {
           loginSupabaseUser({
             role: role,
@@ -235,22 +216,32 @@ export function AuthModal() {
           return;
         }
 
-        // 2. Email confirmation is pending - display verification screen
+        // 2. Email confirmation is pending
         setSubmittedEmail(cleanEmail);
         setMode('verification_sent');
         setResendCooldown(60);
         showToast('Kayıt başarılı! Doğrulama e-postası gönderildi. ✉️', 'success');
       } else {
-        // Sign In Flow
+        // Sign In Flow with Strict Role Guard
 
-        // 1. Check if student credentials match a classroom account
+        // 1. Check if student credentials match a teacher-created classroom account
         const matchedStudent = state.students.find(
           (s) =>
             (s.username.toLowerCase() === cleanEmail.toLowerCase() ||
               s.name.toLowerCase() === cleanEmail.toLowerCase()) &&
             s.password === cleanPass
         );
+
         if (matchedStudent) {
+          if (role !== 'student') {
+            const mismatchMsg = '⚠️ Bu hesap bir Öğrenci hesabıdır. Lütfen Öğrenci Girişi sekmesini kullanın.';
+            setErrorMessage(mismatchMsg);
+            showToast(mismatchMsg, 'warn');
+            setPassword('');
+            setLoading(false);
+            return;
+          }
+
           loginSupabaseUser({
             role: 'student',
             name: matchedStudent.name,
@@ -275,13 +266,56 @@ export function AuthModal() {
         }
 
         if (data.user) {
-          const userMeta = data.user.user_metadata || {};
-          const userRole = (userMeta.role as 'teacher' | 'student') || role;
+          let actualRole: 'teacher' | 'student' =
+            (data.user.user_metadata?.role as 'teacher' | 'student') || 'student';
+          let userFullName: string = data.user.user_metadata?.full_name || '';
+
+          // Fetch verified role from profiles table
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('role, full_name')
+              .eq('id', data.user.id)
+              .single();
+
+            if (profile?.role) {
+              actualRole = profile.role as 'teacher' | 'student';
+            }
+            if (profile?.full_name) {
+              userFullName = profile.full_name;
+            }
+          } catch (e) {
+            // fallback to user_metadata
+          }
+
+          // Strict Role Guard Check
+          if (role === 'student' && actualRole === 'teacher') {
+            await supabase.auth.signOut();
+            setPassword('');
+            const mismatchMsg = '⚠️ Bu hesap bir Öğretmen hesabıdır. Lütfen Öğretmen Girişi sekmesini kullanın.';
+            setErrorMessage(mismatchMsg);
+            showToast(mismatchMsg, 'warn');
+            setLoading(false);
+            return;
+          }
+
+          if (role === 'teacher' && actualRole === 'student') {
+            await supabase.auth.signOut();
+            setPassword('');
+            const mismatchMsg = '⚠️ Bu hesap bir Öğrenci hesabıdır. Lütfen Öğrenci Girişi sekmesini kullanın.';
+            setErrorMessage(mismatchMsg);
+            showToast(mismatchMsg, 'warn');
+            setLoading(false);
+            return;
+          }
+
           const userName =
-            userMeta.full_name || data.user.email?.split('@')[0] || (userRole === 'teacher' ? 'Öğretmen' : 'Öğrenci');
+            userFullName ||
+            data.user.email?.split('@')[0] ||
+            (actualRole === 'teacher' ? 'Öğretmen' : 'Öğrenci');
 
           loginSupabaseUser({
-            role: userRole,
+            role: actualRole,
             name: userName,
             email: data.user.email || cleanEmail,
             supabaseId: data.user.id,
@@ -448,6 +482,9 @@ export function AuthModal() {
                   disabled={loading}
                   onClick={() => {
                     setRole('teacher');
+                    setEmail('');
+                    setPassword('');
+                    setFullName('');
                     setErrorMessage(null);
                   }}
                   className={cn(
@@ -464,6 +501,9 @@ export function AuthModal() {
                   disabled={loading}
                   onClick={() => {
                     setRole('student');
+                    setEmail('');
+                    setPassword('');
+                    setFullName('');
                     setErrorMessage(null);
                   }}
                   className={cn(
@@ -670,6 +710,9 @@ export function AuthModal() {
                     disabled={loading}
                     onClick={() => {
                       setMode('signup');
+                      setEmail('');
+                      setPassword('');
+                      setFullName('');
                       setErrorMessage(null);
                     }}
                     className="text-cyan-400 hover:text-cyan-300 font-bold hover:underline cursor-pointer ml-1 disabled:opacity-50"
@@ -685,6 +728,9 @@ export function AuthModal() {
                     disabled={loading}
                     onClick={() => {
                       setMode('signin');
+                      setEmail('');
+                      setPassword('');
+                      setFullName('');
                       setErrorMessage(null);
                     }}
                     className="text-cyan-400 hover:text-cyan-300 font-bold hover:underline cursor-pointer ml-1 disabled:opacity-50"
