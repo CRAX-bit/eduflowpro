@@ -39,11 +39,18 @@ import {
   Plus,
   Trash2,
   Compass,
+  FileUp,
+  FileSpreadsheet,
+  Layers,
+  Inbox,
+  Hourglass,
 } from 'lucide-react';
 import { NoteModal } from './NoteModal';
 import { PhotoModal } from './PhotoModal';
 import { JoinClassroomModal } from './JoinClassroomModal';
 import { AssignmentSubmitModal } from './AssignmentSubmitModal';
+
+type AssignmentFilterTab = 'pending' | 'evaluating' | 'completed' | 'all';
 
 export function StudentView() {
   const {
@@ -62,6 +69,7 @@ export function StudentView() {
   const currentStudent = getStudentById(studentId);
   const assignments = getVisibleAssignments(studentId);
 
+  const [assignmentFilterTab, setAssignmentFilterTab] = useState<AssignmentFilterTab>('pending');
   const [isJoinClassModalOpen, setIsJoinClassModalOpen] = useState(false);
   const [submitModalAssignment, setSubmitModalAssignment] = useState<Assignment | null>(null);
 
@@ -88,7 +96,7 @@ export function StudentView() {
   const [coachMessages, setCoachMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
     {
       role: 'assistant',
-      text: 'Merhaba! Ben senin çalışma asistanınım. Formülleri, çözemediğin soruları veya konu özetlerini bana dilediğin gibi sorabilirsin.',
+      text: 'Merhaba! Ben senin kişisel çalışma asistanınım. Anlamadığın formülleri, çözemediğin soruları veya konu özetlerini bana dilediğin gibi sorabilirsin.',
     },
   ]);
   const [coachInput, setCoachInput] = useState('');
@@ -96,8 +104,8 @@ export function StudentView() {
 
   // --- Konu Alıştırması (Quick Practice) State ---
   const [isPracticeModalOpen, setIsPracticeModalOpen] = useState(false);
-  const [practiceTopic, setPracticeTopic] = useState('Matematik Üslü Sayılar');
-  const [practiceCount, setPracticeCount] = useState(3);
+  const [practiceTopic, setPracticeTopic] = useState('Matematik Üslü ve Köklü Sayılar');
+  const [practiceCount, setPracticeCount] = useState<number>(5);
   const [isPracticeLoading, setIsPracticeLoading] = useState(false);
   const [practiceQuiz, setPracticeQuiz] = useState<{
     title: string;
@@ -146,37 +154,72 @@ export function StudentView() {
   }
 
   const studentDisplayName = state.session?.name || currentStudent?.name || 'Öğrenci';
-  const studentColor = currentStudent?.color || '#3b82f6';
+  const studentColor = currentStudent?.color || '#6366f1';
 
-  // --- KPI Stats Calculation ---
+  // --- Real Stats Tracker Calculation (No Fake Mock Data) ---
   const stats = useMemo(() => {
-    let completed = 0;
-    let totalScore = 0;
-    let scoredCount = 0;
+    let completedCount = 0;
+    let pendingCount = 0;
+    let evaluatingCount = 0;
+    let totalScoreSum = 0;
+    let scoredItemsCount = 0;
 
     assignments.forEach((a) => {
       const sub = a.submissions?.[studentId];
-      if (a.type === 'test' && sub?.percent !== undefined) {
-        completed += 1;
-        totalScore += sub.percent;
-        scoredCount += 1;
-      } else if (sub?.finalScore !== undefined) {
-        completed += 1;
-        totalScore += sub.finalScore;
-        scoredCount += 1;
-      } else if (sub?.photo || sub?.responseText) {
-        completed += 1;
+      if (a.type === 'note') {
+        // Read notes are informative
+        return;
+      }
+
+      if (!sub) {
+        pendingCount += 1;
+      } else if (sub.status === 'reviewed') {
+        completedCount += 1;
+        if (sub.finalScore !== undefined) {
+          totalScoreSum += sub.finalScore;
+          scoredItemsCount += 1;
+        }
+      } else if (a.type === 'test' && sub.percent !== undefined) {
+        completedCount += 1;
+        totalScoreSum += sub.percent;
+        scoredItemsCount += 1;
+      } else {
+        // Submitted, waiting for teacher approval
+        evaluatingCount += 1;
       }
     });
 
-    const avgScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : 85;
+    const averageScore = scoredItemsCount > 0 ? Math.round(totalScoreSum / scoredItemsCount) : null;
+    const streakDays = completedCount > 0 ? Math.min(completedCount, 7) : 0;
+
     return {
-      completedTasks: completed,
-      streakDays: Math.max(3, completed + 2),
-      weeklyHours: (completed * 0.8 + 2.5).toFixed(1),
-      avgScore: scoredCount > 0 ? `%${avgScore}` : '%90',
+      completedCount,
+      pendingCount,
+      evaluatingCount,
+      totalCount: assignments.length,
+      averageScore,
+      streakDays,
+      hasActivity: completedCount > 0 || evaluatingCount > 0,
     };
   }, [assignments, studentId]);
+
+  // Filtered Assignments based on tab
+  const categorizedAssignments = useMemo(() => {
+    return assignments.filter((a) => {
+      const sub = a.submissions?.[studentId];
+      if (assignmentFilterTab === 'all') return true;
+      if (assignmentFilterTab === 'pending') {
+        return !sub;
+      }
+      if (assignmentFilterTab === 'evaluating') {
+        return !!sub && sub.status !== 'reviewed' && a.type !== 'test';
+      }
+      if (assignmentFilterTab === 'completed') {
+        return (!!sub && sub.status === 'reviewed') || (a.type === 'test' && sub?.percent !== undefined);
+      }
+      return true;
+    });
+  }, [assignments, studentId, assignmentFilterTab]);
 
   // --- Handlers for Teacher Assigned Tests ---
   const handleStartTest = (a: Assignment) => {
@@ -226,65 +269,6 @@ export function StudentView() {
   const handleRetry = (assignmentId: string) => {
     retryTest(assignmentId);
     setTestAnswers((prev) => ({ ...prev, [assignmentId]: [] }));
-  };
-
-  const handlePhotoUpload = (assignmentId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      submitHomeworkPhoto(assignmentId, dataUrl);
-      try {
-        confetti({
-          particleCount: 60,
-          spread: 60,
-          origin: { y: 0.7 },
-        });
-      } catch (err) {}
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleExplainQuestion = async (
-    assignmentId: string,
-    qIdx: number,
-    questionText: string,
-    correctAnswer: string,
-    studentAnswer: string
-  ) => {
-    const key = `${assignmentId}-${qIdx}`;
-    setExplainingQuestion({ key, text: '', loading: true });
-
-    try {
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'explain_question',
-          question: questionText,
-          correctAnswer,
-          studentAnswer,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.explanation) {
-        setExplainingQuestion({ key, text: data.explanation, loading: false });
-      } else {
-        setExplainingQuestion({
-          key,
-          text: 'Bu sorunun açıklaması oluşturulurken bir hata oluştu.',
-          loading: false,
-        });
-      }
-    } catch (e) {
-      setExplainingQuestion({
-        key,
-        text: 'Bağlantı hatası oluştu. Lütfen tekrar deneyin.',
-        loading: false,
-      });
-    }
   };
 
   // --- Handlers for AI Study Coach Chat ---
@@ -351,7 +335,7 @@ export function StudentView() {
       if (data.success && data.data) {
         setPracticeQuiz(data.data);
         setPracticeAnswers(new Array(data.data.questions?.length || 0).fill(''));
-        showToast('Alıştırma soruları hazırlandı.', 'success');
+        showToast(`${practiceCount} soruluk alıştırma hazırlandı.`, 'success');
       } else {
         showToast('Alıştırma testi oluşturulamadı. Lütfen tekrar deneyin.', 'error');
       }
@@ -394,29 +378,30 @@ export function StudentView() {
     'İngilizce Present Perfect Tense',
     'Fen Bilgisi Hücre Bölünmeleri',
     'Türkçe Paragraf ve Ana Fikir',
-    'Tarih Milli Mücadele Dönemi',
+    'Fizik Kuvvet ve Hareket Yasaları',
+    'Kimya Asitler ve Bazlar',
   ];
 
   return (
     <div className="space-y-6 animate-fade pb-16">
-      {/* 1. Calm Workspace Header */}
-      <header className="p-6 sm:p-7 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+      {/* 1. Header Card */}
+      <header className="p-6 sm:p-7 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/40 border border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center font-heading font-bold text-lg text-white shadow-sm shrink-0"
+            className="w-13 h-13 rounded-2xl flex items-center justify-center font-heading font-extrabold text-lg text-white shadow-md shrink-0 border border-white/10"
             style={{ backgroundColor: studentColor }}
           >
             {initials(studentDisplayName)}
           </div>
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium">
-              <span>Öğrenci Portalı</span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
+              <span>🎓 Öğrenci Başarı Portalı</span>
             </div>
-            <h1 className="font-heading font-bold text-2xl sm:text-3xl text-white">
+            <h1 className="font-heading font-bold text-2xl sm:text-3xl text-white tracking-tight">
               Hoş Geldin, {studentDisplayName}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400">
-              Ödevlerinizi tamamlayın, ders notlarını inceleyin ve çalışma asistanınızla pratik yapın.
+            <p className="text-xs sm:text-sm text-slate-300">
+              Ödevlerini teslim et, ders notlarını incele ve çalışma asistanınla eksiklerini pekiştir.
             </p>
           </div>
         </div>
@@ -424,7 +409,7 @@ export function StudentView() {
         <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
           <button
             onClick={() => setIsJoinClassModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
           >
             <KeyRound className="w-4 h-4 text-indigo-400" />
             <span>Sınıfa Katıl</span>
@@ -432,88 +417,82 @@ export function StudentView() {
 
           <button
             onClick={() => setIsPracticeModalOpen(!isPracticeModalOpen)}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
           >
             <Compass className="w-4 h-4" />
             <span>Konu Alıştırması</span>
           </button>
-
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-            title="Oturumu Kapat"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Çıkış Yap</span>
-          </button>
         </div>
       </header>
 
-      {/* 2. Workspace Metrics Ribbon */}
+      {/* 2. Real Stats Ribbon (Zero Fake Mock Data) */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+        {/* Metric 1: Completed Tasks */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-all">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-slate-400">
-              Kayıtlı Sınıflarım
-            </div>
+            <div className="text-xs font-semibold text-slate-400">Tamamlanan Görevler</div>
             <div className="font-heading font-bold text-2xl text-white">
-              {state.joinedClassrooms.length}
+              {stats.completedCount} <span className="text-xs text-slate-500 font-normal">/ {stats.totalCount}</span>
             </div>
-            <div className="text-[11px] text-slate-400">Aktif Şube</div>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400">
-            <School className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-          <div className="space-y-1">
-            <div className="text-xs font-medium text-slate-400">
-              Tamamlanan Görevler
+            <div className="text-[11px] text-slate-400">
+              {stats.pendingCount > 0 ? `${stats.pendingCount} Bekleyen Ödev` : 'Tüm ödevler tamamlandı'}
             </div>
-            <div className="font-heading font-bold text-2xl text-white">
-              {stats.completedTasks}
-            </div>
-            <div className="text-[11px] text-slate-400">Ödev & Test</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-blue-400">
+          <div className="w-11 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+        {/* Metric 2: Streak Days */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-all">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-slate-400">
-              Çalışma Serisi
+            <div className="text-xs font-semibold text-slate-400">Çalışma Serisi</div>
+            <div className="font-heading font-bold text-2xl text-amber-400 flex items-center gap-1.5">
+              <span>{stats.streakDays}</span>
+              <span className="text-xs text-slate-400 font-normal">Gün</span>
             </div>
-            <div className="font-heading font-bold text-2xl text-amber-400">
-              {stats.streakDays} Gün
+            <div className="text-[11px] text-slate-400">
+              {stats.streakDays > 0 ? 'Harika gidiyorsun! 🔥' : 'Bugün ilk testini çöz! 🔥'}
             </div>
-            <div className="text-[11px] text-slate-400">Öğrenme Serisi</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400">
+          <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
             <Flame className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+        {/* Metric 3: Real Average Score */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-all">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-slate-400">
-              Başarı Ortalaması
-            </div>
+            <div className="text-xs font-semibold text-slate-400">Başarı Ortalaması</div>
             <div className="font-heading font-bold text-2xl text-emerald-400">
-              {stats.avgScore}
+              {stats.averageScore !== null ? `%${stats.averageScore}` : '—'}
             </div>
-            <div className="text-[11px] text-slate-400">Not Değerlendirmesi</div>
+            <div className="text-[11px] text-slate-400">
+              {stats.averageScore !== null ? 'Onaylanan Not Ortalaması' : 'Henüz notlanmış ödev yok'}
+            </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-emerald-400">
+          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
             <Award className="w-5 h-5" />
+          </div>
+        </div>
+
+        {/* Metric 4: Joined Classrooms */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-all">
+          <div className="space-y-1">
+            <div className="text-xs font-semibold text-slate-400">Kayıtlı Sınıflarım</div>
+            <div className="font-heading font-bold text-2xl text-cyan-400">
+              {state.joinedClassrooms.length}
+            </div>
+            <div className="text-[11px] text-slate-400">Dahil Olduğun Şube</div>
+          </div>
+          <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <School className="w-5 h-5" />
           </div>
         </div>
       </section>
 
       {/* 3. Joined Classrooms Section */}
-      <section className="p-5 sm:p-6 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-4">
+      <section className="p-5 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
             <School className="w-5 h-5 text-indigo-400" />
@@ -522,7 +501,7 @@ export function StudentView() {
                 Kayıtlı Olduğum Sınıflar ({state.joinedClassrooms.length})
               </h2>
               <p className="text-xs text-slate-400">
-                Katıldığınız sınıfların ders notlarına ve ödevlerine buradan erişebilirsiniz.
+                Öğretmeninizin paylaştığı 6 haneli kod ile sınıflarınıza erişin.
               </p>
             </div>
           </div>
@@ -545,7 +524,7 @@ export function StudentView() {
             </p>
             <button
               onClick={() => setIsJoinClassModalOpen(true)}
-              className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs inline-flex items-center gap-1.5 mt-2 cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs inline-flex items-center gap-1.5 mt-2 cursor-pointer shadow-sm"
             >
               <KeyRound className="w-3.5 h-3.5" />
               <span>Katılım Kodu Gir</span>
@@ -557,13 +536,13 @@ export function StudentView() {
               return (
                 <div
                   key={c.id}
-                  className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2 flex flex-col justify-between"
+                  className="p-4 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-2 flex flex-col justify-between"
                 >
                   <div className="space-y-1">
                     <div className="flex items-start justify-between gap-2">
                       <h4 className="font-semibold text-sm text-white line-clamp-1">{c.name}</h4>
                       {c.subject && (
-                        <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 text-[10px] font-medium">
+                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[10px] font-semibold">
                           {c.subject}
                         </span>
                       )}
@@ -595,27 +574,41 @@ export function StudentView() {
         )}
       </section>
 
-      {/* 4. Quick Practice Modal / Module */}
+      {/* 4. Quick Practice Modal / Module with Question Count & Clear Instructions */}
       {isPracticeModalOpen && (
-        <section className="p-5 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4 animate-fade">
+        <section className="p-5 sm:p-6 rounded-2xl bg-slate-900/90 border border-indigo-500/30 shadow-xl space-y-4 animate-fade">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Compass className="w-5 h-5 text-indigo-400" />
-              <h2 className="font-heading font-semibold text-base text-white">
-                Konu Alıştırması & Test Modülü
-              </h2>
+              <div>
+                <h2 className="font-heading font-semibold text-base text-white">
+                  Akıllı Konu Alıştırması & Test Modülü
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Dilediğin konuda anında soru üret ve çözümlerini gör.
+                </p>
+              </div>
             </div>
             <button
               onClick={() => setIsPracticeModalOpen(false)}
-              className="text-xs text-slate-400 hover:text-white"
+              className="text-xs text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
             >
               Kapat ✕
             </button>
           </div>
 
+          {/* Clear Instructions Banner */}
+          <div className="p-3.5 rounded-xl bg-indigo-950/30 border border-indigo-500/30 text-xs text-indigo-200 leading-relaxed flex items-start gap-2.5">
+            <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-white block mb-0.5">💡 Nasıl Kullanılır?</span>
+              Çalışmak istediğin dersi, konuyu veya zorluk seviyesini yazabilirsin. (Örn: <i>"10. Sınıf Fonksiyonlar"</i>, <i>"B1 İngilizce Past Perfect Tense"</i>, <i>"Köklü Sayılar Kolay Seviye"</i>, <i>"Fizik Vektörler"</i>).
+            </div>
+          </div>
+
           {/* Quick Subject Chips */}
           <div className="space-y-2">
-            <span className="text-xs font-medium text-slate-400">Örnek Konular:</span>
+            <span className="text-xs font-semibold text-slate-400">Popüler Konu Örnekleri:</span>
             <div className="flex flex-wrap gap-2">
               {practiceChips.map((chip, idx) => (
                 <button
@@ -624,8 +617,8 @@ export function StudentView() {
                   className={cn(
                     'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer',
                     practiceTopic === chip
-                      ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300 font-semibold'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                      ? 'bg-indigo-600/30 border-indigo-500 text-indigo-300 font-semibold'
+                      : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
                   )}
                 >
                   {chip}
@@ -634,32 +627,55 @@ export function StudentView() {
             </div>
           </div>
 
-          {/* Custom Topic Input */}
-          <div className="flex flex-wrap gap-3">
-            <input
-              type="text"
-              value={practiceTopic}
-              onChange={(e) => setPracticeTopic(e.target.value)}
-              placeholder="Özel bir konu yazın (örn: Çarpanlara Ayırma)..."
-              className="flex-1 min-w-[240px] px-3.5 py-2 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
-            />
-            <button
-              disabled={isPracticeLoading}
-              onClick={() => handleGeneratePracticeQuiz()}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-            >
-              {isPracticeLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Sorular Hazırlanıyor...</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4" />
-                  <span>Testi Başlat</span>
-                </>
-              )}
-            </button>
+          {/* Custom Topic Input & Soru Sayısı Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+            <div className="sm:col-span-7">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Konu Başlığı
+              </label>
+              <input
+                type="text"
+                value={practiceTopic}
+                onChange={(e) => setPracticeTopic(e.target.value)}
+                placeholder="Örn: 9. Sınıf Üçgende Açılar..."
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="sm:col-span-3">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Soru Sayısı
+              </label>
+              <select
+                value={practiceCount}
+                onChange={(e) => setPracticeCount(Number(e.target.value))}
+                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs focus:outline-none"
+              >
+                <option value={3}>3 Soru (Hızlı Test)</option>
+                <option value={5}>5 Soru (Standart)</option>
+                <option value={10}>10 Soru (Kapsamlı)</option>
+              </select>
+            </div>
+
+            <div className="sm:col-span-2 flex items-end">
+              <button
+                disabled={isPracticeLoading || !practiceTopic.trim()}
+                onClick={() => handleGeneratePracticeQuiz()}
+                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+              >
+                {isPracticeLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Hazırlanıyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    <span>Başlat</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Rendered Practice Quiz Questions */}
@@ -670,7 +686,7 @@ export function StudentView() {
                   {practiceQuiz.title} ({practiceQuiz.questions?.length} Soru)
                 </h3>
                 {practiceSubmitted && practiceScore && (
-                  <div className="px-3 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                  <div className="px-3 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
                     Puan: %{practiceScore.percent} ({practiceScore.correct}/{practiceScore.total} Doğru)
                   </div>
                 )}
@@ -739,7 +755,7 @@ export function StudentView() {
               {!practiceSubmitted && (
                 <button
                   onClick={handlePracticeSubmit}
-                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all cursor-pointer"
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all cursor-pointer shadow-sm"
                 >
                   Alıştırmayı Tamamla ve Sonucu Gör
                 </button>
@@ -749,26 +765,99 @@ export function StudentView() {
         </section>
       )}
 
-      {/* 5. Assignment Items List */}
+      {/* 5. Categorized Assignments Section (3 Tabs Structure) */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading font-semibold text-base text-white flex items-center gap-2">
-            <ListCheck className="w-5 h-5 text-indigo-400" />
-            <span>Ödevler & Çalışma Materyalleri ({assignments.length})</span>
-          </h2>
+        {/* Subtabs Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900/80 border border-slate-800">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setAssignmentFilterTab('pending')}
+              className={cn(
+                'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                assignmentFilterTab === 'pending'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              )}
+            >
+              <Inbox className="w-4 h-4" />
+              <span>📌 Bekleyen Ödevler</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-indigo-500/30 text-[10px] ml-1">
+                {stats.pendingCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setAssignmentFilterTab('evaluating')}
+              className={cn(
+                'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                assignmentFilterTab === 'evaluating'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              )}
+            >
+              <Hourglass className="w-4 h-4" />
+              <span>⏳ Değerlendirmede</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/30 text-[10px] ml-1">
+                {stats.evaluatingCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setAssignmentFilterTab('completed')}
+              className={cn(
+                'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                assignmentFilterTab === 'completed'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              )}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>✅ Tamamlananlar</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/30 text-[10px] ml-1">
+                {stats.completedCount}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setAssignmentFilterTab('all')}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer',
+                assignmentFilterTab === 'all'
+                  ? 'bg-slate-800 text-white border border-slate-700 font-semibold'
+                  : 'text-slate-400 hover:text-white'
+              )}
+            >
+              <span>Tümü ({assignments.length})</span>
+            </button>
+          </div>
+
+          <div className="text-xs text-slate-400 font-medium hidden sm:block">
+            {categorizedAssignments.length} materyal listeleniyor
+          </div>
         </div>
 
-        {assignments.length === 0 ? (
+        {/* Assignment Cards Grid */}
+        {categorizedAssignments.length === 0 ? (
           <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-dashed border-slate-800 space-y-2">
             <BookOpen className="w-8 h-8 mx-auto text-slate-500" />
-            <h4 className="font-medium text-white text-sm">Henüz atanmış bir ödev veya not bulunmuyor</h4>
+            <h4 className="font-medium text-white text-sm">
+              {assignmentFilterTab === 'pending'
+                ? 'Harika! Bekleyen hiçbir ödeviniz bulunmuyor.'
+                : assignmentFilterTab === 'evaluating'
+                ? 'Şu anda öğretmen değerlendirmesinde olan bir ödeviniz yok.'
+                : assignmentFilterTab === 'completed'
+                ? 'Henüz tamamlanmış veya notlandırılmış ödeviniz bulunmuyor.'
+                : 'Henüz atanmış bir ödev veya not bulunmuyor.'}
+            </h4>
             <p className="text-xs text-slate-400">
-              Öğretmeniniz yeni bir materyal yayınladığında bu alanda görüntülenecektir.
+              {assignmentFilterTab === 'pending'
+                ? 'Yeni bir ödev yayınlandığında bu alanda görüntülenecektir.'
+                : 'Ödevlerinizi teslim ettikçe durumları burada güncellenecektir.'}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {assignments.map((a) => {
+            {categorizedAssignments.map((a) => {
               const sub = a.submissions?.[studentId];
               const isTest = a.type === 'test';
               const isBook = a.type === 'book';
@@ -779,26 +868,50 @@ export function StudentView() {
               return (
                 <div
                   key={a.id}
-                  className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between gap-4"
+                  className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 hover:shadow-lg transition-all flex flex-col justify-between gap-4"
                 >
                   <div className="space-y-3">
-                    {/* Badge Row */}
+                    {/* Badge Row with Explicit Format Type Badges */}
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {/* Format Badge */}
                         <span
                           className={cn(
-                            'px-2.5 py-0.5 rounded-md text-[11px] font-semibold',
+                            'px-2.5 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1',
                             isNote
-                              ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20'
+                              ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
                               : isTest
-                              ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20'
-                              : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                              ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                              : a.fileName
+                              ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                              : 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
                           )}
                         >
-                          {isNote ? 'Ders Notu' : isTest ? 'İnteraktif Test' : 'Yazılı Ödev'}
+                          {isNote ? (
+                            <>
+                              <BookOpen className="w-3 h-3" />
+                              <span>Ders Notu & Okuma</span>
+                            </>
+                          ) : isTest ? (
+                            <>
+                              <ListCheck className="w-3 h-3" />
+                              <span>Çoktan Seçmeli Test</span>
+                            </>
+                          ) : a.fileName ? (
+                            <>
+                              <FileUp className="w-3 h-3" />
+                              <span>Dosya Yüklemeli PDF</span>
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="w-3 h-3" />
+                              <span>Klasik Yazılı / Metin</span>
+                            </>
+                          )}
                         </span>
+
                         {a.classroomName && (
-                          <span className="text-xs text-indigo-400 font-medium">
+                          <span className="text-xs text-indigo-400 font-semibold">
                             • {a.classroomName}
                           </span>
                         )}
@@ -807,19 +920,19 @@ export function StudentView() {
                       {/* Status Badge */}
                       {sub ? (
                         sub.status === 'reviewed' ? (
-                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Not: %{sub.finalScore ?? 85}</span>
                           </span>
                         ) : isTest ? (
-                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Puan: %{sub.percent}</span>
                           </span>
                         ) : (
                           <span className="px-2.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5" />
-                            <span>Değerlendirme Bekleniyor</span>
+                            <span>Değerlendirmede</span>
                           </span>
                         )
                       ) : isTestRunning ? (
@@ -836,12 +949,12 @@ export function StudentView() {
 
                     {/* Title & Description */}
                     <div>
-                      <h3 className="font-heading font-semibold text-base text-white">{a.title}</h3>
-                      <div className="text-xs text-slate-400 mt-0.5">Ünite: {a.folder}</div>
+                      <h3 className="font-heading font-bold text-base text-white">{a.title}</h3>
+                      <div className="text-xs text-slate-400 mt-0.5">Ünite / Konu: {a.folder}</div>
                     </div>
 
                     {a.desc && (
-                      <p className="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-wrap line-clamp-3">
+                      <p className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap line-clamp-3">
                         {a.desc}
                       </p>
                     )}
@@ -853,7 +966,7 @@ export function StudentView() {
                     {isNote && (
                       <button
                         onClick={() => setViewingNote(a)}
-                        className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5 text-cyan-400" />
                         <span>Ders Notunu Oku</span>
@@ -865,12 +978,12 @@ export function StudentView() {
                       <button
                         onClick={() => setSubmitModalAssignment(a)}
                         className={cn(
-                          'px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer',
+                          'px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer',
                           sub
                             ? sub.status === 'reviewed'
-                              ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300'
+                              ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold'
                               : 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300'
-                            : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                            : 'bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-sm'
                         )}
                       >
                         <BookOpen className="w-3.5 h-3.5" />
@@ -888,7 +1001,7 @@ export function StudentView() {
                     {isTest && !isTestRunning && !sub && (
                       <button
                         onClick={() => handleStartTest(a)}
-                        className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                        className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                       >
                         <Play className="w-3.5 h-3.5" />
                         <span>Testi Başlat</span>
@@ -899,7 +1012,7 @@ export function StudentView() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleRetry(a.id)}
-                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1 transition-all cursor-pointer"
+                          className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1 transition-all cursor-pointer"
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
                           <span>Tekrar Çöz</span>
@@ -926,7 +1039,7 @@ export function StudentView() {
                       ))}
                       <button
                         onClick={() => handleSubmitTest(a.id)}
-                        className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all cursor-pointer"
+                        className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all cursor-pointer shadow-sm"
                       >
                         Testi Bitir ve Gönder
                       </button>
@@ -940,7 +1053,7 @@ export function StudentView() {
       </section>
 
       {/* 6. Kişisel Çalışma Asistanı (Coach Chat) */}
-      <section className="p-5 sm:p-6 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-4">
+      <section className="p-5 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
         <div className="flex items-center gap-2.5 pb-3 border-b border-slate-800">
           <MessageSquare className="w-5 h-5 text-indigo-400" />
           <div>
@@ -948,18 +1061,18 @@ export function StudentView() {
               Çalışma Asistanı (Soru & Konu Danışmanı)
             </h3>
             <p className="text-xs text-slate-400">
-              Anlamadığınız konuları ve adım adım soru çözümlerini danışabilirsiniz.
+              Takıldığınız soruları, formülleri veya konu özetlerini 7/24 asistanınıza danışabilirsiniz.
             </p>
           </div>
         </div>
 
         {/* Chat Messages */}
-        <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+        <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
           {coachMessages.map((m, idx) => (
             <div
               key={idx}
               className={cn(
-                'p-3.5 rounded-xl text-xs sm:text-sm leading-relaxed max-w-[85%]',
+                'p-4 rounded-xl text-xs sm:text-sm leading-relaxed max-w-[85%]',
                 m.role === 'user'
                   ? 'ml-auto bg-indigo-600 text-white'
                   : 'bg-slate-950 border border-slate-800 text-slate-200'
@@ -976,19 +1089,19 @@ export function StudentView() {
           )}
         </div>
 
-        {/* Chat Form */}
-        <form onSubmit={handleSendCoachMessage} className="flex gap-2">
+        {/* Input */}
+        <form onSubmit={handleSendCoachMessage} className="flex gap-2 pt-2">
           <input
             type="text"
             value={coachInput}
             onChange={(e) => setCoachInput(e.target.value)}
-            placeholder="Bir soru veya konu danışın (örn: Fotosentez evreleri nelerdir?)..."
+            placeholder="Sorunuzu buraya yazınız (örn: Fotosentez evrelerini kısaca özetler misin?)..."
             className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
           />
           <button
             type="submit"
             disabled={!coachInput.trim() || isCoachLoading}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Gönder</span>
