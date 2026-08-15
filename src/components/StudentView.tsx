@@ -25,6 +25,7 @@ import {
   UploadCloud,
   ChevronDown,
   BookOpen,
+  LogOut,
 } from 'lucide-react';
 import { NoteModal } from './NoteModal';
 import { PhotoModal } from './PhotoModal';
@@ -37,11 +38,13 @@ export function StudentView() {
     submitTestAnswers,
     retryTest,
     submitHomeworkPhoto,
+    logout,
     showToast,
   } = useEduFlow();
 
-  const currentStudent = getStudentById(state.currentStudentId);
-  const assignments = getVisibleAssignments(state.currentStudentId);
+  const studentId = state.currentStudentId || state.session?.studentId || state.session?.supabaseId || '';
+  const currentStudent = getStudentById(studentId);
+  const assignments = getVisibleAssignments(studentId);
 
   // Timers state: { [assignmentId]: { remaining: number, active: boolean } }
   const [timers, setTimers] = useState<Record<string, { remaining: number; active: boolean }>>({});
@@ -91,13 +94,16 @@ export function StudentView() {
     return () => clearInterval(interval);
   }, [testAnswers, submitTestAnswers]);
 
-  if (!currentStudent) {
+  if (!state.session && !state.currentStudentId) {
     return (
-      <div className="text-center py-20 text-slate-500">
+      <div className="text-center py-20 text-slate-500 space-y-3">
         <p>Lütfen önce öğrenci girişi yapınız.</p>
       </div>
     );
   }
+
+  const studentDisplayName = state.session?.name || currentStudent?.name || 'Öğrenci';
+  const studentColor = currentStudent?.color || '#3b82f6';
 
   const handleStartTest = (a: Assignment) => {
     const limit = a.timeLimit || 120;
@@ -213,48 +219,65 @@ export function StudentView() {
 
   return (
     <div className="space-y-8 animate-fade pb-12">
-      {/* Header */}
-      <div>
-        <div className="text-xs uppercase font-bold tracking-widest text-blue-400">
-          Ders Çalışma Modu
+      {/* Dynamic Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-gradient-to-r from-blue-950/40 via-[#0d1424] to-[#0a0f1d] border border-blue-500/20 shadow-[0_0_30px_rgba(59,130,246,0.05)]">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold mb-2">
+            <span>🎓 Öğrenci Hesabı</span>
+          </div>
+          <h2 className="font-heading font-extrabold text-2xl sm:text-3xl text-white">
+            Hoş Geldin, <span className="text-blue-400">{studentDisplayName}</span> 👋
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            Size atanan notları inceleyin, süreli testleri çözün ve kitap sayfası fotoğraflarınızı teslim edin.
+          </p>
         </div>
-        <h2 className="font-heading font-extrabold text-3xl text-white">
-          Öğrenci <span className="text-blue-400">Portalı</span>
-        </h2>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Size atanan notları inceleyin, süreli testleri çözün ve kitap sayfası fotoğraflarınızı teslim edin.
-        </p>
+
+        <button
+          onClick={logout}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 hover:text-red-200 text-xs font-bold transition-all cursor-pointer shadow-sm self-start sm:self-auto"
+          title="Oturumu Kapat"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Çıkış Yap</span>
+        </button>
       </div>
 
-      {/* Active Student Card */}
+      {/* Active Student Info Card */}
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-900/20 via-sky-900/10 to-transparent border border-blue-500/30 flex items-center gap-4">
         <div
           className="w-12 h-12 rounded-xl flex items-center justify-center font-heading font-bold text-base text-white shadow-lg shrink-0"
-          style={{ backgroundColor: currentStudent.color }}
+          style={{ backgroundColor: studentColor }}
         >
-          {initials(currentStudent.name)}
+          {initials(studentDisplayName)}
         </div>
         <div>
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Aktif Öğrenci
+            Aktif Profil
           </div>
-          <div className="font-heading font-bold text-lg text-white">{currentStudent.name}</div>
+          <div className="font-heading font-bold text-lg text-white">{studentDisplayName}</div>
         </div>
       </div>
 
-      {/* Assignment Feed */}
+      {/* Assignment Feed / Empty State */}
       <div className="space-y-5">
         {assignments.length === 0 ? (
-          <div className="p-12 text-center rounded-3xl bg-white/[0.02] border border-white/10 text-slate-500 space-y-2">
-            <BookOpen className="w-12 h-12 mx-auto text-slate-600 mb-2" />
-            <div className="font-heading font-bold text-white">Henüz Ödev Bulunmuyor</div>
-            <p className="text-xs text-slate-400">
-              Öğretmeniniz size veya sınıfa yeni bir içerik yayınladığında burada görünecektir.
-            </p>
+          <div className="p-10 sm:p-14 text-center rounded-3xl bg-gradient-to-b from-blue-950/20 to-transparent border border-dashed border-blue-500/30 text-slate-400 space-y-4 animate-fade">
+            <div className="w-16 h-16 mx-auto rounded-3xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-[0_0_25px_rgba(59,130,246,0.2)] text-2xl">
+              🎉
+            </div>
+            <div className="space-y-2 max-w-md mx-auto">
+              <h3 className="font-heading font-bold text-lg sm:text-xl text-white">
+                Harika! Şu an tamamlanması gereken bekleyen bir ödeviniz bulunmuyor.
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                Öğretmeniniz yeni bir ders notu, test veya kitap ödevi yayınladığında burada görüntülenecektir.
+              </p>
+            </div>
           </div>
         ) : (
           assignments.map((a) => {
-            const sid = currentStudent.id;
+            const sid = studentId;
             const sub = a.submissions?.[sid];
             const isTest = a.type === 'test';
             const isBook = a.type === 'book';
@@ -562,7 +585,7 @@ export function StudentView() {
                               setViewingPhoto({
                                 url: sub.photo!,
                                 title: a.title,
-                                studentName: currentStudent.name,
+                                studentName: studentDisplayName,
                               })
                             }
                           />

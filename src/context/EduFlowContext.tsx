@@ -38,8 +38,6 @@ interface EduFlowContextType {
   authModalInitialRole: 'teacher' | 'student';
   openAuthModal: (role?: 'teacher' | 'student') => void;
   closeAuthModal: () => void;
-  loginTeacher: (u: string, p: string) => boolean;
-  loginStudent: (u: string, p: string) => boolean;
   loginSupabaseUser: (params: { role: Role; name: string; email: string; supabaseId?: string }) => void;
   logout: () => void;
   addStudent: (name: string, password: string) => boolean;
@@ -50,87 +48,49 @@ interface EduFlowContextType {
   retryTest: (assignmentId: string) => void;
   submitHomeworkPhoto: (assignmentId: string, photoDataUrl: string) => void;
   saveFeedback: (assignmentId: string, studentId: string, feedback: string) => void;
-  resetAllData: () => void;
   getStudentById: (id?: string | null) => Student | undefined;
   getVisibleAssignments: (studentId?: string | null) => Assignment[];
+  refreshData: () => Promise<void>;
 }
 
 const EduFlowContext = createContext<EduFlowContextType | null>(null);
 
-function getSeedData(): EduFlowState {
-  const s1 = uid();
-  const s2 = uid();
-  const s3 = uid();
-
+function getInitialState(): EduFlowState {
   return {
     session: null,
     currentStudentId: null,
-    auth: {
-      teacherUser: 'ogretmen',
-      teacherPass: '1234',
-    },
-    students: [
-      { id: s1, name: 'Ayşe Yılmaz', color: '#3b82f6', username: 'ayse', password: 'ayse123' },
-      { id: s2, name: 'Mehmet Demir', color: '#10b981', username: 'mehmet', password: 'mehmet123' },
-      { id: s3, name: 'Zeynep Kaya', color: '#9d4edd', username: 'zeynep', password: 'zeynep123' },
-    ],
-    assignments: [
-      {
-        id: uid(),
-        type: 'note',
-        title: 'Past Simple Tense — Konu Anlatımı',
-        folder: 'Past Simple Tense',
-        target: 'all',
-        desc: 'Geçmiş zaman (Past Simple) yapısı: Düzenli fiiller -ed takısı alır, düzensiz fiillerin 2. halleri (V2) kullanılır. Olumsuzda "did not + V1", soruda "Did + özne + V1" kalıbı kullanılır.\n\nÖrnekler:\n- I played football yesterday.\n- She visited her grandparents.\n- They did not come to the party.',
-        fileName: 'past_simple_ders_notu.pdf',
-        fileData: null,
-        createdAt: Date.now() - 86400000,
-        submissions: {},
-      },
-      {
-        id: uid(),
-        type: 'note',
-        title: 'Haftalık Duyuru',
-        folder: 'Genel',
-        target: 'all',
-        desc: 'Sevgili öğrenciler, bu hafta Present Perfect testini mutlaka çözün. Sorularınız için mesaj atabilirsiniz. Başarılar! 📚',
-        fileName: null,
-        fileData: null,
-        createdAt: Date.now() - 70000000,
-        submissions: {},
-      },
-      {
-        id: uid(),
-        type: 'test',
-        title: 'Present Perfect Alıştırması',
-        folder: 'Present Perfect Tense',
-        target: 'all',
-        timeLimit: 120, // 2 minutes
-        desc: 'Aşağıdaki boşlukları have/has ile doldurun.',
-        questions: [
-          { q: "'I ___ never been to Paris.' boşluğa gelen?", a: 'have' },
-          { q: "'She ___ just finished her homework.' boşluğa gelen?", a: 'has' },
-          { q: "'They ___ lived here since 2010.' boşluğa gelen?", a: 'have' },
-        ],
-        createdAt: Date.now() - 43200000,
-        submissions: {},
-      },
-      {
-        id: uid(),
-        type: 'book',
-        title: 'Test Kitabı Sayfa 42',
-        folder: 'Vocabulary Unit 3',
-        target: s1,
-        desc: 'Kitabın 42. sayfasındaki tüm kelime sorularını çözüp sayfanın fotoğrafını yükleyin.',
-        createdAt: Date.now() - 3600000,
-        submissions: {},
-      },
-    ],
+    students: [],
+    assignments: [],
+  };
+}
+
+// Helper to fetch user profile from Supabase profiles table with fallback
+async function getUserProfile(userId: string, userMeta: any, userEmail?: string): Promise<{ name: string; role: Role }> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('full_name, role')
+      .eq('id', userId)
+      .single();
+
+    if (data && data.full_name) {
+      return {
+        name: data.full_name,
+        role: (data.role as Role) || (userMeta?.role as Role) || 'student',
+      };
+    }
+  } catch (e) {
+    // Graceful fallback to user_metadata
+  }
+
+  return {
+    name: userMeta?.full_name || userEmail?.split('@')[0] || 'Kullanıcı',
+    role: (userMeta?.role as Role) || 'student',
   };
 }
 
 export function EduFlowProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<EduFlowState>(() => getSeedData());
+  const [state, setState] = useState<EduFlowState>(() => getInitialState());
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'teacher' | 'student'>('home');
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -149,14 +109,56 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     setToast(null);
   }, []);
 
-  // Load from localStorage
+  // Fetch real assignments from Supabase
+  const loadSupabaseAssignments = useCallback(async (userRole: Role, userId: string) => {
+    try {
+      let query = supabase.from('assignments').select('*');
+      if (userRole === 'teacher') {
+        query = query.eq('teacher_id', userId);
+      }
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (data && Array.isArray(data)) {
+        const mapped: Assignment[] = data.map((row: any) => ({
+          id: row.id,
+          type: row.type as AssignmentType,
+          title: row.title,
+          folder: row.folder || 'Genel',
+          target: row.target || 'all',
+          desc: row.desc || '',
+          fileName: row.file_name || row.fileName || null,
+          fileData: row.file_data || row.fileData || null,
+          timeLimit: row.time_limit || row.timeLimit || 0,
+          questions: row.questions || [],
+          createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+          submissions: row.submissions || {},
+          teacherId: row.teacher_id || row.teacherId,
+        }));
+
+        setState((prev) => ({
+          ...prev,
+          assignments: mapped,
+        }));
+      }
+    } catch (e) {
+      console.warn('Supabase assignments table sync notice:', e);
+    }
+  }, []);
+
+  // Load from localStorage cache
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed.students && parsed.auth) {
-          setState(parsed);
+        if (parsed) {
+          setState({
+            session: parsed.session || null,
+            currentStudentId: parsed.currentStudentId || null,
+            students: Array.isArray(parsed.students) ? parsed.students : [],
+            assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
+          });
+
           if (parsed.session?.role === 'teacher') {
             setActiveTab('teacher');
           } else if (parsed.session?.role === 'student') {
@@ -165,18 +167,18 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (e) {
-      console.error('Failed to load state from localStorage', e);
+      console.error('Failed to load state from cache', e);
     }
     setIsLoaded(true);
   }, []);
 
-  // Save to localStorage
+  // Save to localStorage cache
   useEffect(() => {
     if (!isLoaded) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
-      console.error('Failed to save state to localStorage', e);
+      console.error('Failed to save state to cache', e);
     }
   }, [state, isLoaded]);
 
@@ -199,7 +201,6 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       if (isEmailVerified) {
         showToast('🎉 E-posta adresiniz başarıyla doğrulandı! Giriş yapabilirsiniz.', 'success');
 
-        // Clean URL cleanly without reload
         const cleanUrl = window.location.pathname;
         window.history.replaceState(null, '', cleanUrl);
       }
@@ -208,31 +209,33 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     }
   }, [showToast]);
 
-  // Sync Supabase Auth Session & Optimize Re-renders
+  // Dynamic Supabase Session & Profile Synchronization
   useEffect(() => {
     let isMounted = true;
 
     // Fast initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!isMounted || !session?.user) return;
 
-      const metadata = session.user.user_metadata || {};
-      const role = (metadata.role as Role) || 'student';
-      const name = metadata.full_name || session.user.email?.split('@')[0] || 'Kullanıcı';
+      const profile = await getUserProfile(
+        session.user.id,
+        session.user.user_metadata,
+        session.user.email
+      );
+
+      if (!isMounted) return;
+
+      const role = profile.role;
+      const name = profile.name;
       const email = session.user.email || '';
 
       setState((prev) => {
-        // If already in sync with this Supabase user, skip re-render
-        if (prev.session?.supabaseId === session.user.id && prev.session?.role === role) {
-          return prev;
-        }
-
         let studentId: string | undefined = undefined;
         let nextStudents = [...prev.students];
 
         if (role === 'student') {
           let foundStudent = nextStudents.find(
-            (s) => s.name.toLowerCase() === name.toLowerCase()
+            (s) => s.id === session.user.id || s.name.toLowerCase() === name.toLowerCase()
           );
           if (!foundStudent) {
             const username = slugUser(name, nextStudents.map((s) => s.username));
@@ -260,9 +263,12 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
           currentStudentId: role === 'student' ? (studentId || null) : null,
         };
       });
+
+      // Fetch assignments from Supabase DB
+      loadSupabaseAssignments(role, session.user.id);
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
 
       if (event === 'SIGNED_OUT') {
@@ -276,22 +282,25 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         });
       } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         if (session?.user) {
-          const metadata = session.user.user_metadata || {};
-          const role = (metadata.role as Role) || 'student';
-          const name = metadata.full_name || session.user.email?.split('@')[0] || 'Kullanıcı';
+          const profile = await getUserProfile(
+            session.user.id,
+            session.user.user_metadata,
+            session.user.email
+          );
+
+          if (!isMounted) return;
+
+          const role = profile.role;
+          const name = profile.name;
           const email = session.user.email || '';
 
           setState((prev) => {
-            if (prev.session?.supabaseId === session.user.id && prev.session?.role === role) {
-              return prev;
-            }
-
             let studentId: string | undefined = undefined;
             let nextStudents = [...prev.students];
 
             if (role === 'student') {
               let foundStudent = nextStudents.find(
-                (s) => s.name.toLowerCase() === name.toLowerCase()
+                (s) => s.id === session.user.id || s.name.toLowerCase() === name.toLowerCase()
               );
               if (!foundStudent) {
                 const username = slugUser(name, nextStudents.map((s) => s.username));
@@ -319,6 +328,8 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
               currentStudentId: role === 'student' ? (studentId || null) : null,
             };
           });
+
+          loadSupabaseAssignments(role, session.user.id);
         }
       }
     });
@@ -327,7 +338,13 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [loadSupabaseAssignments]);
+
+  const refreshData = useCallback(async () => {
+    if (state.session?.supabaseId && state.session?.role) {
+      await loadSupabaseAssignments(state.session.role, state.session.supabaseId);
+    }
+  }, [state.session, loadSupabaseAssignments]);
 
   const openAuthModal = useCallback((role: 'teacher' | 'student' = 'teacher') => {
     setAuthModalInitialRole(role);
@@ -337,39 +354,6 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
   const closeAuthModal = useCallback(() => {
     setIsAuthModalOpen(false);
   }, []);
-
-  const loginTeacher = useCallback((u: string, p: string): boolean => {
-    if (u === state.auth.teacherUser && p === state.auth.teacherPass) {
-      setState((prev) => ({
-        ...prev,
-        session: { role: 'teacher', name: 'Öğretmen' },
-        currentStudentId: null,
-      }));
-      setIsAuthModalOpen(false);
-      setActiveTab('teacher');
-      showToast('Hoş geldiniz, öğretmenim! 👋', 'success');
-      return true;
-    }
-    showToast('Öğretmen kullanıcı adı veya şifre hatalı.', 'warn');
-    return false;
-  }, [state.auth, showToast]);
-
-  const loginStudent = useCallback((u: string, p: string): boolean => {
-    const student = state.students.find((s) => s.username.toLowerCase() === u.toLowerCase().trim() && s.password === p);
-    if (student) {
-      setState((prev) => ({
-        ...prev,
-        session: { role: 'student', studentId: student.id, name: student.name },
-        currentStudentId: student.id,
-      }));
-      setIsAuthModalOpen(false);
-      setActiveTab('student');
-      showToast(`Hoş geldin, ${student.name.split(' ')[0]}! 🎓`, 'success');
-      return true;
-    }
-    showToast('Öğrenci kullanıcı adı veya şifre hatalı.', 'warn');
-    return false;
-  }, [state.students, showToast]);
 
   const loginSupabaseUser = useCallback(
     ({
@@ -391,7 +375,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         if (role === 'student') {
           let foundStudent = nextStudents.find(
             (s) =>
-              (s.username && s.username.toLowerCase() === slugUser(name, []).toLowerCase()) ||
+              (supabaseId && s.id === supabaseId) ||
               s.name.toLowerCase() === name.toLowerCase()
           );
 
@@ -432,21 +416,27 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         setActiveTab('student');
         showToast(`Hoş geldin, ${name.split(' ')[0]}! 🎓`, 'success');
       }
+
+      if (supabaseId) {
+        loadSupabaseAssignments(role, supabaseId);
+      }
     },
-    [showToast]
+    [showToast, loadSupabaseAssignments]
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     try {
-      supabase.auth.signOut();
-    } catch (e) {}
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('SignOut error', e);
+    }
     setState((prev) => ({
       ...prev,
       session: null,
       currentStudentId: null,
     }));
     setActiveTab('home');
-    showToast('Çıkış yapıldı.', 'info');
+    showToast('Başarıyla çıkış yapıldı.', 'info');
   }, [showToast]);
 
   const addStudent = useCallback((name: string, password: string): boolean => {
@@ -509,6 +499,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
+    const teacherId = state.session?.supabaseId;
     const newAssignment: Assignment = {
       id: uid(),
       type: params.type,
@@ -522,6 +513,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       questions: params.questions || [],
       createdAt: Date.now(),
       submissions: {},
+      teacherId,
     };
 
     if (params.type === 'book' && !newAssignment.desc) {
@@ -533,15 +525,40 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       assignments: [newAssignment, ...prev.assignments],
     }));
 
+    // Async sync with Supabase
+    if (teacherId) {
+      supabase
+        .from('assignments')
+        .insert({
+          id: newAssignment.id,
+          type: newAssignment.type,
+          title: newAssignment.title,
+          folder: newAssignment.folder,
+          target: newAssignment.target,
+          desc: newAssignment.desc,
+          file_name: newAssignment.fileName,
+          file_data: newAssignment.fileData,
+          time_limit: newAssignment.timeLimit,
+          questions: newAssignment.questions,
+          submissions: {},
+          teacher_id: teacherId,
+        })
+        .then(({ error }) => {
+          if (error) console.warn('Supabase assignments insert note:', error.message);
+        });
+    }
+
     showToast('İçerik başarıyla yayınlandı! 🎉', 'success');
     return true;
-  }, [showToast]);
+  }, [state.session, showToast]);
 
   const deleteAssignment = useCallback((id: string) => {
     setState((prev) => ({
       ...prev,
       assignments: prev.assignments.filter((a) => a.id !== id),
     }));
+
+    supabase.from('assignments').delete().eq('id', id).then(() => {});
     showToast('İçerik silindi.', 'info');
   }, [showToast]);
 
@@ -567,28 +584,38 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     const total = assignment.questions.length;
     const percent = Math.round((correct / total) * 100);
 
+    let updatedSubmissions: Record<string, Submission> = {};
+
     setState((prev) => {
       const nextAssignments = prev.assignments.map((a) => {
         if (a.id !== assignmentId) return a;
         const prevFb = a.submissions[sid]?.feedback || '';
+        updatedSubmissions = {
+          ...a.submissions,
+          [sid]: {
+            answers,
+            correct,
+            total,
+            percent,
+            at: Date.now(),
+            timedOut,
+            feedback: prevFb,
+          },
+        };
         return {
           ...a,
-          submissions: {
-            ...a.submissions,
-            [sid]: {
-              answers,
-              correct,
-              total,
-              percent,
-              at: Date.now(),
-              timedOut,
-              feedback: prevFb,
-            },
-          },
+          submissions: updatedSubmissions,
         };
       });
       return { ...prev, assignments: nextAssignments };
     });
+
+    // Supabase update
+    supabase
+      .from('assignments')
+      .update({ submissions: updatedSubmissions })
+      .eq('id', assignmentId)
+      .then(() => {});
 
     if (timedOut) {
       showToast(`Süre doldu! Otomatik teslim edildi. Başarı: %${percent}`, 'warn');
@@ -603,15 +630,24 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     const sid = state.currentStudentId;
     if (!sid) return;
 
+    let updatedSubmissions: Record<string, Submission> = {};
+
     setState((prev) => {
       const nextAssignments = prev.assignments.map((a) => {
         if (a.id !== assignmentId) return a;
         const nextSubs = { ...a.submissions };
         delete nextSubs[sid];
+        updatedSubmissions = nextSubs;
         return { ...a, submissions: nextSubs };
       });
       return { ...prev, assignments: nextAssignments };
     });
+
+    supabase
+      .from('assignments')
+      .update({ submissions: updatedSubmissions })
+      .eq('id', assignmentId)
+      .then(() => {});
 
     showToast('Test sıfırlandı, yeniden çözebilirsiniz.', 'info');
   }, [state.currentStudentId, showToast]);
@@ -620,58 +656,66 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     const sid = state.currentStudentId;
     if (!sid) return;
 
+    let updatedSubmissions: Record<string, Submission> = {};
+
     setState((prev) => {
       const nextAssignments = prev.assignments.map((a) => {
         if (a.id !== assignmentId) return a;
         const prevFb = a.submissions[sid]?.feedback || '';
+        updatedSubmissions = {
+          ...a.submissions,
+          [sid]: {
+            photo: photoDataUrl,
+            at: Date.now(),
+            feedback: prevFb,
+          },
+        };
         return {
           ...a,
-          submissions: {
-            ...a.submissions,
-            [sid]: {
-              photo: photoDataUrl,
-              at: Date.now(),
-              feedback: prevFb,
-            },
-          },
+          submissions: updatedSubmissions,
         };
       });
       return { ...prev, assignments: nextAssignments };
     });
+
+    supabase
+      .from('assignments')
+      .update({ submissions: updatedSubmissions })
+      .eq('id', assignmentId)
+      .then(() => {});
 
     showToast('Ödev fotoğrafınız öğretmeninize iletildi! 📸', 'success');
   }, [state.currentStudentId, showToast]);
 
   const saveFeedback = useCallback((assignmentId: string, studentId: string, feedback: string) => {
+    let updatedSubmissions: Record<string, Submission> = {};
+
     setState((prev) => {
       const nextAssignments = prev.assignments.map((a) => {
         if (a.id !== assignmentId) return a;
         const existingSub = a.submissions[studentId] || { at: Date.now() };
+        updatedSubmissions = {
+          ...a.submissions,
+          [studentId]: {
+            ...existingSub,
+            feedback: feedback.trim(),
+          },
+        };
         return {
           ...a,
-          submissions: {
-            ...a.submissions,
-            [studentId]: {
-              ...existingSub,
-              feedback: feedback.trim(),
-            },
-          },
+          submissions: updatedSubmissions,
         };
       });
       return { ...prev, assignments: nextAssignments };
     });
 
-    showToast('Geri bildirim başarıyla kaydedildi! 💬', 'success');
-  }, [showToast]);
+    supabase
+      .from('assignments')
+      .update({ submissions: updatedSubmissions })
+      .eq('id', assignmentId)
+      .then(() => {});
 
-  const resetAllData = useCallback(() => {
-    const seed = getSeedData();
-    setState(seed);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch (e) {}
-    setActiveTab('home');
-    showToast('Tüm demo verileri ve hesaplar sıfırlandı.', 'info');
+    showToast('Geri bildirim başarıyla kaydedildi! 💬', 'success');
   }, [showToast]);
 
   const getStudentById = useCallback((id?: string | null): Student | undefined => {
@@ -697,8 +741,6 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         authModalInitialRole,
         openAuthModal,
         closeAuthModal,
-        loginTeacher,
-        loginStudent,
         loginSupabaseUser,
         logout,
         addStudent,
@@ -709,9 +751,9 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         retryTest,
         submitHomeworkPhoto,
         saveFeedback,
-        resetAllData,
         getStudentById,
         getVisibleAssignments,
+        refreshData,
       }}
     >
       {children}
@@ -726,3 +768,4 @@ export function useEduFlow() {
   }
   return context;
 }
+

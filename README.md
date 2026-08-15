@@ -74,12 +74,10 @@ Bu proje Vercel ile %100 uyumlu Next.js App Router standartlarında geliştirilm
 
 ---
 
-## 🔑 Hazır Demo Giriş Bilgileri
+## 🔐 Kimlik Doğrulama & Veritabanı Mimarisi
 
-- **Öğretmen Hesabı:**
-  - Kullanıcı Adı: `ogretmen`
-  - Şifre: `1234`
-- **Öğrenci Hesapları:**
-  - Ayşe Yılmaz: `ayse` / `ayse123`
-  - Mehmet Demir: `mehmet` / `mehmet123`
-  - Zeynep Kaya: `zeynep` / `zeynep123`
+- **Kurumsal Supabase Auth:** Öğretmen ve öğrenciler kendi e-posta ve şifreleri ile güvenli şekilde kayıt olabilir (`fullName` ve `role` metadata aktarımı ile).
+- **E-posta Doğrulama:** Otomatik e-posta onay akışı ve callback yakalayıcı.
+- **Sınıf Yönetimi:** Öğretmenler sınıflarına doğrudan öğrenci profili tanımlayabilir ve şifre atayabilir.
+- **Dinamik Veri Akışı:** Ödevler ve teslim kayıtları kullanıcı bazlı gerçek Supabase tabloları ve yerel reaktif önbellek ile anlık senkronize edilir.
+

@@ -64,8 +64,6 @@ export function AuthModal() {
     isAuthModalOpen,
     closeAuthModal,
     authModalInitialRole,
-    loginTeacher,
-    loginStudent,
     loginSupabaseUser,
     showToast,
     state,
@@ -98,9 +96,9 @@ export function AuthModal() {
       setMode('signin');
 
       try {
-        const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
-        if (savedEmail) {
-          setEmail(savedEmail);
+        const remembered = localStorage.getItem(REMEMBER_EMAIL_KEY);
+        if (remembered) {
+          setEmail(remembered);
           setRememberMe(true);
         } else {
           setEmail('');
@@ -112,7 +110,7 @@ export function AuthModal() {
     }
   }, [isAuthModalOpen, authModalInitialRole]);
 
-  // Handle resend countdown timer
+  // Resend cooldown timer
   useEffect(() => {
     if (resendCooldown > 0) {
       cooldownTimerRef.current = setTimeout(() => {
@@ -120,17 +118,15 @@ export function AuthModal() {
       }, 1000);
     }
     return () => {
-      if (cooldownTimerRef.current) {
-        clearTimeout(cooldownTimerRef.current);
-      }
+      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
     };
   }, [resendCooldown]);
 
   if (!isAuthModalOpen) return null;
 
-  // Handle Resend Verification Email
+  // Resend Verification Email Action
   const handleResendEmail = async () => {
-    if (!submittedEmail || resendCooldown > 0 || resendLoading) return;
+    if (resendCooldown > 0 || resendLoading || !submittedEmail) return;
 
     setResendLoading(true);
     setErrorMessage(null);
@@ -164,21 +160,6 @@ export function AuthModal() {
     setMode('signin');
     setErrorMessage(null);
     setPassword('');
-  };
-
-  // Quick Demo Account Autofill
-  const handleFillDemo = (demoType: 'teacher' | 'student') => {
-    setErrorMessage(null);
-    if (demoType === 'teacher') {
-      setRole('teacher');
-      setEmail(state.auth.teacherUser || 'ogretmen');
-      setPassword(state.auth.teacherPass || '1234');
-    } else {
-      setRole('student');
-      const firstStudent = state.students[0];
-      setEmail(firstStudent?.username || 'ayse');
-      setPassword(firstStudent?.password || 'ayse123');
-    }
   };
 
   // Form Submit Handler
@@ -262,12 +243,7 @@ export function AuthModal() {
       } else {
         // Sign In Flow
 
-        // A. Check for demo credentials first (teacher: ogretmen/1234, students: ayse/ayse123 etc.)
-        if (role === 'teacher' && cleanEmail === state.auth.teacherUser && cleanPass === state.auth.teacherPass) {
-          const ok = loginTeacher(cleanEmail, cleanPass);
-          if (ok) return;
-        }
-
+        // 1. Check if student credentials match a classroom account
         const matchedStudent = state.students.find(
           (s) =>
             (s.username.toLowerCase() === cleanEmail.toLowerCase() ||
@@ -275,11 +251,16 @@ export function AuthModal() {
             s.password === cleanPass
         );
         if (matchedStudent) {
-          const ok = loginStudent(matchedStudent.username, cleanPass);
-          if (ok) return;
+          loginSupabaseUser({
+            role: 'student',
+            name: matchedStudent.name,
+            email: cleanEmail.includes('@') ? cleanEmail : `${matchedStudent.username}@eduflow.pro`,
+            supabaseId: matchedStudent.id,
+          });
+          return;
         }
 
-        // B. Standard Supabase Sign In with Password
+        // 2. Standard Supabase Sign In with Email & Password
         const { data, error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password: cleanPass,
@@ -679,33 +660,8 @@ export function AuthModal() {
               </button>
             </form>
 
-            {/* Quick Demo Fill Buttons (Effortless evaluation) */}
-            {mode === 'signin' && (
-              <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-slate-400">
-                <span className="text-[11px] text-slate-500">Hızlı Demo Doldur:</span>
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleFillDemo('teacher')}
-                    className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[11px] font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    👨‍🏫 Öğretmen
-                  </button>
-                  <button
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleFillDemo('student')}
-                    className="px-2 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 text-[11px] font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    🎓 Öğrenci
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Mode Switch (Sign In <-> Sign Up) */}
-            <div className="mt-4 pt-3 border-t border-white/[0.08] text-center">
+            <div className="mt-5 pt-4 border-t border-white/[0.08] text-center">
               {mode === 'signin' ? (
                 <p className="text-xs text-slate-400">
                   Henüz bir hesabınız yok mu?{' '}

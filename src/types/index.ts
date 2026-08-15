@@ -46,6 +46,7 @@ export interface Assignment {
   questions?: Question[];
   createdAt: number;
   submissions: Record<string, Submission>; // key is studentId
+  teacherId?: string;
 }
 
 export interface UserSession {
@@ -56,15 +57,18 @@ export interface UserSession {
   supabaseId?: string;
 }
 
-export interface AuthState {
-  teacherUser: string;
-  teacherPass: string;
+export interface UserProfile {
+  id: string;
+  full_name: string;
+  role: Role;
+  email?: string;
+  avatar_url?: string;
+  created_at?: string;
 }
 
 export interface EduFlowState {
   students: Student[];
   assignments: Assignment[];
-  auth: AuthState;
   session: UserSession | null;
   currentStudentId: string | null;
 }

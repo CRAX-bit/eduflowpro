@@ -23,6 +23,7 @@ import {
   UploadCloud,
   X,
   RotateCcw,
+  LogOut,
 } from 'lucide-react';
 import { ReportCardModal } from './ReportCardModal';
 import { FeedbackModal } from './FeedbackModal';
@@ -45,10 +46,16 @@ export function TeacherView({
     addStudent,
     deleteStudent,
     createAssignment,
-    resetAllData,
+    logout,
     showToast,
     getStudentById,
   } = useEduFlow();
+
+  const contentFormRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollToContentForm = () => {
+    contentFormRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   // Student form state
   const [newStudentName, setNewStudentName] = useState('');
@@ -187,29 +194,40 @@ export function TeacherView({
 
   return (
     <div className="space-y-8 animate-fade pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Dynamic Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-gradient-to-r from-emerald-950/40 via-[#0d1424] to-[#0a0f1d] border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.05)]">
         <div>
-          <div className="text-xs uppercase font-bold tracking-widest text-emerald-400">
-            Yönetim Merkezi
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold mb-2">
+            <span>👨‍🏫 Öğretmen Hesabı</span>
           </div>
-          <h2 className="font-heading font-extrabold text-3xl text-white">
-            Öğretmen <span className="text-emerald-400">Paneli</span>
+          <h2 className="font-heading font-extrabold text-2xl sm:text-3xl text-white">
+            Hoş Geldiniz, <span className="text-emerald-400">{state.session?.name || 'Öğretmenim'}</span> 👋
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
             Öğrencilerinizi yönetin, ödev atayın, canlı izleme tablosundan anında geri bildirim verin.
           </p>
         </div>
 
-        {onOpenAiAssistant && (
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          {onOpenAiAssistant && (
+            <button
+              onClick={onOpenAiAssistant}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-500/20 via-cyan-500/20 to-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-bold hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-400 animate-spin" style={{ animationDuration: '6s' }} />
+              <span>Gemini AI</span>
+            </button>
+          )}
+
           <button
-            onClick={onOpenAiAssistant}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-500/20 via-cyan-500/20 to-emerald-500/20 border border-emerald-500/40 text-emerald-300 hover:text-white text-xs font-bold hover:shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all self-start sm:self-auto cursor-pointer"
+            onClick={logout}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 hover:text-red-200 text-xs font-bold transition-all cursor-pointer shadow-sm"
+            title="Oturumu Kapat"
           >
-            <Sparkles className="w-4 h-4 text-emerald-400 animate-spin" style={{ animationDuration: '6s' }} />
-            <span>Gemini AI Asistanı Aç</span>
+            <LogOut className="w-4 h-4" />
+            <span>Çıkış Yap</span>
           </button>
-        )}
+        </div>
       </div>
 
       {/* Sınıf Yönetimi (Student Management Card) */}
@@ -244,11 +262,17 @@ export function TeacherView({
           </button>
         </form>
 
-        {/* Student Chips Grid */}
+        {/* Student Chips Grid / Empty State */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {state.students.length === 0 ? (
-            <div className="col-span-full py-8 text-center text-slate-500 text-xs">
-              Henüz öğrenci eklenmedi. Yukarıdaki formdan yeni öğrenci ekleyebilirsiniz.
+            <div className="col-span-full py-10 px-4 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01]">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                <Users className="w-6 h-6" />
+              </div>
+              <h4 className="text-sm font-bold text-white mb-1">Henüz Öğrenci Eklenmedi</h4>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                Yukarıdaki forma öğrenci adı ve şifresini yazarak sınıfınıza öğrenci ekleyebilir ve ödev atayabilirsiniz.
+              </p>
             </div>
           ) : (
             state.students.map((s) => (
@@ -301,7 +325,10 @@ export function TeacherView({
       {/* Main 2-Column Split: Content Creator & Live Monitor */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Column 1: Assignment Creator */}
-        <section className="lg:col-span-5 p-6 rounded-3xl bg-white/[0.02] border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.04)] space-y-4">
+        <section
+          ref={contentFormRef}
+          className="lg:col-span-5 p-6 rounded-3xl bg-white/[0.02] border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.04)] space-y-4"
+        >
           <div className="flex items-center justify-between">
             <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
               <PlusCircle className="w-5 h-5 text-emerald-400" />
@@ -350,7 +377,7 @@ export function TeacherView({
                   }`}
                 >
                   <ListCheck className="w-4 h-4 mx-auto mb-1" />
-                  <span className="text-xs">Test</span>
+                  <span className="text-xs">İnteraktif Test</span>
                 </button>
 
                 <button
@@ -368,18 +395,20 @@ export function TeacherView({
               </div>
             </div>
 
-            {/* Target Student */}
+            {/* Target Selector */}
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Öğrenciye Ata</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Kime Atanacak?
+              </label>
               <select
                 value={targetStudent}
                 onChange={(e) => setTargetStudent(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#0a0f1d] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
+                className="w-full px-4 py-2.5 bg-[#0a0f1d] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
               >
-                <option value="all">👥 Tüm Sınıf</option>
+                <option value="all">Tüm Sınıfa (Genel)</option>
                 {state.students.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name}
+                    Yalnızca: {s.name}
                   </option>
                 ))}
               </select>
@@ -387,194 +416,263 @@ export function TeacherView({
 
             {/* Title */}
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">Başlık</label>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Başlık
+              </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Örn: İngilizce Zamanlar Tekrarı"
-                className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
+                placeholder="Örn: Past Simple Tense Konu Anlatımı"
                 required
+                className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
               />
             </div>
 
-            {/* Folder / Topic */}
+            {/* Folder / Unit */}
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Klasör / Ünite (Konu)
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Klasör / Ünite Adı
               </label>
               <input
                 type="text"
+                list="folder-list"
                 value={folder}
                 onChange={(e) => setFolder(e.target.value)}
-                placeholder="Örn: Past Simple Tense"
-                list="teacher-folders"
-                className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
+                placeholder="Örn: Past Simple Tense veya Genel"
+                className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
               />
-              <datalist id="teacher-folders">
+              <datalist id="folder-list">
                 {existingFolders.map((f) => (
                   <option key={f} value={f} />
                 ))}
               </datalist>
             </div>
 
-            {/* Description / Instructions */}
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                {contentType === 'book'
-                  ? 'Kitap Ödevi Talimatı'
-                  : 'Talimat / Açıklama (Opsiyonel)'}
-              </label>
-              <textarea
-                rows={3}
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
-                placeholder={
-                  contentType === 'book'
-                    ? 'Kitabın 42. sayfasındaki tüm soruları çözüp sayfanın fotoğrafını yükleyin.'
-                    : 'Öğrenciye not veya açıklama yazın...'
-                }
-                className="w-full px-3.5 py-2 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
-              />
-            </div>
-
-            {/* Note Specific: File upload */}
+            {/* Note Fields */}
             {contentType === 'note' && (
-              <div className="space-y-2">
-                <label className="block text-xs font-medium text-slate-300">
-                  Ders Notu Dosyası (PDF veya Görsel - Opsiyonel)
-                </label>
-                <label className="block p-4 rounded-xl border-2 border-dashed border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10 text-center cursor-pointer transition-all">
-                  <UploadCloud className="w-6 h-6 text-amber-400 mx-auto mb-1" />
-                  <span className="text-xs font-semibold text-amber-300">
-                    {noteFileName ? noteFileName : 'Dosya seçmek için tıklayın'}
-                  </span>
-                  <p className="text-[10px] text-slate-500 mt-0.5">PDF, PNG veya JPG</p>
-                  <input
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={handleNoteFileChange}
-                    className="hidden"
+              <div className="space-y-3 pt-1 animate-fade">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Ders Notu Metni / Açıklama
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={desc}
+                    onChange={(e) => setDesc(e.target.value)}
+                    placeholder="Ders notlarını, formülleri veya açıklamaları buraya yazabilirsiniz..."
+                    className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none resize-none"
                   />
-                </label>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Ek Dosya (PDF veya Görsel - İsteğe Bağlı)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id="note-file"
+                      accept=".pdf,image/*"
+                      onChange={handleNoteFileChange}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="note-file"
+                      className="flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-white/20 hover:border-emerald-400/50 bg-white/[0.02] text-xs text-slate-300 hover:text-white cursor-pointer transition-all"
+                    >
+                      <UploadCloud className="w-4 h-4 text-emerald-400" />
+                      <span>{noteFileName ? `Seçildi: ${noteFileName}` : 'PDF veya Görsel Yükle (Maks 10MB)'}</span>
+                    </label>
+                    {noteFileName && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNoteFileName(null);
+                          setNoteFileData(null);
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-red-400"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Test Specific: Timer and Questions */}
+            {/* Test Fields */}
             {contentType === 'test' && (
-              <div className="space-y-3 pt-1">
+              <div className="space-y-3 pt-1 animate-fade">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
-                    Süre Sınırı (Dakika · 0 = Süresiz)
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Süre Sınırı (Dakika - 0 = Süresiz)
                   </label>
                   <input
                     type="number"
                     min={0}
-                    value={timeLimitMinutes}
-                    onChange={(e) => setTimeLimitMinutes(Math.max(0, Number(e.target.value)))}
-                    className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
+                    max={180}
+                    value={timeLimitMinutes || ''}
+                    onChange={(e) => setTimeLimitMinutes(Number(e.target.value))}
+                    placeholder="Örn: 5 dakika (boş bırakılırsa 0 = limitsiz)"
+                    className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-xs font-medium text-slate-300">
-                    Sorular ve Doğru Cevaplar
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Test Açıklaması / Yönerge
                   </label>
-                  {questions.map((q, i) => (
-                    <div key={i} className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={desc}
+                    onChange={(e) => setDesc(e.target.value)}
+                    placeholder="Örn: Boşlukları uygun kalıplarla doldurunuz."
+                    className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                      Sorular & Doğru Cevaplar ({questions.length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={addQuestionRow}
+                      className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+                    >
+                      <span>+ Soru Ekle</span>
+                    </button>
+                  </div>
+
+                  {questions.map((q, idx) => (
+                    <div key={idx} className="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-2 relative">
+                      <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+                        <span>Soru {idx + 1}</span>
+                        {questions.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeQuestionRow(idx)}
+                            className="text-slate-500 hover:text-red-400 p-0.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="text"
                         value={q.q}
-                        onChange={(e) => handleQuestionChange(i, 'q', e.target.value)}
-                        placeholder={`Soru ${i + 1} metni...`}
-                        className="flex-1 px-3 py-2 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
+                        onChange={(e) => handleQuestionChange(idx, 'q', e.target.value)}
+                        placeholder="Soru metni (örn: 'I ___ happy yesterday.')"
+                        className="w-full px-3 py-2 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-lg text-white text-xs focus:outline-none"
                       />
                       <input
                         type="text"
                         value={q.a}
-                        onChange={(e) => handleQuestionChange(i, 'a', e.target.value)}
-                        placeholder="Doğru Cevap"
-                        className="w-28 px-3 py-2 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
+                        onChange={(e) => handleQuestionChange(idx, 'a', e.target.value)}
+                        placeholder="Beklenen doğru cevap (örn: was)"
+                        className="w-full px-3 py-2 bg-emerald-500/5 border border-emerald-500/30 focus:border-emerald-400 rounded-lg text-emerald-300 text-xs focus:outline-none placeholder:text-emerald-500/40"
                       />
-                      <button
-                        type="button"
-                        onClick={() => removeQuestionRow(i)}
-                        className="p-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
 
-                  <button
-                    type="button"
-                    onClick={addQuestionRow}
-                    className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-cyan-400 text-xs font-semibold hover:bg-white/10 flex items-center gap-1.5"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    <span>Soru Ekle</span>
-                  </button>
+            {/* Book Assignment Fields */}
+            {contentType === 'book' && (
+              <div className="space-y-3 pt-1 animate-fade">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                    Ödev Yönergesi / Sayfa Bilgisi
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={desc}
+                    onChange={(e) => setDesc(e.target.value)}
+                    placeholder="Örn: İngilizce soru bankası sayfa 48'deki tüm alıştırmaları çözüp sayfanın net fotoğrafını yükleyin."
+                    className="w-full px-4 py-2.5 bg-white/[0.04] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none resize-none"
+                  />
                 </div>
               </div>
             )}
 
             <button
               type="submit"
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 shadow-[0_6px_25px_rgba(16,185,129,0.35)] hover:shadow-[0_10px_35px_rgba(16,185,129,0.55)] transition-all cursor-pointer mt-4"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all cursor-pointer mt-2"
             >
               <Send className="w-4 h-4" />
-              <span>İçeriği Yayınla</span>
+              <span>İçeriği Yayınla & Öğrencilere İlet</span>
             </button>
           </form>
         </section>
 
-        {/* Column 2: Live Monitor Table */}
+        {/* Column 2: Live Monitor & Tracking Table */}
         <section className="lg:col-span-7 p-6 rounded-3xl bg-white/[0.02] border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.04)] space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
               <Radio className="w-5 h-5 text-emerald-400 animate-pulse" />
-              <span>Canlı İzleme Tablosu</span>
+              <span>Canlı İzleme & Teslim Tablosu</span>
             </h3>
 
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <Filter className="w-3.5 h-3.5" />
-              <span>Öğrenci:</span>
-              <select
-                value={monitorFilter}
-                onChange={(e) => setMonitorFilter(e.target.value)}
-                className="px-3 py-1.5 bg-[#0a0f1d] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
-              >
-                <option value="all">Tüm Sınıf (Genel Bakış)</option>
-                {state.students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Filter by Student */}
+            {state.students.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Filter className="w-3.5 h-3.5 text-slate-400" />
+                <select
+                  value={monitorFilter}
+                  onChange={(e) => setMonitorFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-[#0a0f1d] border border-white/10 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
+                >
+                  <option value="all">Tüm Öğrenciler</option>
+                  {state.students.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto rounded-2xl border border-white/[0.08]">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-white/[0.04] border-b border-white/[0.08] text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                <tr>
-                  <th className="p-3">İçerik</th>
-                  <th className="p-3">Hedef</th>
-                  <th className="p-3">Tür</th>
-                  <th className="p-3">Durum</th>
-                  <th className="p-3">Sonuç / İşlem</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.04] text-slate-300">
-                {state.assignments.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="p-6 text-center text-slate-500">
-                      Henüz içerik eklenmedi.
-                    </td>
+          {/* Assignments / Monitor Table or Empty State */}
+          {state.assignments.length === 0 ? (
+            <div className="py-12 px-6 text-center rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-950/10 space-y-4 animate-fade">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                <FileText className="w-7 h-7" />
+              </div>
+              <div className="space-y-1.5 max-w-md mx-auto">
+                <h4 className="font-heading font-bold text-base text-white">
+                  Henüz aktif bir ödev veya sınıf oluşturmadınız.
+                </h4>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Öğrencilerinize ders notu paylaşmak, süreli testler atamak veya kitap ödevi vermek için içerik oluşturucuyu kullanabilirsiniz.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={scrollToContentForm}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>+ İlk Ödevinizi Oluşturun</span>
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-white/[0.08] text-slate-400 font-semibold">
+                    <th className="p-3">Ödev / Başlık</th>
+                    <th className="p-3">Hedef</th>
+                    <th className="p-3">Tür</th>
+                    <th className="p-3">Durum</th>
+                    <th className="p-3">Sonuç / İşlem</th>
                   </tr>
-                ) : (
-                  state.assignments
+                </thead>
+                <tbody className="divide-y divide-white/[0.04] text-slate-300">
+                  {state.assignments
                     .filter((a) => monitorFilter === 'all' || a.target === 'all' || a.target === monitorFilter)
                     .map((a) => {
                       const targetLabel =
@@ -638,7 +736,7 @@ export function TeacherView({
                             </td>
                             <td className="p-3">
                               <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
-                                {a.type === 'note' ? 'Yayında' : `${doneCount}/${targetStudents.length}`}
+                                {a.type === 'note' ? 'Yayında' : `${doneCount}/${targetStudents.length || 1}`}
                               </span>
                             </td>
                             <td className="p-3">
@@ -786,27 +884,11 @@ export function TeacherView({
                           </tr>
                         );
                       }
-                    })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Reset Demo Data Link */}
-          <div className="pt-4 border-t border-white/[0.08] flex justify-between items-center text-xs text-slate-500">
-            <span>EduFlow Pro Veri Yönetimi</span>
-            <button
-              onClick={() => {
-                if (confirm('Tüm demo verileri ve hesaplar silinip başlangıç durumuna dönecek. Emin misiniz?')) {
-                  resetAllData();
-                }
-              }}
-              className="text-slate-400 hover:text-red-400 flex items-center gap-1 transition-colors underline cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Tüm demo verilerini sıfırla</span>
-            </button>
-          </div>
+                    })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
 
