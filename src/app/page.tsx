@@ -9,10 +9,22 @@ import { StudentView } from '@/components/StudentView';
 import { AiAssistantModal } from '@/components/AiAssistantModal';
 
 export default function App() {
-  const { activeTab, state, openAuthModal } = useEduFlow();
+  const { activeTab, setActiveTab, state, openAuthModal } = useEduFlow();
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [generatedQuizData, setGeneratedQuizData] = useState<any>(null);
   const [generatedNoteData, setGeneratedNoteData] = useState<any>(null);
+
+  // Pathname synchronization
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.includes('teacher-dashboard') || path.includes('teacher')) {
+        setActiveTab('teacher');
+      } else if (path.includes('student-dashboard') || path.includes('student')) {
+        setActiveTab('student');
+      }
+    }
+  }, [setActiveTab]);
 
   // If a user navigates to a protected tab without a session, show login
   React.useEffect(() => {
@@ -27,7 +39,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col relative z-10">
       <Navbar onOpenAiAssistant={() => setIsAiModalOpen(true)} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-12">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-28 sm:pt-32 pb-16">
         {activeTab === 'home' && <HomeView />}
         {activeTab === 'teacher' && (
           <TeacherView

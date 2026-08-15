@@ -30,12 +30,19 @@ import {
   Award,
   ChevronRight,
   TrendingUp,
+  School,
+  Copy,
+  Check,
+  Hash,
+  Plus,
 } from 'lucide-react';
 import { ReportCardModal } from './ReportCardModal';
 import { FeedbackModal } from './FeedbackModal';
 import { NoteModal } from './NoteModal';
 import { PhotoModal } from './PhotoModal';
 import { CreateAssignmentModal } from './CreateAssignmentModal';
+import { CreateClassroomModal } from './CreateClassroomModal';
+import { AssignmentReviewModal } from './AssignmentReviewModal';
 import { GeminiStudioTab } from './GeminiStudioTab';
 
 interface TeacherViewProps {
@@ -54,6 +61,7 @@ export function TeacherView({
     addStudent,
     deleteStudent,
     deleteAssignment,
+    deleteClassroom,
     logout,
     showToast,
     getStudentById,
@@ -61,6 +69,8 @@ export function TeacherView({
 
   // Active Tab: 'assignments' | 'students' | 'ai_studio'
   const [activeTab, setActiveTab] = useState<'assignments' | 'students' | 'ai_studio'>('assignments');
+  const [isCreateClassModalOpen, setIsCreateClassModalOpen] = useState(false);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
   // Assignment Filters
   const [typeFilter, setTypeFilter] = useState<'all' | AssignmentType>('all');
@@ -79,6 +89,7 @@ export function TeacherView({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalPrefill, setCreateModalPrefill] = useState<any>(null);
   const [reportStudent, setReportStudent] = useState<Student | null>(null);
+  const [reviewAssignment, setReviewAssignment] = useState<Assignment | null>(null);
   const [feedbackItem, setFeedbackItem] = useState<{
     assignment: Assignment;
     student: Student;
@@ -141,6 +152,21 @@ export function TeacherView({
   const handleDeleteStudent = (s: Student) => {
     if (confirm(`${s.name} ve tüm ödev kayıtları tamamen silinecektir. Emin misiniz?`)) {
       deleteStudent(s.id);
+    }
+  };
+
+  const handleCopyCode = (code: string, classId: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCodeId(classId);
+    showToast(`Katılım kodu kopyalandı: ${code} 📋`, 'success');
+    setTimeout(() => {
+      setCopiedCodeId(null);
+    }, 2500);
+  };
+
+  const handleDeleteClass = (id: string, name: string) => {
+    if (confirm(`"${name}" sınıfını ve bu sınıfa ait üyelikleri silmek istediğinize emin misiniz?`)) {
+      deleteClassroom(id);
     }
   };
 
@@ -316,7 +342,7 @@ export function TeacherView({
           )}
         >
           <Users className="w-4 h-4" />
-          <span>👥 Sınıfım & Öğrenciler ({state.students.length})</span>
+          <span>👥 Sınıflarım & Öğrenciler ({state.classrooms.length} Sınıf)</span>
         </button>
 
         <button
@@ -554,7 +580,7 @@ export function TeacherView({
 
                     {/* Card Action Buttons */}
                     <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-800">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         {isNote && (
                           <button
                             onClick={() => setViewingNote(a)}
@@ -565,11 +591,19 @@ export function TeacherView({
                           </button>
                         )}
 
-                        {!isNote && completedCount > 0 && (
-                          <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Teslimler Mevcut</span>
-                          </span>
+                        {!isNote && (
+                          <button
+                            onClick={() => setReviewAssignment(a)}
+                            className={cn(
+                              'px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border',
+                              completedCount > 0
+                                ? 'bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-500/40 text-indigo-300 shadow-sm'
+                                : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-400'
+                            )}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                            <span>Teslimler & AI İnceleme ({completedCount})</span>
+                          </button>
                         )}
                       </div>
 
@@ -713,128 +747,240 @@ export function TeacherView({
         </div>
       )}
 
-      {/* 5. TAB 2: Sınıfım & Öğrenciler */}
+      {/* 5. TAB 2: Sınıflarım & Öğrenciler */}
       {activeTab === 'students' && (
-        <div className="space-y-6 animate-fade">
-          {/* Add Student Card */}
-          <section className="p-6 sm:p-7 rounded-3xl bg-[#111827]/80 border border-slate-800 backdrop-blur-xl shadow-lg space-y-4">
-            <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
-              <UserPlus className="w-4 h-4" />
-              <span>Yeni Öğrenci Hesabı Tanımla</span>
+        <div className="space-y-12 animate-fade">
+          {/* Classrooms Section */}
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-heading font-extrabold text-lg text-white flex items-center gap-2">
+                  <School className="w-5 h-5 text-indigo-400" />
+                  <span>Sınıflarım & Şubelerim ({state.classrooms.length})</span>
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsCreateClassModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Yeni Sınıf Oluştur</span>
+              </button>
             </div>
 
-            <form onSubmit={handleAddStudent} className="flex flex-wrap items-center gap-3">
-              <div className="flex-1 min-w-[220px]">
+            {state.classrooms.length === 0 ? (
+              <div className="p-8 sm:p-12 text-center rounded-3xl bg-[#111827]/60 border border-dashed border-slate-800 space-y-3">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-md">
+                  <School className="w-7 h-7" />
+                </div>
+                <div className="space-y-1 max-w-sm mx-auto">
+                  <h4 className="font-heading font-bold text-white text-base">Henüz bir sınıf veya şube oluşturmadınız</h4>
+                  <p className="text-xs text-slate-400">
+                    Yeni bir sınıf oluşturarak otomatik 6 haneli katılım kodu alabilir ve öğrencilerinizle paylaşabilirsiniz.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsCreateClassModalOpen(true)}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-cyan-400 text-slate-950 text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-md shadow-indigo-500/20"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>İlk Sınıfı Oluştur</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {state.classrooms.map((c) => {
+                  const assignedCount = state.assignments.filter((a) => a.classroomId === c.id).length;
+                  const isCopied = copiedCodeId === c.id;
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="p-5 rounded-3xl bg-[#111827]/80 border border-slate-800 hover:border-indigo-500/40 backdrop-blur-xl shadow-lg transition-all space-y-4 flex flex-col justify-between"
+                    >
+                      <div className="space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h4 className="font-heading font-bold text-base text-white">{c.name}</h4>
+                            {c.subject && (
+                              <span className="inline-block mt-1 px-2.5 py-0.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 font-semibold text-[11px]">
+                                {c.subject}
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={() => handleDeleteClass(c.id, c.name)}
+                            title="Sınıfı Sil"
+                            className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 transition-all cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        {c.description && (
+                          <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                            {c.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Join Code Box */}
+                      <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                            Katılım Kodu (Join Code)
+                          </div>
+                          <div className="font-mono text-cyan-400 font-extrabold text-lg tracking-widest mt-0.5">
+                            {c.joinCode}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => handleCopyCode(c.joinCode, c.id)}
+                          className={cn(
+                            'px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer',
+                            isCopied
+                              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30'
+                              : 'bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-300'
+                          )}
+                        >
+                          {isCopied ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-slate-950" />
+                              <span>Kopyalandı!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Kodu Kopyala</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800/80 text-[11px] text-slate-400 flex items-center justify-between">
+                        <span>{assignedCount} Atanmış Materyal</span>
+                        <span>{timeAgo(c.createdAt)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* Student Management Section */}
+          <section className="space-y-6 pt-8 border-t border-slate-800">
+            <h3 className="font-heading font-extrabold text-lg text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-indigo-400" />
+              <span>Öğrenci Hesapları ({state.students.length})</span>
+            </h3>
+
+            {/* Add Student Form */}
+            <div className="p-6 sm:p-7 rounded-3xl bg-[#111827]/80 border border-slate-800 shadow-lg space-y-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                <UserPlus className="w-4 h-4" />
+                <span>Manuel Öğrenci Hesabı Tanımla</span>
+              </div>
+              <form onSubmit={handleAddStudent} className="flex flex-wrap items-center gap-3">
                 <input
                   type="text"
                   value={newStudentName}
                   onChange={(e) => setNewStudentName(e.target.value)}
                   placeholder="Öğrenci Adı Soyadı (örn: Ali Vural)"
-                  className="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
+                  className="flex-1 min-w-[200px] px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:border-indigo-400 focus:outline-none"
                 />
-              </div>
-
-              <div className="w-full sm:w-56">
                 <input
                   type="text"
                   value={newStudentPass}
                   onChange={(e) => setNewStudentPass(e.target.value)}
-                  placeholder="Erişim Şifresi / Kodu (örn: ali123)"
-                  className="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
+                  placeholder="Şifre / Kod (örn: ali123)"
+                  className="w-full sm:w-48 px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:border-indigo-400 focus:outline-none"
                 />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isAddingStudent}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-indigo-500/20 transition-all cursor-pointer"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Öğrenciyi Ekle</span>
-              </button>
-            </form>
-          </section>
-
-          {/* Student Search and Count */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-xs font-semibold text-slate-400">
-              Kayıtlı Öğrenci Listesi ({state.students.length})
-            </div>
-
-            <div className="relative w-64">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={studentSearchQuery}
-                onChange={(e) => setStudentSearchQuery(e.target.value)}
-                placeholder="İsim veya kullanıcı adı ara..."
-                className="w-full pl-8 pr-3 py-1.5 bg-slate-900/90 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Student Grid / Empty State */}
-          {filteredStudents.length === 0 ? (
-            <div className="p-12 sm:p-16 text-center rounded-3xl bg-[#111827]/60 border border-dashed border-slate-800 space-y-4 animate-fade">
-              <div className="w-16 h-16 mx-auto rounded-3xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
-                <Users className="w-8 h-8" />
-              </div>
-              <div className="space-y-1.5 max-w-md mx-auto">
-                <h3 className="font-heading font-bold text-lg text-white">
-                  Sınıfınızda henüz kayıtlı öğrenci bulunmuyor
-                </h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Yukarıdaki formdan öğrenci adı ve erişim şifresi belirleyerek ilk öğrencinizi ekleyebilirsiniz.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredStudents.map((s) => (
-                <div
-                  key={s.id}
-                  className="p-4 rounded-2xl bg-[#111827]/80 border border-slate-800/90 hover:border-indigo-500/40 backdrop-blur-xl shadow-md flex items-center justify-between gap-3 transition-all"
+                <button
+                  type="submit"
+                  disabled={isAddingStudent}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white font-bold text-xs flex items-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className="w-11 h-11 rounded-2xl flex items-center justify-center font-heading font-bold text-sm text-white shrink-0 shadow-md"
-                      style={{ backgroundColor: s.color }}
-                    >
-                      {initials(s.name)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-semibold text-xs text-white truncate">{s.name}</div>
-                      <div className="text-[11px] text-slate-400 truncate mt-0.5">
-                        Kullanıcı: <b className="text-cyan-400">@{s.username}</b>
-                      </div>
-                      {s.password && (
-                        <div className="text-[10px] text-slate-500 truncate">
-                          Şifre: <span className="text-slate-300 font-mono">{s.password}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() => setReportStudent(s)}
-                      title="Gelişim Karnesi (PDF)"
-                      className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 transition-all cursor-pointer"
-                    >
-                      <FileSpreadsheet className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteStudent(s)}
-                      title="Öğrenciyi Sil"
-                      className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 transition-all cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                  <UserPlus className="w-4 h-4" />
+                  <span>Öğrenciyi Ekle</span>
+                </button>
+              </form>
             </div>
-          )}
+
+            {/* Student Search and Grid */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="text-xs font-semibold text-slate-400">
+                  Kayıtlı Öğrenci Listesi ({state.students.length})
+                </div>
+
+                <div className="relative w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                    placeholder="İsim veya kullanıcı adı ara..."
+                    className="w-full pl-8 pr-3 py-1.5 bg-slate-900/90 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {filteredStudents.length === 0 ? (
+                <div className="p-8 text-center rounded-3xl bg-[#111827]/60 border border-dashed border-slate-800">
+                  <p className="text-xs text-slate-400">Kayıtlı öğrenci bulunamadı.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredStudents.map((s) => (
+                    <div
+                      key={s.id}
+                      className="p-4 rounded-2xl bg-[#111827]/80 border border-slate-800 hover:border-indigo-500/40 backdrop-blur-xl shadow-md flex items-center justify-between gap-3 transition-all"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-11 h-11 rounded-2xl flex items-center justify-center font-heading font-bold text-sm text-white shrink-0 shadow-md"
+                          style={{ backgroundColor: s.color }}
+                        >
+                          {initials(s.name)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-xs text-white truncate">{s.name}</div>
+                          <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                            Kullanıcı: <b className="text-cyan-400">@{s.username}</b>
+                          </div>
+                          {s.password && (
+                            <div className="text-[10px] text-slate-500 truncate">
+                              Şifre: <span className="text-slate-300 font-mono">{s.password}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          onClick={() => setReportStudent(s)}
+                          title="Gelişim Karnesi (PDF)"
+                          className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 transition-all cursor-pointer"
+                        >
+                          <FileSpreadsheet className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteStudent(s)}
+                          title="Öğrenciyi Sil"
+                          className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
         </div>
       )}
 
@@ -849,6 +995,15 @@ export function TeacherView({
       )}
 
       {/* Modals */}
+      <AssignmentReviewModal
+        assignment={reviewAssignment}
+        isOpen={!!reviewAssignment}
+        onClose={() => setReviewAssignment(null)}
+      />
+      <CreateClassroomModal
+        isOpen={isCreateClassModalOpen}
+        onClose={() => setIsCreateClassModalOpen(false)}
+      />
       <CreateAssignmentModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}

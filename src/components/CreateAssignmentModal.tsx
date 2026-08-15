@@ -41,6 +41,7 @@ export function CreateAssignmentModal({
   const { state, createAssignment, showToast } = useEduFlow();
 
   const [contentType, setContentType] = useState<AssignmentType>(initialType);
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string>('');
   const [targetStudent, setTargetStudent] = useState('all');
   const [title, setTitle] = useState('');
   const [folder, setFolder] = useState('');
@@ -67,6 +68,7 @@ export function CreateAssignmentModal({
         }
       } else {
         setContentType(initialType);
+        setSelectedClassroomId(state.classrooms.length > 0 ? state.classrooms[0].id : '');
         setTitle('');
         setFolder('');
         setDesc('');
@@ -79,7 +81,7 @@ export function CreateAssignmentModal({
         ]);
       }
     }
-  }, [isOpen, prefillData, initialType]);
+  }, [isOpen, prefillData, initialType, state.classrooms]);
 
   if (!isOpen) return null;
 
@@ -100,10 +102,16 @@ export function CreateAssignmentModal({
   const handleNoteFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('Dosya boyutu 2MB üzerinde olamaz.', 'warn');
+      return;
+    }
+
     setNoteFileName(file.name);
     const reader = new FileReader();
-    reader.onload = (event) => {
-      setNoteFileData(event.target?.result as string);
+    reader.onload = (loadEv) => {
+      setNoteFileData(loadEv.target?.result as string);
     };
     reader.readAsDataURL(file);
   };
@@ -126,11 +134,15 @@ export function CreateAssignmentModal({
 
     setIsSubmitting(true);
 
+    const selectedClass = state.classrooms.find((c) => c.id === selectedClassroomId);
+
     const success = createAssignment({
       type: contentType,
       title: title.trim(),
       folder: folder.trim() || 'Genel',
       target: targetStudent,
+      classroomId: selectedClassroomId || undefined,
+      classroomName: selectedClass ? selectedClass.name : undefined,
       desc: desc.trim(),
       fileName: noteFileName,
       fileData: noteFileData,
@@ -231,18 +243,36 @@ export function CreateAssignmentModal({
             </div>
           </div>
 
-          {/* Target & Folder Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Classroom Selection & Target & Folder Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                Kime Atanacak?
+                🏫 Hangi Sınıfa?
+              </label>
+              <select
+                value={selectedClassroomId}
+                onChange={(e) => setSelectedClassroomId(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs focus:outline-none"
+              >
+                <option value="">🌐 Tüm Sınıflar</option>
+                {state.classrooms.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    🏫 {c.name} ({c.joinCode})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                👤 Hedef Öğrenci
               </label>
               <select
                 value={targetStudent}
                 onChange={(e) => setTargetStudent(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs focus:outline-none"
+                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs focus:outline-none"
               >
-                <option value="all">👥 Tüm Sınıfa (Genel)</option>
+                <option value="all">👥 Sınıftaki Herkese</option>
                 {state.students.map((s) => (
                   <option key={s.id} value={s.id}>
                     👤 Yalnızca: {s.name}
@@ -253,15 +283,15 @@ export function CreateAssignmentModal({
 
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-                Klasör / Ünite Adı
+                📁 Klasör / Ünite
               </label>
               <input
                 type="text"
                 list="modal-folder-list"
                 value={folder}
                 onChange={(e) => setFolder(e.target.value)}
-                placeholder="Örn: Past Simple Tense veya Genel"
-                className="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
+                placeholder="Örn: Ünite 1 veya Genel"
+                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
               />
               <datalist id="modal-folder-list">
                 {existingFolders.map((f) => (
