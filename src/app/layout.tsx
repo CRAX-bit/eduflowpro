@@ -3,6 +3,7 @@ import './globals.css';
 import { EduFlowProvider } from '@/context/EduFlowContext';
 import { Toast } from '@/components/Toast';
 import { AuthModal } from '@/components/AuthModal';
+import { Analytics } from '@vercel/analytics/next';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -39,6 +40,7 @@ export default function RootLayout({
           <AuthModal />
           <Toast />
         </EduFlowProvider>
+        <Analytics />
       </body>
     </html>
   );
