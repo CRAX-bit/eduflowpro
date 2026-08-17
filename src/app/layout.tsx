@@ -32,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" className="bg-slate-50">
-      <body className="antialiased bg-slate-50 text-slate-900 selection:bg-blue-600 selection:text-white min-h-screen">
+    <html lang="tr" className="bg-[#f8fafc]">
+      <body className="antialiased bg-[#f8fafc] text-slate-800 selection:bg-blue-600 selection:text-white min-h-screen">
         <EduFlowProvider>
           {children}
           <AuthModal />

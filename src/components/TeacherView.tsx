@@ -202,49 +202,54 @@ export function TeacherView({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      showToast('Dosya boyutu 10MB\'dan küçük olmalıdır.', 'warn');
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      showToast('Dosya boyutu en fazla 10 MB olabilir.', 'warn');
       return;
     }
 
     setSelectedFile(file);
-    if (!materialTitle) {
-      setMaterialTitle(file.name.replace(/\.[^/.]+$/, ''));
-    }
 
     const reader = new FileReader();
     reader.onload = () => {
       setSelectedFileData(reader.result as string);
     };
     reader.readAsDataURL(file);
+
+    if (!materialTitle.trim()) {
+      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+      setMaterialTitle(nameWithoutExt);
+    }
   };
 
-  const handleUploadMaterialSubmit = (e: React.FormEvent) => {
+  // Handle Quick Material Upload Submit
+  const handleUploadMaterialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!materialTitle.trim()) {
-      showToast('Lütfen materyal veya ders başlığı giriniz.', 'warn');
+      showToast('Lütfen bir materyal başlığı yazınız.', 'warn');
       return;
     }
 
     setIsUploadingMaterial(true);
     try {
-      const selectedClass = state.classrooms.find((c) => c.id === materialClassId);
-      const isSuccess = createAssignment({
+      const targetClass = state.classrooms.find((c) => c.id === materialClassId);
+      const created = createAssignment({
         type: 'note',
         title: materialTitle.trim(),
-        folder: materialFolder.trim() || 'Ders Materyali & PDF',
+        folder: materialFolder.trim() || 'Genel Materyal',
+        desc: materialDesc.trim(),
         target: materialTarget,
-        classroomId: materialClassId || undefined,
-        classroomName: selectedClass?.name || undefined,
-        desc: materialDesc.trim() || `${materialTitle} ders materyali ve çalışma dokümanı.`,
-        fileName: selectedFile ? selectedFile.name : null,
-        fileData: selectedFileData,
+        classroomId: targetClass?.id,
+        classroomName: targetClass?.name,
+        fileName: selectedFile?.name || null,
+        fileData: selectedFileData || null,
       });
 
-      if (isSuccess) {
+      if (created) {
         setMaterialTitle('');
         setMaterialFolder('');
         setMaterialDesc('');
+        setMaterialClassId('');
         setSelectedFile(null);
         setSelectedFileData(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -424,16 +429,16 @@ export function TeacherView({
   return (
     <div className="space-y-6 animate-fade pb-20">
       {/* 1. Calm Workspace Header (Clean EdTech Light Theme) */}
-      <header className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <header className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
             <GraduationCap className="w-3.5 h-3.5" />
             <span>Öğretmen Yönetim Paneli</span>
           </div>
-          <h1 className="font-heading font-bold text-2xl sm:text-3xl text-slate-900 tracking-tight">
+          <h1 className="font-heading font-bold text-2xl sm:text-3xl text-slate-800 tracking-tight">
             Hoş Geldiniz, {teacherDisplayName}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-600 max-w-xl leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">
             Ders materyallerinizi paylaşın, ödev ve testler yayınlayın, öğrenci not çizelgesini (Gradebook) anlık olarak takip edin.
           </p>
         </div>
@@ -476,11 +481,11 @@ export function TeacherView({
       {/* 2. Sınıf Başarı & Tamamlama Donut Modülü + Stat Kartları */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Sınıf Başarı Donut Kartı (5 Kolon) */}
-        <div className="lg:col-span-5 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="lg:col-span-5 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <PieChart className="w-4 h-4 text-blue-600" />
-              <h3 className="font-heading font-bold text-sm text-slate-900">
+              <h3 className="font-heading font-bold text-sm text-slate-800">
                 Sınıf Başarı & Teslim Analitiği
               </h3>
             </div>
@@ -516,7 +521,7 @@ export function TeacherView({
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="font-heading font-extrabold text-xl text-slate-900 leading-none">
+                <span className="font-heading font-extrabold text-xl text-slate-800 leading-none">
                   %{gradebookMetrics.completionPercent}
                 </span>
                 <span className="text-[9px] text-slate-500 font-medium mt-0.5">Teslimat</span>
@@ -527,17 +532,17 @@ export function TeacherView({
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
-                <span className="text-slate-600">İncelenen / Notlanan:</span>
-                <span className="font-bold text-slate-900">{gradebookMetrics.totalReviewed}</span>
+                <span className="text-slate-500">İncelenen / Notlanan:</span>
+                <span className="font-bold text-slate-800">{gradebookMetrics.totalReviewed}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-                <span className="text-slate-600">Onay Bekleyen:</span>
+                <span className="text-slate-500">Onay Bekleyen:</span>
                 <span className="font-bold text-amber-600">{gradebookMetrics.totalPendingReview}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-slate-200 shrink-0" />
-                <span className="text-slate-600">Beklenen Toplam:</span>
+                <span className="text-slate-500">Beklenen Toplam:</span>
                 <span className="font-semibold text-slate-700">{gradebookMetrics.totalExpectedSubmissions}</span>
               </div>
             </div>
@@ -554,10 +559,10 @@ export function TeacherView({
         {/* 4 Stat Kartı Grid (7 Kolon) */}
         <div className="lg:col-span-7 grid grid-cols-2 gap-4">
           {/* Metric 1: Students */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-blue-300 hover:shadow-xs transition-all shadow-xs">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-blue-300 hover:shadow-md transition-all shadow-sm">
             <div className="space-y-1">
               <div className="text-xs font-medium text-slate-500">Kayıtlı Öğrenciler</div>
-              <div className="font-heading font-bold text-2xl text-slate-900">
+              <div className="font-heading font-bold text-2xl text-slate-800">
                 {state.students.length}
               </div>
               <div className="text-[11px] text-blue-600 font-medium">{gradebookMetrics.activeStudents} Aktif Öğrenci</div>
@@ -568,10 +573,10 @@ export function TeacherView({
           </div>
 
           {/* Metric 2: Assignments & Materials */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-indigo-300 hover:shadow-xs transition-all shadow-xs">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all shadow-sm">
             <div className="space-y-1">
               <div className="text-xs font-medium text-slate-500">Yayındaki Materyaller</div>
-              <div className="font-heading font-bold text-2xl text-slate-900">
+              <div className="font-heading font-bold text-2xl text-slate-800">
                 {state.assignments.length}
               </div>
               <div className="text-[11px] text-indigo-600 font-medium">
@@ -584,10 +589,10 @@ export function TeacherView({
           </div>
 
           {/* Metric 3: Submissions */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-emerald-300 hover:shadow-xs transition-all shadow-xs">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-emerald-300 hover:shadow-md transition-all shadow-sm">
             <div className="space-y-1">
               <div className="text-xs font-medium text-slate-500">Ödev Teslimleri</div>
-              <div className="font-heading font-bold text-2xl text-slate-900">
+              <div className="font-heading font-bold text-2xl text-slate-800">
                 {totalSubmissions}
               </div>
               <div className="text-[11px] text-emerald-600 font-medium">Tamamlanan Teslimat</div>
@@ -598,10 +603,10 @@ export function TeacherView({
           </div>
 
           {/* Metric 4: Class Average */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-amber-300 hover:shadow-xs transition-all shadow-xs">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-amber-300 hover:shadow-md transition-all shadow-sm">
             <div className="space-y-1">
               <div className="text-xs font-medium text-slate-500">En Yüksek Başarı Skoru</div>
-              <div className="font-heading font-bold text-2xl text-slate-900">
+              <div className="font-heading font-bold text-2xl text-slate-800">
                 {gradebookMetrics.highestScore !== null ? `%${gradebookMetrics.highestScore}` : '—'}
               </div>
               <div className="text-[11px] text-amber-600 font-medium">
@@ -616,7 +621,7 @@ export function TeacherView({
       </section>
 
       {/* 3. Main LMS Navigation Tabs (Clean EdTech Light Style) */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white border border-slate-200 shadow-sm">
         <button
           type="button"
           onClick={() => setActiveTab('assignments')}
@@ -666,12 +671,12 @@ export function TeacherView({
       {activeTab === 'assignments' && (
         <div className="space-y-6 animate-fade">
           {/* A. Materyal & PDF Yükleme Alanı (Direct Upload & Sharing Zone) */}
-          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <UploadCloud className="w-5 h-5 text-blue-600" />
                 <div>
-                  <h3 className="font-heading font-semibold text-base text-slate-900">
+                  <h3 className="font-heading font-semibold text-base text-slate-800">
                     Ders Materyali & PDF Paylaşım Alanı
                   </h3>
                   <p className="text-xs text-slate-500">
@@ -786,7 +791,7 @@ export function TeacherView({
           {/* B. Yayınlanmış Materyal ve Ödevler Listesi */}
           <div className="space-y-4">
             {/* Toolbar Filter Row */}
-            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-white border border-slate-200 shadow-sm">
               {/* Type Filter Pills */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
@@ -877,10 +882,10 @@ export function TeacherView({
 
             {/* Assignments Grid (Clean EdTech Light Cards) */}
             {filteredAssignments.length === 0 ? (
-              <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 shadow-xs space-y-3">
+              <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 shadow-sm space-y-3">
                 <FileText className="w-8 h-8 mx-auto text-slate-400" />
                 <div className="space-y-1 max-w-md mx-auto">
-                  <h3 className="font-heading font-semibold text-base text-slate-900">
+                  <h3 className="font-heading font-semibold text-base text-slate-800">
                     Yayınlanmış ödev veya materyal bulunamadı
                   </h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
@@ -921,7 +926,7 @@ export function TeacherView({
                   return (
                     <div
                       key={a.id}
-                      className="p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between gap-4 group shadow-xs"
+                      className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all flex flex-col justify-between gap-4 group shadow-sm"
                     >
                       <div className="space-y-3">
                         {/* Top Badges */}
@@ -944,12 +949,12 @@ export function TeacherView({
 
                         {/* Title & Unit */}
                         <div>
-                          <h3 className="font-heading font-semibold text-base text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                          <h3 className="font-heading font-semibold text-base text-slate-800 group-hover:text-blue-600 transition-colors line-clamp-1">
                             {a.title}
                           </h3>
                           <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                             <span>Ünite:</span>
-                            <span className="text-slate-800 font-medium">{a.folder}</span>
+                            <span className="text-slate-700 font-medium">{a.folder}</span>
                             {a.classroomName && (
                               <span className="ml-1 text-blue-600 font-medium">• {a.classroomName}</span>
                             )}
@@ -994,7 +999,7 @@ export function TeacherView({
 
                         {/* Description */}
                         {a.desc && (
-                          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
                             {a.desc}
                           </p>
                         )}
@@ -1082,9 +1087,9 @@ export function TeacherView({
       {activeTab === 'gradebook' && (
         <div className="space-y-6 animate-fade">
           {/* Gradebook Header with Search */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <h3 className="font-heading font-bold text-base text-slate-900 flex items-center gap-2">
+              <h3 className="font-heading font-bold text-base text-slate-800 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-blue-600" />
                 <span>Öğrenci Not Çizelgesi & Gelişim Takip Tablosu</span>
               </h3>
@@ -1107,15 +1112,15 @@ export function TeacherView({
 
           {/* Gradebook Table View (Clean EdTech Light Table) */}
           {gradebookData.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 shadow-xs space-y-2">
+            <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 shadow-sm space-y-2">
               <Users className="w-8 h-8 mx-auto text-slate-400" />
-              <h4 className="font-semibold text-slate-900 text-sm">Kayıtlı öğrenci bulunamadı</h4>
+              <h4 className="font-semibold text-slate-800 text-sm">Kayıtlı öğrenci bulunamadı</h4>
               <p className="text-xs text-slate-500">
                 Öğrenci ekleyerek veya sınıf katılım kodunu paylaşarak sınıf mevcudunu oluşturun.
               </p>
             </div>
           ) : (
-            <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs overflow-hidden space-y-3">
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden space-y-3">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
@@ -1141,7 +1146,7 @@ export function TeacherView({
                               >
                                 {initials(student.name)}
                               </div>
-                              <div className="font-semibold text-slate-900">{student.name}</div>
+                              <div className="font-semibold text-slate-800">{student.name}</div>
                             </div>
                           </td>
 
@@ -1150,7 +1155,7 @@ export function TeacherView({
                           </td>
 
                           <td className="p-3.5">
-                            <span className="font-semibold text-slate-900">
+                            <span className="font-semibold text-slate-800">
                               {completedAssignmentsCount}
                             </span>
                             <span className="text-slate-400 font-normal"> / {totalAssigned}</span>
@@ -1222,12 +1227,12 @@ export function TeacherView({
       {activeTab === 'students' && (
         <div className="space-y-6 animate-fade">
           {/* Classrooms Grid & Management */}
-          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <School className="w-5 h-5 text-blue-600" />
                 <div>
-                  <h3 className="font-heading font-semibold text-base text-slate-900">
+                  <h3 className="font-heading font-semibold text-base text-slate-800">
                     Sınıf Şubeleri ({state.classrooms.length})
                   </h3>
                   <p className="text-xs text-slate-500">
@@ -1262,7 +1267,7 @@ export function TeacherView({
                     className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0 space-y-1">
-                      <h4 className="font-semibold text-xs text-slate-900 truncate">{c.name}</h4>
+                      <h4 className="font-semibold text-xs text-slate-800 truncate">{c.name}</h4>
                       {c.subject && <div className="text-[10px] text-slate-500">{c.subject}</div>}
                       <div className="flex items-center gap-2 pt-1">
                         <button
@@ -1291,12 +1296,12 @@ export function TeacherView({
           </section>
 
           {/* Student Roster Management */}
-          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-blue-600" />
                 <div>
-                  <h3 className="font-heading font-semibold text-base text-slate-900">
+                  <h3 className="font-heading font-semibold text-base text-slate-800">
                     Öğrenci Yönetim Listesi ({state.students.length})
                   </h3>
                   <p className="text-xs text-slate-500">
@@ -1355,7 +1360,7 @@ export function TeacherView({
                       {initials(s.name)}
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-semibold text-xs text-slate-900 truncate">{s.name}</h4>
+                      <h4 className="font-semibold text-xs text-slate-800 truncate">{s.name}</h4>
                       <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
                         <span>Kullanıcı: <b className="font-mono text-slate-700">{s.username}</b></span>
                         {s.password && <span>• Şifre: <b className="font-mono text-slate-700">{s.password}</b></span>}

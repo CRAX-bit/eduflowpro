@@ -300,7 +300,7 @@ export function StudentView() {
   return (
     <div className="space-y-8 animate-fade pb-20">
       {/* 1. Header Banner (Clean EdTech Light Theme) */}
-      <header className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+      <header className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-extrabold text-base text-white shadow-xs shrink-0"
@@ -346,7 +346,7 @@ export function StudentView() {
                       className="fixed inset-0 z-20"
                       onClick={() => setIsLevelDropdownOpen(false)}
                     />
-                    <div className="absolute left-0 top-full mt-1.5 w-72 sm:w-80 p-1.5 rounded-2xl bg-white border border-slate-200/90 shadow-xl z-30 space-y-1 animate-fade">
+                    <div className="absolute left-0 top-full mt-1.5 w-72 sm:w-80 p-1.5 rounded-2xl bg-white border border-slate-200 shadow-xl z-30 space-y-1 animate-fade">
                       <div className="px-2.5 py-1.5 text-[11px] font-semibold text-slate-500 border-b border-slate-100 flex items-center justify-between">
                         <span>Eğitim Seviyesi / Hedef Sınav</span>
                         <span className="text-[10px] text-blue-600 font-semibold">Seç & Güncelle</span>
@@ -383,7 +383,7 @@ export function StudentView() {
               </div>
             </div>
 
-            <h1 className="font-heading font-bold text-xl sm:text-2xl text-slate-900 tracking-tight">
+            <h1 className="font-heading font-bold text-xl sm:text-2xl text-slate-800 tracking-tight">
               Hoş Geldin, {studentDisplayName}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500">
@@ -419,10 +419,10 @@ export function StudentView() {
       {/* 2. Metrics Ribbon */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Completed Tasks */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-blue-300 hover:shadow-xs transition-all shadow-xs">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-blue-300 hover:shadow-md transition-all shadow-sm">
           <div className="space-y-1">
             <div className="text-xs font-medium text-slate-500">Tamamlanan Görevler</div>
-            <div className="font-heading font-bold text-2xl text-slate-900">
+            <div className="font-heading font-bold text-2xl text-slate-800">
               {stats.completedCount} <span className="text-xs text-slate-400 font-normal">/ {stats.totalCount}</span>
             </div>
             <div className="text-[11px] text-blue-600 font-medium">
@@ -435,10 +435,10 @@ export function StudentView() {
         </div>
 
         {/* Metric 2: Streak Days */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-amber-300 hover:shadow-xs transition-all shadow-xs">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-amber-300 hover:shadow-md transition-all shadow-sm">
           <div className="space-y-1">
             <div className="text-xs font-medium text-slate-500">Çalışma Serisi</div>
-            <div className="font-heading font-bold text-2xl text-slate-900 flex items-center gap-1.5">
+            <div className="font-heading font-bold text-2xl text-slate-800 flex items-center gap-1.5">
               <span>{stats.streakDays}</span>
               <span className="text-xs font-normal text-slate-400">Gün</span>
               <Flame className="w-5 h-5 text-amber-500" />
@@ -453,10 +453,10 @@ export function StudentView() {
         </div>
 
         {/* Metric 3: Average Score */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-emerald-300 hover:shadow-xs transition-all shadow-xs">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-emerald-300 hover:shadow-md transition-all shadow-sm">
           <div className="space-y-1">
             <div className="text-xs font-medium text-slate-500">Genel Başarı Puanı</div>
-            <div className="font-heading font-bold text-2xl text-slate-900">
+            <div className="font-heading font-bold text-2xl text-slate-800">
               {stats.averageScore !== null ? `%${stats.averageScore}` : '—'}
             </div>
             <div className="text-[11px] text-emerald-600 font-medium">
@@ -469,10 +469,10 @@ export function StudentView() {
         </div>
 
         {/* Metric 4: Classrooms */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-indigo-300 hover:shadow-xs transition-all shadow-xs">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all shadow-sm">
           <div className="space-y-1">
             <div className="text-xs font-medium text-slate-500">Kayıtlı Sınıflar</div>
-            <div className="font-heading font-bold text-2xl text-slate-900">
+            <div className="font-heading font-bold text-2xl text-slate-800">
               {state.joinedClassrooms.length}
             </div>
             <div className="text-[11px] text-indigo-600 font-medium">Aktif Şube & Ders</div>
@@ -486,11 +486,11 @@ export function StudentView() {
       {/* 3. BİREYSEL BAŞARI & KONU HAKİMİYETİ DONUT ANALİZ MODÜLÜ */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Sol Kolon: Bireysel Başarı & Görev Dağılımı Donut Grafiği (6 Kolon) */}
-        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <PieChart className="w-4 h-4 text-blue-600" />
-              <h3 className="font-heading font-bold text-sm text-slate-900">
+              <h3 className="font-heading font-bold text-sm text-slate-800">
                 Bireysel Başarı & Görev Dağılımı
               </h3>
             </div>
@@ -526,7 +526,7 @@ export function StudentView() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="font-heading font-extrabold text-2xl text-slate-900 leading-none">
+                <span className="font-heading font-extrabold text-2xl text-slate-800 leading-none">
                   %{stats.completionRate}
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium mt-1">İlerleme</span>
@@ -537,17 +537,17 @@ export function StudentView() {
             <div className="space-y-2.5 text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
-                <span className="text-slate-600">Tamamlanan:</span>
-                <span className="font-bold text-slate-900">{stats.completedCount} Ödev</span>
+                <span className="text-slate-500">Tamamlanan:</span>
+                <span className="font-bold text-slate-800">{stats.completedCount} Ödev</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
-                <span className="text-slate-600">Değerlendirmede:</span>
+                <span className="text-slate-500">Değerlendirmede:</span>
                 <span className="font-bold text-indigo-600">{stats.evaluatingCount} Ödev</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-                <span className="text-slate-600">Bekleyen:</span>
+                <span className="text-slate-500">Bekleyen:</span>
                 <span className="font-bold text-amber-600">{stats.pendingCount} Ödev</span>
               </div>
               <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
@@ -566,11 +566,11 @@ export function StudentView() {
         </div>
 
         {/* Sağ Kolon: Konu Hakimiyeti & Tavsiyeler (6 Kolon) */}
-        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4 text-emerald-600" />
-              <h3 className="font-heading font-bold text-sm text-slate-900">
+              <h3 className="font-heading font-bold text-sm text-slate-800">
                 Konu Hakimiyeti & Çalışma Tavsiyesi
               </h3>
             </div>
@@ -639,7 +639,7 @@ export function StudentView() {
       {/* 4. Categorized Assignments Section (Clean Tabs) */}
       <section className="space-y-4">
         {/* Subtabs Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-white border border-slate-200 shadow-sm">
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
@@ -722,7 +722,7 @@ export function StudentView() {
 
         {/* Assignment Cards Grid */}
         {categorizedAssignments.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 shadow-xs space-y-2">
+          <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 shadow-sm space-y-2">
             <BookOpen className="w-8 h-8 mx-auto text-slate-400" />
             <h4 className="font-medium text-slate-800 text-sm">
               {assignmentFilterTab === 'pending'
@@ -750,7 +750,7 @@ export function StudentView() {
               return (
                 <div
                   key={a.id}
-                  className="p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between gap-4 group shadow-xs"
+                  className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all flex flex-col justify-between gap-4 group shadow-sm"
                 >
                   <div className="space-y-3">
                     {/* Badge Row with Format & Status */}
@@ -803,7 +803,7 @@ export function StudentView() {
 
                     {/* Title & Description */}
                     <div>
-                      <h3 className="font-heading font-bold text-base text-slate-900 group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-heading font-bold text-base text-slate-800 group-hover:text-blue-600 transition-colors">
                         {a.title}
                       </h3>
                       <div className="text-xs text-slate-500 mt-0.5">Konu: {a.folder}</div>
@@ -845,7 +845,7 @@ export function StudentView() {
                     })()}
 
                     {a.desc && (
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                      <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
                         {a.desc}
                       </p>
                     )}
@@ -944,12 +944,12 @@ export function StudentView() {
       </section>
 
       {/* 5. Katılınan Sınıf Şubeleri */}
-      <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+      <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <School className="w-5 h-5 text-blue-600" />
             <div>
-              <h3 className="font-heading font-semibold text-base text-slate-900">
+              <h3 className="font-heading font-semibold text-base text-slate-800">
                 Kayıtlı Olduğun Sınıflar ({state.joinedClassrooms.length})
               </h3>
               <p className="text-xs text-slate-500">
@@ -984,7 +984,7 @@ export function StudentView() {
                 className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3"
               >
                 <div className="min-w-0 space-y-0.5">
-                  <h4 className="font-semibold text-xs text-slate-900 truncate">{c.name}</h4>
+                  <h4 className="font-semibold text-xs text-slate-800 truncate">{c.name}</h4>
                   {c.subject && <div className="text-[10px] text-slate-500">{c.subject}</div>}
                   <div className="text-[10px] text-blue-600 font-mono font-semibold pt-0.5">
                     Öğretmen: {c.teacherName || 'Öğretmen'}
