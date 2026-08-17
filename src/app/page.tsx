@@ -61,8 +61,20 @@ export default function App() {
             <span className="text-cyan-400">Google Gemini Pro Destekli</span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <span>Öğrenci & Öğretmen Başarı Platformu</span>
+          <div className="flex items-center gap-4 text-slate-400">
+            <a
+              href="/gizlilik-politikasi"
+              className="hover:text-cyan-400 transition-colors underline-offset-4 hover:underline"
+            >
+              Gizlilik & KVKK Politikası
+            </a>
+            <span>·</span>
+            <a
+              href="/kullanim-kosullari"
+              className="hover:text-cyan-400 transition-colors underline-offset-4 hover:underline"
+            >
+              Kullanım Koşulları
+            </a>
           </div>
 
           <div className="text-[11px] text-slate-500">

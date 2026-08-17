@@ -76,6 +76,7 @@ export function AuthModal() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -93,6 +94,7 @@ export function AuthModal() {
       setPassword('');
       setFullName('');
       setShowPassword(false);
+      setAcceptedTerms(false);
       setErrorMessage(null);
       setMode('signin');
     }
@@ -181,6 +183,13 @@ export function AuthModal() {
         if (cleanPass.length < 6) {
           setErrorMessage('Şifreniz en az 6 karakter uzunluğunda olmalıdır.');
           showToast('Şifreniz en az 6 karakter olmalıdır.', 'warn');
+          setLoading(false);
+          return;
+        }
+
+        if (!acceptedTerms) {
+          setErrorMessage("Kayıt olmak için lütfen Kullanım Koşulları'nı ve KVKK Aydınlatma Metni'ni onaylayınız.");
+          showToast("Lütfen Kullanım Koşulları ve KVKK Aydınlatma Metni'ni onaylayın.", 'warn');
           setLoading(false);
           return;
         }
@@ -679,6 +688,58 @@ export function AuthModal() {
                 </div>
               )}
 
+              {/* Terms and KVKK Consent Checkbox (Sign Up only) */}
+              {mode === 'signup' && (
+                <div className="pt-2 animate-fade">
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none group">
+                    <input
+                      type="checkbox"
+                      name="eduflow_terms_consent"
+                      disabled={loading}
+                      checked={acceptedTerms}
+                      onChange={(e) => {
+                        setAcceptedTerms(e.target.checked);
+                        if (errorMessage) setErrorMessage(null);
+                      }}
+                      className="sr-only"
+                    />
+                    <div
+                      className={cn(
+                        'w-4 h-4 mt-0.5 rounded-md border flex items-center justify-center transition-all shrink-0',
+                        acceptedTerms
+                          ? 'bg-cyan-500 border-cyan-400 text-slate-950 shadow-[0_0_10px_rgba(0,242,254,0.5)]'
+                          : 'border-white/20 bg-white/[0.03] group-hover:border-white/40',
+                        loading && 'opacity-50 cursor-not-allowed'
+                      )}
+                    >
+                      {acceptedTerms && <Check className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                    <span className="text-[11px] sm:text-xs text-slate-300 leading-relaxed group-hover:text-white transition-colors">
+                      <a
+                        href="/kullanim-kosullari"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-cyan-400 hover:text-cyan-300 underline font-medium"
+                      >
+                        Kullanım Koşulları&apos;nı
+                      </a>{' '}
+                      ve{' '}
+                      <a
+                        href="/gizlilik-politikasi"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-cyan-400 hover:text-cyan-300 underline font-medium"
+                      >
+                        KVKK Aydınlatma Metni&apos;ni
+                      </a>{' '}
+                      okudum, onaylıyorum.
+                    </span>
+                  </label>
+                </div>
+              )}
+
               {/* Submit Button with Loading Spinner */}
               <button
                 type="submit"
@@ -722,6 +783,7 @@ export function AuthModal() {
                       setEmail('');
                       setPassword('');
                       setFullName('');
+                      setAcceptedTerms(false);
                       setErrorMessage(null);
                     }}
                     className="text-cyan-400 hover:text-cyan-300 font-bold hover:underline cursor-pointer ml-1 disabled:opacity-50"
@@ -740,6 +802,7 @@ export function AuthModal() {
                       setEmail('');
                       setPassword('');
                       setFullName('');
+                      setAcceptedTerms(false);
                       setErrorMessage(null);
                     }}
                     className="text-cyan-400 hover:text-cyan-300 font-bold hover:underline cursor-pointer ml-1 disabled:opacity-50"

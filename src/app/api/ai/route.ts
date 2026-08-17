@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { verifyServerAuth, unauthorizedResponse } from '@/lib/server-auth';
+import { sanitizeInput, escapePromptInjection, clampInteger, AI_SAFETY_DIRECTIVE } from '@/lib/security';
+import { getClientIdentifier, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limiter';
 
 interface AiRequestBody {
   action: 'generate_quiz' | 'generate_notes' | 'generate_feedback' | 'explain_question' | 'chat_assistant';
@@ -18,6 +21,19 @@ interface AiRequestBody {
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Enforce Authentication Guard (Reject unauthenticated callers with 401)
+    const authResult = await verifyServerAuth(req);
+    if (!authResult.authenticated) {
+      return unauthorizedResponse(authResult.error);
+    }
+
+    // 2. Enforce In-Memory Rate Limiting (Max 10 requests / 1 min per User ID or IP)
+    const clientKey = getClientIdentifier(req, authResult.user?.id);
+    const rateLimit = checkRateLimit(clientKey, 10, 60000);
+    if (!rateLimit.allowed) {
+      return rateLimitExceededResponse(rateLimit.resetInSeconds);
+    }
+
     const body: AiRequestBody = await req.json();
     const { action } = body;
 
@@ -31,17 +47,19 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.GEMINI_API_KEY;
 
-    // If API Key is present, call Google Gemini via @google/genai
-    if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
-      try {
-        const ai = new GoogleGenAI({ apiKey });
+    // 2. Input Sanitization & Abuse Prevention (Max 1000 chars per text input)
+    if (action === 'generate_quiz') {
+      const rawTopic = body.topic || 'Genel Konu Tekrarı';
+      const topic = escapePromptInjection(sanitizeInput(rawTopic, 200)) || 'Genel Konu Tekrarı';
+      const count = clampInteger(body.count, 1, 10, 3);
+      const grade = escapePromptInjection(sanitizeInput(body.grade || 'Lise / Ortaokul', 100));
 
-        if (action === 'generate_quiz') {
-          const topic = body.topic || 'Genel Konu Tekrarı';
-          const count = body.count || 3;
-          const grade = body.grade || 'Lise / Ortaokul';
+      if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
+        try {
+          const ai = new GoogleGenAI({ apiKey });
+          const prompt = `${AI_SAFETY_DIRECTIVE}
 
-          const prompt = `Sen uzman bir öğretmensin. Aşağıdaki konu ve sınıf seviyesi için ${count} adet interaktif kısa cevaplı (boşluk doldurma veya tek-iki kelimelik net cevaplı) soru hazırla.
+Sen uzman bir öğretmensin. Aşağıdaki konu ve sınıf seviyesi için ${count} adet interaktif kısa cevaplı (boşluk doldurma veya tek-iki kelimelik net cevaplı) soru hazırla.
 Konu: ${topic}
 Seviye: ${grade}
 
@@ -66,15 +84,40 @@ Lütfen sadece ve sadece aşağıdaki JSON formatında yanıt ver (başka hiçbi
           });
 
           const rawText = response.text || '';
-          // Clean JSON
           const jsonMatch = rawText.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
             return NextResponse.json({ success: true, data: parsed, source: 'gemini' });
           }
-        } else if (action === 'generate_notes') {
-          const topic = body.topic || 'Önemli Konu';
-          const prompt = `Sen harika bir özel ders öğretmenisin. "${topic}" konusu hakkında öğrenciler için anlaşılır, akılda kalıcı, maddeli, örnekli ve formüllü/ipuçlu zengin bir Ders Notu hazırla. Türkçe olsun. Emojilerle zenginleştir.`;
+        } catch (geminiError: any) {
+          console.warn('Gemini API call failed, falling back to intelligent template response:', geminiError.message);
+        }
+      }
+
+      const questions = generateFallbackQuestions(topic, count);
+      return NextResponse.json({
+        success: true,
+        data: {
+          title: `${topic} — Akıllı Test`,
+          folder: topic,
+          desc: 'Soruları dikkatlice okuyup kısa cevap kutularına doğru yanıtları yazınız.',
+          timeLimit: count * 45,
+          questions,
+        },
+        source: 'fallback_template',
+      });
+    }
+
+    if (action === 'generate_notes') {
+      const rawTopic = body.topic || 'Önemli Konu';
+      const topic = escapePromptInjection(sanitizeInput(rawTopic, 300)) || 'Önemli Konu';
+
+      if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
+        try {
+          const ai = new GoogleGenAI({ apiKey });
+          const prompt = `${AI_SAFETY_DIRECTIVE}
+
+Sen harika bir özel ders öğretmenisin. "${topic}" konusu hakkında öğrenciler için anlaşılır, akılda kalıcı, maddeli, örnekli ve formüllü/ipuçlu zengin bir Ders Notu hazırla. Türkçe olsun. Emojilerle zenginleştir.`;
 
           const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -90,13 +133,45 @@ Lütfen sadece ve sadece aşağıdaki JSON formatında yanıt ver (başka hiçbi
             },
             source: 'gemini',
           });
-        } else if (action === 'generate_feedback') {
-          const { studentName, score, total, mistakes, topic } = body;
-          const prompt = `Sen destekleyici, motivasyon verici ve yapıcı bir özel ders öğretmenisin.
-Öğrenci: ${studentName || 'Öğrenci'}
-Konu: ${topic || 'Genel Konu'}
-Skor: ${total ? Math.round(((score || 0) / total) * 100) : 100}% (${score || 0}/${total || 0})
-Yapılan Hatalar: ${JSON.stringify(mistakes || [])}
+        } catch (geminiError: any) {
+          console.warn('Gemini API call failed, falling back to intelligent template response:', geminiError.message);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          title: `${topic} — Özet Ders Notu`,
+          folder: topic,
+          content: generateFallbackNotes(topic),
+        },
+        source: 'fallback_template',
+      });
+    }
+
+    if (action === 'generate_feedback') {
+      const studentName = escapePromptInjection(sanitizeInput(body.studentName || 'Öğrenci', 100));
+      const topic = escapePromptInjection(sanitizeInput(body.topic || 'Genel Konu', 200));
+      const score = clampInteger(body.score, 0, 1000, 0);
+      const total = clampInteger(body.total, 0, 1000, 0);
+      const safeMistakes = Array.isArray(body.mistakes)
+        ? body.mistakes.slice(0, 10).map((m) => ({
+            question: sanitizeInput(m.question, 300),
+            studentAnswer: sanitizeInput(m.studentAnswer, 200),
+            correctAnswer: sanitizeInput(m.correctAnswer, 200),
+          }))
+        : [];
+
+      if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
+        try {
+          const ai = new GoogleGenAI({ apiKey });
+          const prompt = `${AI_SAFETY_DIRECTIVE}
+
+Sen destekleyici, motivasyon verici ve yapıcı bir özel ders öğretmenisin.
+Öğrenci: ${studentName}
+Konu: ${topic}
+Skor: ${total ? Math.round((score / total) * 100) : 100}% (${score}/${total})
+Yapılan Hatalar: ${JSON.stringify(safeMistakes)}
 
 Bu öğrenciye hitaben 2-4 cümlelik samimi, eksik noktaları hatırlatan ve motive eden bir öğretmen geri bildirimi (feedback) yaz.`;
 
@@ -110,9 +185,39 @@ Bu öğrenciye hitaben 2-4 cümlelik samimi, eksik noktaları hatırlatan ve mot
             feedback: response.text || '',
             source: 'gemini',
           });
-        } else if (action === 'explain_question') {
-          const { question, studentAnswer, correctAnswer } = body;
-          const prompt = `Bir öğrenci aşağıdaki soruda hata yaptı:
+        } catch (geminiError: any) {
+          console.warn('Gemini feedback error:', geminiError.message);
+        }
+      }
+
+      const pct = total ? Math.round((score / total) * 100) : 0;
+      let feedbackText = '';
+      if (pct >= 80) {
+        feedbackText = `Harika bir performans ${studentName}! Konuyu çok iyi kavramışsın. Temel kurallara olan hakimiyetin ve dikkatli yaklaşımın tebrik edilmeye değer. Bu istikrarı koruyarak bir sonraki üniteye güvenle geçebilirsin! 🌟👏`;
+      } else if (pct >= 50) {
+        feedbackText = `Tebrikler ${studentName}, güzel bir gayret gösterdin. Temel noktalarda başarılısın ancak bazı küçük istisnaları ve ayrıntıları tekrar gözden geçirmen faydalı olacaktır. Yanlış yaptığın soruların açıklamalarına mutlaka bak! 📚💪`;
+      } else {
+        feedbackText = `Sevgili ${studentName}, bu konu biraz pratik gerektiriyor. Yanlış yaptığın soruların doğru çözümlerini dikkatle incele ve konu anlatım notlarına bir kez daha göz at. Birlikte yapacağımız bir sonraki derste bu noktaları pekiştireceğiz! ✨🚀`;
+      }
+
+      return NextResponse.json({
+        success: true,
+        feedback: feedbackText,
+        source: 'fallback_template',
+      });
+    }
+
+    if (action === 'explain_question') {
+      const question = escapePromptInjection(sanitizeInput(body.question || '', 500));
+      const studentAnswer = escapePromptInjection(sanitizeInput(body.studentAnswer || '', 300));
+      const correctAnswer = escapePromptInjection(sanitizeInput(body.correctAnswer || '', 300));
+
+      if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
+        try {
+          const ai = new GoogleGenAI({ apiKey });
+          const prompt = `${AI_SAFETY_DIRECTIVE}
+
+Bir öğrenci aşağıdaki soruda hata yaptı:
 Soru: "${question}"
 Öğrencinin Verdiği Yanıt: "${studentAnswer || '(Boş bırakıldı)'}"
 Doğru Yanıt: "${correctAnswer}"
@@ -129,9 +234,34 @@ Lütfen öğrenciye samimi, net ve öğretici bir dille doğrusunun neden "${cor
             explanation: response.text || '',
             source: 'gemini',
           });
-        } else if (action === 'chat_assistant') {
-          const prompt = `Sen EduFlow Pro'nun yapay zeka eğitim asistanısın. Öğretmenlere ders planlamada, öğrencilere ise konu anlamada yardımcı oluyorsun.
-Kullanıcı Mesajı: "${body.message || 'Merhaba'}"
+        } catch (geminiError: any) {
+          console.warn('Gemini explainer error:', geminiError.message);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        explanation: `💡 **Soru Çözüm Analizi**:\n\n**Soru:** ${question}\n**Senin Cevabın:** ${studentAnswer || '(Boş)'}\n**Doğru Cevap:** **${correctAnswer}**\n\n📌 **Neden Doğru?**\nBu soru tipinde cümlenin zaman yapısı ve özne-yüklem uyumu belirleyicidir. Kural gereği doğru ifade **"${correctAnswer}"** olmalıdır. Konu tekrarı yaparken bu kuralı notlarına eklemeyi unutma!`,
+        source: 'fallback_template',
+      });
+    }
+
+    if (action === 'chat_assistant') {
+      const message = escapePromptInjection(sanitizeInput(body.message || '', 1000));
+      if (!message) {
+        return NextResponse.json(
+          { success: false, error: 'Mesaj metni boş olamaz.' },
+          { status: 400 }
+        );
+      }
+
+      if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
+        try {
+          const ai = new GoogleGenAI({ apiKey });
+          const prompt = `${AI_SAFETY_DIRECTIVE}
+
+Sen EduFlow Pro'nun yapay zeka eğitim asistanısın. Öğretmenlere ders planlamada, öğrencilere ise konu anlamada yardımcı oluyorsun.
+Kullanıcı Mesajı: "${message}"
 Lütfen kısa, faydalı ve samimi bir yanıt ver.`;
 
           const response = await ai.models.generateContent({
@@ -144,79 +274,19 @@ Lütfen kısa, faydalı ve samimi bir yanıt ver.`;
             reply: response.text || '',
             source: 'gemini',
           });
+        } catch (geminiError: any) {
+          console.warn('Gemini chat error:', geminiError.message);
         }
-      } catch (geminiError: any) {
-        console.warn('Gemini API call failed, falling back to intelligent template response:', geminiError.message);
-      }
-    }
-
-    // High-quality smart fallback (works offline or when API key is not configured)
-    if (action === 'generate_quiz') {
-      const topic = body.topic || 'İngilizce Zamanlar';
-      const count = body.count || 3;
-      const questions = generateFallbackQuestions(topic, count);
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          title: `${topic} — Akıllı Test`,
-          folder: topic,
-          desc: 'Soruları dikkatlice okuyup kısa cevap kutularına doğru yanıtları yazınız.',
-          timeLimit: count * 45,
-          questions,
-        },
-        source: 'fallback_template',
-        note: 'Gemini API anahtarı girildiğinde doğrudan canlı modelden üretilir.',
-      });
-    }
-
-    if (action === 'generate_notes') {
-      const topic = body.topic || 'Konu Özeti';
-      return NextResponse.json({
-        success: true,
-        data: {
-          title: `${topic} — Özet Ders Notu`,
-          folder: topic,
-          content: generateFallbackNotes(topic),
-        },
-        source: 'fallback_template',
-      });
-    }
-
-    if (action === 'generate_feedback') {
-      const { studentName, score, total } = body;
-      const pct = total ? Math.round(((score || 0) / total) * 100) : 0;
-      let feedbackText = '';
-
-      if (pct >= 80) {
-        feedbackText = `Harika bir performans ${studentName || ''}! Konuyu çok iyi kavramışsın. Temel kurallara olan hakimiyetin ve dikkatli yaklaşımın tebrik edilmeye değer. Bu istikrarı koruyarak bir sonraki üniteye güvenle geçebilirsin! 🌟👏`;
-      } else if (pct >= 50) {
-        feedbackText = `Tebrikler ${studentName || ''}, güzel bir gayret gösterdin. Temel noktalarda başarılısın ancak bazı küçük istisnaları ve ayrıntıları tekrar gözden geçirmen faydalı olacaktır. Yanlış yaptığın soruların açıklamalarına mutlaka bak! 📚💪`;
-      } else {
-        feedbackText = `Sevgili ${studentName || ''}, bu konu biraz pratik gerektiriyor. Yanlış yaptığın soruların doğru çözümlerini dikkatle incele ve konu anlatım notlarına bir kez daha göz at. Birlikte yapacağımız bir sonraki derste bu noktaları pekiştireceğiz! ✨🚀`;
       }
 
       return NextResponse.json({
         success: true,
-        feedback: feedbackText,
+        reply: 'EduFlow Pro AI Asistanı devrede! Size nasıl yardımcı olabilirim?',
         source: 'fallback_template',
       });
     }
 
-    if (action === 'explain_question') {
-      const { question, studentAnswer, correctAnswer } = body;
-      return NextResponse.json({
-        success: true,
-        explanation: `💡 **Soru Çözüm Analizi**:\n\n**Soru:** ${question}\n**Senin Cevabın:** ${studentAnswer || '(Boş)'}\n**Doğru Cevap:** **${correctAnswer}**\n\n📌 **Neden Doğru?**\nBu soru tipinde cümlenin zaman yapısı ve özne-yüklem uyumu belirleyicidir. Kural gereği doğru ifade **"${correctAnswer}"** olmalıdır. Konu tekrarı yaparken bu kuralı notlarına eklemeyi unutma!`,
-        source: 'fallback_template',
-      });
-    }
-
-    return NextResponse.json({
-      success: true,
-      reply: 'EduFlow Pro AI Asistanı devrede! Size nasıl yardımcı olabilirim?',
-      source: 'fallback_template',
-    });
+    return NextResponse.json({ success: false, error: 'Bilinmeyen istek.' }, { status: 400 });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message || 'Internal Server Error' },

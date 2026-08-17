@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useEduFlow } from '@/context/EduFlowContext';
 import { Assignment, Student } from '@/types';
 import { X, MessageSquareQuote, Sparkles, Loader2, Save } from 'lucide-react';
+import { getAuthHeaders } from '@/lib/api-client';
 
 interface FeedbackModalProps {
   assignment: Assignment | null;
@@ -12,7 +13,7 @@ interface FeedbackModalProps {
 }
 
 export function FeedbackModal({ assignment, student, onClose }: FeedbackModalProps) {
-  const { saveFeedback, showToast } = useEduFlow();
+  const { saveFeedback, showToast, state } = useEduFlow();
 
   const [feedbackText, setFeedbackText] = useState(() => {
     if (!assignment || !student) return '';
@@ -32,9 +33,10 @@ export function FeedbackModal({ assignment, student, onClose }: FeedbackModalPro
   const handleGenerateAiFeedback = async () => {
     setIsGenerating(true);
     try {
+      const headers = await getAuthHeaders(state.session);
       const res = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           action: 'generate_feedback',
           studentName: student.name,
@@ -49,7 +51,7 @@ export function FeedbackModal({ assignment, student, onClose }: FeedbackModalPro
         setFeedbackText(data.feedback);
         showToast('Gemini AI öğrenciye özel geri bildirim oluşturdu! ✨', 'success');
       } else {
-        showToast('Yapay zeka yanıtı alınamadı.', 'warn');
+        showToast(data.error || 'Yapay zeka yanıtı alınamadı.', 'warn');
       }
     } catch (e) {
       showToast('Bağlantı hatası oluştu.', 'error');

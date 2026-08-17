@@ -21,13 +21,14 @@ import {
   Compass,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getAuthHeaders } from '@/lib/api-client';
 
 interface GeminiStudioTabProps {
   onOpenCreateAssignmentModal: (prefill: any) => void;
 }
 
 export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTabProps) {
-  const { showToast } = useEduFlow();
+  const { showToast, state } = useEduFlow();
 
   const [activeSubTab, setActiveSubTab] = useState<'quiz' | 'note' | 'chat'>('quiz');
 
@@ -81,9 +82,10 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
     setGeneratedQuiz(null);
 
     try {
+      const headers = await getAuthHeaders(state.session);
       const res = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           action: 'generate_quiz',
           topic,
@@ -96,7 +98,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
         setGeneratedQuiz(data.data);
         showToast('Soru taslağı başarıyla oluşturuldu.', 'success');
       } else {
-        showToast('Test oluşturulamadı. Lütfen tekrar deneyin.', 'error');
+        showToast(data.error || 'Test oluşturulamadı. Lütfen tekrar deneyin.', 'error');
       }
     } catch (e) {
       showToast('Bağlantı hatası oluştu.', 'error');
@@ -116,9 +118,10 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
     setGeneratedNote(null);
 
     try {
+      const headers = await getAuthHeaders(state.session);
       const res = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           action: 'generate_notes',
           topic,
@@ -129,7 +132,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
         setGeneratedNote(data.data);
         showToast('Ders notu ve özeti oluşturuldu.', 'success');
       } else {
-        showToast('Ders notu oluşturulamadı.', 'error');
+        showToast(data.error || 'Ders notu oluşturulamadı.', 'error');
       }
     } catch (e) {
       showToast('Bağlantı hatası oluştu.', 'error');
@@ -148,9 +151,10 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
     setIsChatLoading(true);
 
     try {
+      const headers = await getAuthHeaders(state.session);
       const res = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           action: 'chat_assistant',
           message: userText,
@@ -162,7 +166,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
       } else {
         setChatMessages((prev) => [
           ...prev,
-          { role: 'assistant', text: 'Yanıt üretilirken bir sorun oluştu. Lütfen tekrar iletin.' },
+          { role: 'assistant', text: data.error || 'Yanıt üretilirken bir sorun oluştu. Lütfen tekrar iletin.' },
         ]);
       }
     } catch (e) {

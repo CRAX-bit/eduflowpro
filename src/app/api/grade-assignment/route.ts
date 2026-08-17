@@ -4,15 +4,6 @@ import { verifyServerAuth, unauthorizedResponse } from '@/lib/server-auth';
 import { sanitizeInput, escapePromptInjection, MAX_STUDENT_ANSWER_LENGTH, AI_SAFETY_DIRECTIVE } from '@/lib/security';
 import { getClientIdentifier, checkRateLimit, rateLimitExceededResponse } from '@/lib/rate-limiter';
 
-interface GradeRequestBody {
-  assignmentTitle: string;
-  assignmentDesc?: string;
-  assignmentType?: string;
-  studentAnswer: string;
-  studentName?: string;
-  folder?: string;
-}
-
 export async function POST(req: NextRequest) {
   try {
     // 1. Enforce Authentication Guard (Reject unauthenticated callers with 401)
@@ -28,7 +19,7 @@ export async function POST(req: NextRequest) {
       return rateLimitExceededResponse(rateLimit.resetInSeconds);
     }
 
-    const body: GradeRequestBody = await req.json();
+    const body = await req.json();
     const rawAnswer = body.studentAnswer || '';
     
     // 2. Input Sanitization & Abuse Prevention
@@ -47,7 +38,6 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.GEMINI_API_KEY;
 
-    // Live call to Google Gemini Pro
     if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
       try {
         const ai = new GoogleGenAI({ apiKey });
@@ -72,7 +62,7 @@ GÖREVİN:
 3. Öğrenciye hitaben 2-4 cümlelik samimi, motive edici, pedagojik ve yapıcı Türkçe bir değerlendirme (feedback) yaz.
 4. Yanıtın güçlü yönlerini (strengths: en az 2 madde) ve geliştirmesi gereken eksik/öneri noktalarını (improvements: en az 1-2 madde) belirle.
 
-Lütfen SADECE ve SADECE aşağıdaki JSON formatında geçerli bir JSON yanıt ver (başka hiçbir metin veya markdown etiket bloğu ekleme):
+Lütfen SADECE ve SADECE aşağıdaki JSON formatında geçerli bir JSON yanıt ver:
 {
   "score": 85,
   "feedback": "Sevgili ${studentName}, ödevini çok beğendim! Konuyu gayet net kavramışsın...",
@@ -106,31 +96,21 @@ Lütfen SADECE ve SADECE aşağıdaki JSON formatında geçerli bir JSON yanıt 
           });
         }
       } catch (geminiError: any) {
-        console.warn('Gemini grading API notice, falling back to heuristic evaluation:', geminiError.message);
+        console.warn('Gemini grade-assignment notice:', geminiError.message);
       }
     }
 
-    // High quality intelligent fallback if offline / key not set
+    // Heuristic fallback
     const length = studentAnswer.trim().length;
     let fallbackScore = 75;
-    let feedback = '';
-    let strengths = ['Verilen yönergelere uygun bir yanıt hazırlanmış.', 'Konuya odaklanılmış ve temel sorular cevaplanmış.'];
-    let improvements = ['Bir sonraki ödevde detayları biraz daha genişletebilirsin.'];
+    let feedback = `Tebrikler ${studentName}, ödevini başarıyla teslim ettin. Konuya odaklanman gayet güzel.`;
+    let strengths = ['Yönergelere uygun hazırlık', 'Zamanında teslim'];
+    let improvements = ['Detayları genişletme'];
 
     if (length > 200) {
       fallbackScore = 92;
-      feedback = `Harika bir çalışma ${studentName}! Konuyu detaylı ve örneklerle çok güzel açıklamışsın. Analitik düşünme ve ifade gücün oldukça yüksek. Tebrik ederim! 🌟👏`;
-      strengths = ['Kapsamlı ve özenli açıklama', 'Doğru terminoloji kullanımı', 'Akıcı anlatım'];
-    } else if (length > 80) {
-      fallbackScore = 80;
-      feedback = `Tebrikler ${studentName}, güzel bir gayret gösterdin. Temel fikirleri doğru aktarmışsın. Birkaç ek detay ve örnekle çalışmanı daha da güçlendirebilirsin. Başarılar! 👍✨`;
-      strengths = ['Temel fikri yakalama', 'Öz ve net yanıt'];
-      improvements = ['Örneklerle destekleme', 'Daha detaylı açıklama'];
-    } else {
-      fallbackScore = 65;
-      feedback = `Eline sağlık ${studentName}. Yanıtın doğru yönde ancak konuyu biraz daha açman ve daha fazla örnek vermen öğrenmeni pekiştirecektir. Gayretini takdir ediyorum! 📚💪`;
-      strengths = ['Ödeve zamanında katılım'];
-      improvements = ['Cevabı daha detaylı yazma', 'Konu anlatım notlarını inceleme'];
+      feedback = `Harika bir çalışma ${studentName}! Analitik yaklaşımın ve detaylı açıklamaların çok başarılı.`;
+      strengths = ['Kapsamlı anlatım', 'Doğru terminoloji kullanımı'];
     }
 
     return NextResponse.json({

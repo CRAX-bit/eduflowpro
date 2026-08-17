@@ -16,6 +16,7 @@ import {
 } from '@/types';
 import { STORAGE_KEY, AVATAR_COLORS, uid, slugUser, norm } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { getAuthHeaders } from '@/lib/api-client';
 
 interface CreateAssignmentParams {
   type: AssignmentType;
@@ -1118,9 +1119,10 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       let aiImprovements: string[] = ['Birkaç ek detayla zenginleştirilebilir.'];
 
       try {
+        const authHeaders = await getAuthHeaders(state.session);
         const res = await fetch('/api/ai/grade', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({
             assignmentTitle: assignment.title,
             assignmentDesc: assignment.desc,

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useEduFlow } from '@/context/EduFlowContext';
 import { Assignment, Question } from '@/types';
 import { initials, fmtTime, cn } from '@/lib/utils';
+import { getAuthHeaders } from '@/lib/api-client';
 import confetti from 'canvas-confetti';
 import {
   Folder,
@@ -44,11 +45,13 @@ import {
   Layers,
   Inbox,
   Hourglass,
+  ArrowRight,
 } from 'lucide-react';
 import { NoteModal } from './NoteModal';
 import { PhotoModal } from './PhotoModal';
 import { JoinClassroomModal } from './JoinClassroomModal';
 import { AssignmentSubmitModal } from './AssignmentSubmitModal';
+import { QuizStudyModal } from './QuizStudyModal';
 
 type AssignmentFilterTab = 'pending' | 'evaluating' | 'completed' | 'all';
 
@@ -59,9 +62,7 @@ export function StudentView() {
     getVisibleAssignments,
     submitTestAnswers,
     retryTest,
-    submitHomeworkPhoto,
     leaveClassroom,
-    logout,
     showToast,
   } = useEduFlow();
 
@@ -73,15 +74,13 @@ export function StudentView() {
   const [isJoinClassModalOpen, setIsJoinClassModalOpen] = useState(false);
   const [submitModalAssignment, setSubmitModalAssignment] = useState<Assignment | null>(null);
 
-  // Timers state: { [assignmentId]: { remaining: number, active: boolean } }
-  const [timers, setTimers] = useState<Record<string, { remaining: number; active: boolean }>>({});
-  const [testAnswers, setTestAnswers] = useState<Record<string, string[]>>({});
-
-  // Question Explainer state
-  const [explainingQuestion, setExplainingQuestion] = useState<{
-    key: string;
-    text: string;
-    loading: boolean;
+  // Active Focus Quiz Study Modal State (Quizlet Study Engine)
+  const [activeStudyQuiz, setActiveStudyQuiz] = useState<{
+    id?: string;
+    title: string;
+    folder?: string;
+    questions: Question[];
+    timeLimit?: number;
   } | null>(null);
 
   // Modals state
@@ -107,56 +106,19 @@ export function StudentView() {
   const [practiceTopic, setPracticeTopic] = useState('Matematik Üslü ve Köklü Sayılar');
   const [practiceCount, setPracticeCount] = useState<number>(5);
   const [isPracticeLoading, setIsPracticeLoading] = useState(false);
-  const [practiceQuiz, setPracticeQuiz] = useState<{
-    title: string;
-    folder: string;
-    questions: Question[];
-  } | null>(null);
-  const [practiceAnswers, setPracticeAnswers] = useState<string[]>([]);
-  const [practiceSubmitted, setPracticeSubmitted] = useState(false);
-  const [practiceScore, setPracticeScore] = useState<{ correct: number; total: number; percent: number } | null>(null);
-
-  // Active timers countdown effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimers((prev) => {
-        const next = { ...prev };
-        let hasChanges = false;
-
-        Object.keys(next).forEach((id) => {
-          if (next[id]?.active) {
-            if (next[id].remaining <= 1) {
-              // Timer expired! Trigger auto submit
-              next[id] = { remaining: 0, active: false };
-              hasChanges = true;
-              const currentAns = testAnswers[id] || [];
-              submitTestAnswers(id, currentAns, true);
-            } else {
-              next[id] = { ...next[id], remaining: next[id].remaining - 1 };
-              hasChanges = true;
-            }
-          }
-        });
-
-        return hasChanges ? next : prev;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [testAnswers, submitTestAnswers]);
 
   if (!state.session && !state.currentStudentId) {
     return (
-      <div className="text-center py-20 text-slate-400 space-y-3">
+      <div className="text-center py-20 text-zinc-400 space-y-3">
         <p>Lütfen önce öğrenci girişi yapınız.</p>
       </div>
     );
   }
 
   const studentDisplayName = state.session?.name || currentStudent?.name || 'Öğrenci';
-  const studentColor = currentStudent?.color || '#6366f1';
+  const studentColor = currentStudent?.color || '#10b981';
 
-  // --- Real Stats Tracker Calculation (No Fake Mock Data) ---
+  // --- Real Stats Tracker Calculation (Zero Fake Mock Data) ---
   const stats = useMemo(() => {
     let completedCount = 0;
     let pendingCount = 0;
@@ -167,7 +129,6 @@ export function StudentView() {
     assignments.forEach((a) => {
       const sub = a.submissions?.[studentId];
       if (a.type === 'note') {
-        // Read notes are informative
         return;
       }
 
@@ -184,7 +145,7 @@ export function StudentView() {
         totalScoreSum += sub.percent;
         scoredItemsCount += 1;
       } else {
-        // Submitted, waiting for teacher approval
+        // Submitted, waiting for teacher review
         evaluatingCount += 1;
       }
     });
@@ -203,7 +164,7 @@ export function StudentView() {
     };
   }, [assignments, studentId]);
 
-  // Filtered Assignments based on tab
+  // Filtered Assignments based on tab (Quizlet / Notion Clean 3 Tabs)
   const categorizedAssignments = useMemo(() => {
     return assignments.filter((a) => {
       const sub = a.submissions?.[studentId];
@@ -221,54 +182,27 @@ export function StudentView() {
     });
   }, [assignments, studentId, assignmentFilterTab]);
 
-  // --- Handlers for Teacher Assigned Tests ---
-  const handleStartTest = (a: Assignment) => {
-    const limit = a.timeLimit || 120;
-    setTimers((prev) => ({
-      ...prev,
-      [a.id]: { remaining: limit, active: true },
-    }));
-    setTestAnswers((prev) => ({
-      ...prev,
-      [a.id]: new Array(a.questions?.length || 0).fill(''),
-    }));
-    showToast('Test başladı! Başarılar dileriz ⏱️', 'info');
-  };
-
-  const handleAnswerChange = (assignmentId: string, questionIndex: number, value: string) => {
-    setTestAnswers((prev) => {
-      const current = prev[assignmentId] ? [...prev[assignmentId]] : [];
-      current[questionIndex] = value;
-      return { ...prev, [assignmentId]: current };
-    });
-  };
-
-  const handleSubmitTest = (assignmentId: string) => {
-    setTimers((prev) => {
-      const next = { ...prev };
-      if (next[assignmentId]) {
-        next[assignmentId] = { ...next[assignmentId], active: false };
-      }
-      return next;
-    });
-
-    const answers = testAnswers[assignmentId] || [];
-    const result = submitTestAnswers(assignmentId, answers, false);
-
-    if (result.percent >= 70) {
-      try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
-      } catch (e) {}
+  // --- Handlers for Teacher Assigned Tests in Focus Mode ---
+  const handleStartFocusTest = (a: Assignment) => {
+    if (!a.questions || a.questions.length === 0) {
+      showToast('Bu test için soru bulunamadı.', 'warn');
+      return;
     }
+
+    setActiveStudyQuiz({
+      id: a.id,
+      title: a.title,
+      folder: a.folder,
+      questions: a.questions,
+      timeLimit: a.timeLimit || 180,
+    });
   };
 
-  const handleRetry = (assignmentId: string) => {
-    retryTest(assignmentId);
-    setTestAnswers((prev) => ({ ...prev, [assignmentId]: [] }));
+  const handleStudyQuizComplete = (answers: string[], scorePercent: number) => {
+    if (activeStudyQuiz?.id) {
+      submitTestAnswers(activeStudyQuiz.id, answers, false);
+      showToast(`Test tamamlandı! Başarı skorunuz: %${scorePercent}`, 'success');
+    }
   };
 
   // --- Handlers for AI Study Coach Chat ---
@@ -282,9 +216,10 @@ export function StudentView() {
     setIsCoachLoading(true);
 
     try {
+      const headers = await getAuthHeaders(state.session);
       const res = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           action: 'chat_assistant',
           message: `Öğrenci sorusu: ${userText}`,
@@ -296,7 +231,7 @@ export function StudentView() {
       } else {
         setCoachMessages((prev) => [
           ...prev,
-          { role: 'assistant', text: 'Yanıt üretilirken bir aksaklık oldu. Lütfen sorunuzu tekrar iletin.' },
+          { role: 'assistant', text: data.error || 'Yanıt üretilirken bir aksaklık oldu. Lütfen sorunuzu tekrar iletin.' },
         ]);
       }
     } catch (e) {
@@ -309,21 +244,18 @@ export function StudentView() {
     }
   };
 
-  // --- Handlers for Quick AI Practice Quiz ---
+  // --- Handlers for Quick AI Practice Quiz (Direct to Focus Study Mode) ---
   const handleGeneratePracticeQuiz = async (topicToUse?: string) => {
     const topic = (topicToUse || practiceTopic).trim();
     if (!topic) return;
     setPracticeTopic(topic);
     setIsPracticeLoading(true);
-    setPracticeQuiz(null);
-    setPracticeSubmitted(false);
-    setPracticeScore(null);
-    setPracticeAnswers([]);
 
     try {
+      const headers = await getAuthHeaders(state.session);
       const res = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           action: 'generate_quiz',
           topic,
@@ -332,44 +264,22 @@ export function StudentView() {
         }),
       });
       const data = await res.json();
-      if (data.success && data.data) {
-        setPracticeQuiz(data.data);
-        setPracticeAnswers(new Array(data.data.questions?.length || 0).fill(''));
-        showToast(`${practiceCount} soruluk alıştırma hazırlandı.`, 'success');
+      if (data.success && data.data && data.data.questions?.length > 0) {
+        setIsPracticeModalOpen(false);
+        setActiveStudyQuiz({
+          title: data.data.title || `${topic} — Pratik Test`,
+          folder: topic,
+          questions: data.data.questions,
+          timeLimit: (data.data.questions.length || 5) * 45,
+        });
+        showToast(`${topic} için ${data.data.questions.length} soruluk odak çalışma modu başlatıldı!`, 'success');
       } else {
-        showToast('Alıştırma testi oluşturulamadı. Lütfen tekrar deneyin.', 'error');
+        showToast(data.error || 'Alıştırma testi oluşturulamadı. Lütfen tekrar deneyin.', 'error');
       }
     } catch (e) {
       showToast('Bağlantı hatası oluştu.', 'error');
     } finally {
       setIsPracticeLoading(false);
-    }
-  };
-
-  const handlePracticeSubmit = () => {
-    if (!practiceQuiz?.questions) return;
-    let correct = 0;
-    practiceQuiz.questions.forEach((q, idx) => {
-      const userAns = (practiceAnswers[idx] || '').trim().toLowerCase();
-      const trueAns = (q.a || '').trim().toLowerCase();
-      if (userAns && userAns === trueAns) {
-        correct += 1;
-      }
-    });
-
-    const total = practiceQuiz.questions.length;
-    const percent = Math.round((correct / total) * 100);
-    setPracticeScore({ correct, total, percent });
-    setPracticeSubmitted(true);
-
-    if (percent >= 70) {
-      try {
-        confetti({
-          particleCount: 70,
-          spread: 60,
-          origin: { y: 0.6 },
-        });
-      } catch (e) {}
     }
   };
 
@@ -383,25 +293,26 @@ export function StudentView() {
   ];
 
   return (
-    <div className="space-y-6 animate-fade pb-16">
-      {/* 1. Header Card */}
-      <header className="p-6 sm:p-7 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/40 border border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+    <div className="space-y-8 animate-fade pb-16">
+      {/* 1. Header Card (Linear / Quizlet Minimalist Banner) */}
+      <header className="p-6 sm:p-7 rounded-2xl sm:rounded-3xl bg-[#090a0f] border border-zinc-800/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
           <div
-            className="w-13 h-13 rounded-2xl flex items-center justify-center font-heading font-extrabold text-lg text-white shadow-md shrink-0 border border-white/10"
+            className="w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-extrabold text-base text-white shadow-md shrink-0 border border-white/10"
             style={{ backgroundColor: studentColor }}
           >
             {initials(studentDisplayName)}
           </div>
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
-              <span>🎓 Öğrenci Başarı Portalı</span>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+              <Sparkles className="w-3 h-3" />
+              <span>Öğrenci Başarı & Pratik Portalı</span>
             </div>
-            <h1 className="font-heading font-bold text-2xl sm:text-3xl text-white tracking-tight">
+            <h1 className="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">
               Hoş Geldin, {studentDisplayName}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Ödevlerini teslim et, ders notlarını incele ve çalışma asistanınla eksiklerini pekiştir.
+            <p className="text-xs sm:text-sm text-zinc-400">
+              Ödevlerini teslim et, ders notlarını incele ve Quizlet odak modunda anında pratik yap.
             </p>
           </div>
         </div>
@@ -409,106 +320,104 @@ export function StudentView() {
         <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
           <button
             onClick={() => setIsJoinClassModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
           >
-            <KeyRound className="w-4 h-4 text-indigo-400" />
+            <KeyRound className="w-4 h-4 text-emerald-400" />
             <span>Sınıfa Katıl</span>
           </button>
 
           <button
             onClick={() => setIsPracticeModalOpen(!isPracticeModalOpen)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs sm:text-sm shadow-sm transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs sm:text-sm shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all cursor-pointer"
           >
             <Compass className="w-4 h-4" />
-            <span>Konu Alıştırması</span>
+            <span>Konu Alıştırması (AI Quiz)</span>
           </button>
         </div>
       </header>
 
-      {/* 2. Real Stats Ribbon (Zero Fake Mock Data) */}
+      {/* 2. Metrics Ribbon */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Completed Tasks */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-all">
+        <div className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 flex items-center justify-between hover:border-zinc-700 transition-all">
           <div className="space-y-1">
-            <div className="text-xs font-semibold text-slate-400">Tamamlanan Görevler</div>
+            <div className="text-xs font-medium text-zinc-400">Tamamlanan Görevler</div>
             <div className="font-heading font-bold text-2xl text-white">
-              {stats.completedCount} <span className="text-xs text-slate-500 font-normal">/ {stats.totalCount}</span>
+              {stats.completedCount} <span className="text-xs text-zinc-500 font-normal">/ {stats.totalCount}</span>
             </div>
-            <div className="text-[11px] text-slate-400">
+            <div className="text-[11px] text-zinc-400">
               {stats.pendingCount > 0 ? `${stats.pendingCount} Bekleyen Ödev` : 'Tüm ödevler tamamlandı'}
             </div>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 2: Streak Days */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-all">
+        <div className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 flex items-center justify-between hover:border-zinc-700 transition-all">
           <div className="space-y-1">
-            <div className="text-xs font-semibold text-slate-400">Çalışma Serisi</div>
-            <div className="font-heading font-bold text-2xl text-amber-400 flex items-center gap-1.5">
+            <div className="text-xs font-medium text-zinc-400">Çalışma Serisi</div>
+            <div className="font-heading font-bold text-2xl text-white flex items-center gap-1.5">
               <span>{stats.streakDays}</span>
-              <span className="text-xs text-slate-400 font-normal">Gün</span>
+              <span className="text-xs font-normal text-zinc-500">Gün</span>
+              <Flame className="w-5 h-5 text-amber-500" />
             </div>
-            <div className="text-[11px] text-slate-400">
-              {stats.streakDays > 0 ? 'Harika gidiyorsun! 🔥' : 'Bugün ilk testini çöz! 🔥'}
+            <div className="text-[11px] text-zinc-400">
+              {stats.streakDays > 0 ? 'Seriyi bozmadan devam et!' : 'İlk ödevini tamamlayarak seriyi başlat'}
             </div>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
             <Flame className="w-5 h-5" />
           </div>
         </div>
 
-        {/* Metric 3: Real Average Score */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-all">
+        {/* Metric 3: Average Score */}
+        <div className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 flex items-center justify-between hover:border-zinc-700 transition-all">
           <div className="space-y-1">
-            <div className="text-xs font-semibold text-slate-400">Başarı Ortalaması</div>
-            <div className="font-heading font-bold text-2xl text-emerald-400">
+            <div className="text-xs font-medium text-zinc-400">Genel Başarı Puanı</div>
+            <div className="font-heading font-bold text-2xl text-white">
               {stats.averageScore !== null ? `%${stats.averageScore}` : '—'}
             </div>
-            <div className="text-[11px] text-slate-400">
-              {stats.averageScore !== null ? 'Onaylanan Not Ortalaması' : 'Henüz notlanmış ödev yok'}
+            <div className="text-[11px] text-zinc-400">
+              {stats.averageScore !== null ? 'Öğretmen & Test Ortalaması' : 'Notlandırılmış ödev bekleniyor'}
             </div>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <Award className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <TrendingUp className="w-5 h-5" />
           </div>
         </div>
 
-        {/* Metric 4: Joined Classrooms */}
-        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-all">
+        {/* Metric 4: Classrooms */}
+        <div className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 flex items-center justify-between hover:border-zinc-700 transition-all">
           <div className="space-y-1">
-            <div className="text-xs font-semibold text-slate-400">Kayıtlı Sınıflarım</div>
-            <div className="font-heading font-bold text-2xl text-cyan-400">
+            <div className="text-xs font-medium text-zinc-400">Kayıtlı Sınıflar</div>
+            <div className="font-heading font-bold text-2xl text-white">
               {state.joinedClassrooms.length}
             </div>
-            <div className="text-[11px] text-slate-400">Dahil Olduğun Şube</div>
+            <div className="text-[11px] text-zinc-400">Aktif Şube & Ders</div>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
             <School className="w-5 h-5" />
           </div>
         </div>
       </section>
 
-      {/* 3. Joined Classrooms Section */}
-      <section className="p-5 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+      {/* 3. Classrooms Ribbon */}
+      <section className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <School className="w-5 h-5 text-indigo-400" />
+            <School className="w-4 h-4 text-emerald-400" />
             <div>
-              <h2 className="font-heading font-semibold text-base text-white">
+              <h2 className="font-heading font-semibold text-sm text-white">
                 Kayıtlı Olduğum Sınıflar ({state.joinedClassrooms.length})
               </h2>
-              <p className="text-xs text-slate-400">
-                Öğretmeninizin paylaştığı 6 haneli kod ile sınıflarınıza erişin.
-              </p>
             </div>
           </div>
 
           <button
             onClick={() => setIsJoinClassModalOpen(true)}
-            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+            className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Yeni Sınıfa Katıl</span>
@@ -516,99 +425,71 @@ export function StudentView() {
         </div>
 
         {state.joinedClassrooms.length === 0 ? (
-          <div className="p-6 text-center rounded-xl bg-slate-950/40 border border-dashed border-slate-800 space-y-2">
-            <KeyRound className="w-8 h-8 mx-auto text-slate-500" />
-            <h4 className="font-medium text-white text-sm">Henüz bir sınıfa katılmadınız</h4>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Öğretmeninizin sizinle paylaştığı 6 haneli katılım kodunu girerek sınıfınıza dahil olabilirsiniz.
+          <div className="p-6 text-center rounded-xl bg-zinc-950/40 border border-dashed border-zinc-800 space-y-2">
+            <KeyRound className="w-7 h-7 mx-auto text-zinc-600" />
+            <h4 className="font-medium text-white text-xs">Henüz bir sınıfa katılmadınız</h4>
+            <p className="text-[11px] text-zinc-400 max-w-sm mx-auto">
+              Öğretmeninizin paylaştığı 6 haneli kodu girerek sınıfınıza dahil olabilirsiniz.
             </p>
-            <button
-              onClick={() => setIsJoinClassModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs inline-flex items-center gap-1.5 mt-2 cursor-pointer shadow-sm"
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Katılım Kodu Gir</span>
-            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {state.joinedClassrooms.map((c) => {
-              return (
-                <div
-                  key={c.id}
-                  className="p-4 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-2 flex flex-col justify-between"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-semibold text-sm text-white line-clamp-1">{c.name}</h4>
-                      {c.subject && (
-                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[10px] font-semibold">
-                          {c.subject}
-                        </span>
-                      )}
-                    </div>
-                    {c.description && (
-                      <p className="text-xs text-slate-400 line-clamp-1">{c.description}</p>
-                    )}
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                    <span>
-                      Kod: <b className="font-mono text-slate-200">{c.joinCode}</b>
-                    </span>
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`"${c.name}" sınıfından ayrılmak istediğinize emin misiniz?`)) {
-                          leaveClassroom(c.id);
-                        }
-                      }}
-                      className="text-slate-500 hover:text-red-400 text-xs transition-colors cursor-pointer"
-                    >
-                      Ayrıl
-                    </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {state.joinedClassrooms.map((c) => (
+              <div
+                key={c.id}
+                className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <h4 className="font-semibold text-xs text-white truncate">{c.name}</h4>
+                  <div className="text-[10px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
+                    <span>Kod: <b className="font-mono text-emerald-400">{c.joinCode}</b></span>
+                    {c.subject && <span>• {c.subject}</span>}
                   </div>
                 </div>
-              );
-            })}
+
+                <button
+                  onClick={() => {
+                    if (window.confirm(`"${c.name}" sınıfından ayrılmak istediğinize emin misiniz?`)) {
+                      leaveClassroom(c.id);
+                    }
+                  }}
+                  className="text-zinc-600 hover:text-red-400 text-xs transition-colors cursor-pointer"
+                  title="Sınıftan Ayrıl"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </section>
 
-      {/* 4. Quick Practice Modal / Module with Question Count & Clear Instructions */}
+      {/* 4. Quick Practice Modal / Module Trigger */}
       {isPracticeModalOpen && (
-        <section className="p-5 sm:p-6 rounded-2xl bg-slate-900/90 border border-indigo-500/30 shadow-xl space-y-4 animate-fade">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <section className="p-5 sm:p-6 rounded-2xl bg-[#090a0f] border border-emerald-500/30 shadow-2xl space-y-4 animate-fade">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
             <div className="flex items-center gap-2">
-              <Compass className="w-5 h-5 text-indigo-400" />
+              <Compass className="w-5 h-5 text-emerald-400" />
               <div>
                 <h2 className="font-heading font-semibold text-base text-white">
                   Akıllı Konu Alıştırması & Test Modülü
                 </h2>
-                <p className="text-xs text-slate-400">
-                  Dilediğin konuda anında soru üret ve çözümlerini gör.
+                <p className="text-xs text-zinc-400">
+                  Dilediğin konuda anında Quizlet odak modlu pratik testi oluştur.
                 </p>
               </div>
             </div>
             <button
               onClick={() => setIsPracticeModalOpen(false)}
-              className="text-xs text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 cursor-pointer"
+              className="text-xs text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 cursor-pointer"
             >
               Kapat ✕
             </button>
           </div>
 
-          {/* Clear Instructions Banner */}
-          <div className="p-3.5 rounded-xl bg-indigo-950/30 border border-indigo-500/30 text-xs text-indigo-200 leading-relaxed flex items-start gap-2.5">
-            <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold text-white block mb-0.5">💡 Nasıl Kullanılır?</span>
-              Çalışmak istediğin dersi, konuyu veya zorluk seviyesini yazabilirsin. (Örn: <i>"10. Sınıf Fonksiyonlar"</i>, <i>"B1 İngilizce Past Perfect Tense"</i>, <i>"Köklü Sayılar Kolay Seviye"</i>, <i>"Fizik Vektörler"</i>).
-            </div>
-          </div>
-
           {/* Quick Subject Chips */}
           <div className="space-y-2">
-            <span className="text-xs font-semibold text-slate-400">Popüler Konu Örnekleri:</span>
+            <span className="text-xs font-semibold text-zinc-400">Örnek Çalışma Konuları:</span>
             <div className="flex flex-wrap gap-2">
               {practiceChips.map((chip, idx) => (
                 <button
@@ -617,8 +498,8 @@ export function StudentView() {
                   className={cn(
                     'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer',
                     practiceTopic === chip
-                      ? 'bg-indigo-600/30 border-indigo-500 text-indigo-300 font-semibold'
-                      : 'bg-slate-950 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-semibold'
+                      : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
                   )}
                 >
                   {chip}
@@ -627,33 +508,33 @@ export function StudentView() {
             </div>
           </div>
 
-          {/* Custom Topic Input & Soru Sayısı Selection */}
+          {/* Custom Topic Input & Soru Sayısı */}
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
             <div className="sm:col-span-7">
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
                 Konu Başlığı
               </label>
               <input
                 type="text"
                 value={practiceTopic}
                 onChange={(e) => setPracticeTopic(e.target.value)}
-                placeholder="Örn: 9. Sınıf Üçgende Açılar..."
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
+                placeholder="Örn: 10. Sınıf Fotosentez Işık Reaksiyonları..."
+                className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-zinc-500 focus:outline-none"
               />
             </div>
 
             <div className="sm:col-span-3">
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
                 Soru Sayısı
               </label>
               <select
                 value={practiceCount}
                 onChange={(e) => setPracticeCount(Number(e.target.value))}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs focus:outline-none"
+                className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
               >
-                <option value={3}>3 Soru (Hızlı Test)</option>
-                <option value={5}>5 Soru (Standart)</option>
-                <option value={10}>10 Soru (Kapsamlı)</option>
+                <option value={3}>3 Soru (Hızlı Pratik)</option>
+                <option value={5}>5 Soru (Standart Test)</option>
+                <option value={10}>10 Soru (Kapsamlı Sınav)</option>
               </select>
             </div>
 
@@ -661,7 +542,7 @@ export function StudentView() {
               <button
                 disabled={isPracticeLoading || !practiceTopic.trim()}
                 onClick={() => handleGeneratePracticeQuiz()}
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
               >
                 {isPracticeLoading ? (
                   <>
@@ -677,111 +558,26 @@ export function StudentView() {
               </button>
             </div>
           </div>
-
-          {/* Rendered Practice Quiz Questions */}
-          {practiceQuiz && (
-            <div className="space-y-4 pt-4 border-t border-slate-800 animate-fade">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm text-white">
-                  {practiceQuiz.title} ({practiceQuiz.questions?.length} Soru)
-                </h3>
-                {practiceSubmitted && practiceScore && (
-                  <div className="px-3 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold">
-                    Puan: %{practiceScore.percent} ({practiceScore.correct}/{practiceScore.total} Doğru)
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                {practiceQuiz.questions?.map((q, idx) => {
-                  const isCorrect =
-                    practiceSubmitted &&
-                    (practiceAnswers[idx] || '').trim().toLowerCase() === (q.a || '').trim().toLowerCase();
-
-                  return (
-                    <div
-                      key={idx}
-                      className={cn(
-                        'p-4 rounded-xl border space-y-2.5 transition-all',
-                        practiceSubmitted
-                          ? isCorrect
-                            ? 'bg-emerald-950/20 border-emerald-500/40'
-                            : 'bg-red-950/20 border-red-500/40'
-                          : 'bg-slate-950/70 border-slate-800'
-                      )}
-                    >
-                      <div className="flex items-center justify-between text-xs font-medium text-slate-400">
-                        <span className="text-slate-300 font-semibold">Soru {idx + 1}</span>
-                        {practiceSubmitted && (
-                          <span
-                            className={cn(
-                              'px-2 py-0.5 rounded text-[10px] font-semibold',
-                              isCorrect ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'
-                            )}
-                          >
-                            {isCorrect ? '✓ Doğru' : '✕ Yanlış'}
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-sm text-slate-100 font-medium leading-relaxed">{q.q}</p>
-
-                      <input
-                        type="text"
-                        disabled={practiceSubmitted}
-                        value={practiceAnswers[idx] || ''}
-                        onChange={(e) => {
-                          const updated = [...practiceAnswers];
-                          updated[idx] = e.target.value;
-                          setPracticeAnswers(updated);
-                        }}
-                        placeholder="Cevabınızı buraya yazınız..."
-                        className="w-full px-3.5 py-2 bg-slate-900 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
-                      />
-
-                      {practiceSubmitted && !isCorrect && (
-                        <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 text-xs flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                          <span>
-                            Doğru Cevap: <b className="text-emerald-400">{q.a}</b>
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {!practiceSubmitted && (
-                <button
-                  onClick={handlePracticeSubmit}
-                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all cursor-pointer shadow-sm"
-                >
-                  Alıştırmayı Tamamla ve Sonucu Gör
-                </button>
-              )}
-            </div>
-          )}
         </section>
       )}
 
-      {/* 5. Categorized Assignments Section (3 Tabs Structure) */}
+      {/* 5. Categorized Assignments Section (Quizlet / Notion 3 Tabs Structure) */}
       <section className="space-y-4">
         {/* Subtabs Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-slate-900/80 border border-slate-800">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-[#0c0d12] border border-zinc-800/80">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               onClick={() => setAssignmentFilterTab('pending')}
               className={cn(
                 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                 assignmentFilterTab === 'pending'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
               )}
             >
-              <Inbox className="w-4 h-4" />
-              <span>📌 Bekleyen Ödevler</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-indigo-500/30 text-[10px] ml-1">
+              <Inbox className="w-4 h-4 text-amber-400" />
+              <span>Bekleyenler</span>
+              <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-300 text-[10px] font-mono ml-0.5">
                 {stats.pendingCount}
               </span>
             </button>
@@ -791,13 +587,13 @@ export function StudentView() {
               className={cn(
                 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                 assignmentFilterTab === 'evaluating'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
               )}
             >
-              <Hourglass className="w-4 h-4" />
-              <span>⏳ Değerlendirmede</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-amber-500/30 text-[10px] ml-1">
+              <Hourglass className="w-4 h-4 text-indigo-400" />
+              <span>Değerlendirmede</span>
+              <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 text-[10px] font-mono ml-0.5">
                 {stats.evaluatingCount}
               </span>
             </button>
@@ -807,13 +603,13 @@ export function StudentView() {
               className={cn(
                 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                 assignmentFilterTab === 'completed'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
               )}
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>✅ Tamamlananlar</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-emerald-500/30 text-[10px] ml-1">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Tamamlananlar</span>
+              <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[10px] font-mono ml-0.5">
                 {stats.completedCount}
               </span>
             </button>
@@ -823,33 +619,33 @@ export function StudentView() {
               className={cn(
                 'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer',
                 assignmentFilterTab === 'all'
-                  ? 'bg-slate-800 text-white border border-slate-700 font-semibold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-zinc-800 text-white font-semibold'
+                  : 'text-zinc-400 hover:text-white'
               )}
             >
               <span>Tümü ({assignments.length})</span>
             </button>
           </div>
 
-          <div className="text-xs text-slate-400 font-medium hidden sm:block">
-            {categorizedAssignments.length} materyal listeleniyor
+          <div className="text-xs text-zinc-400 font-mono hidden sm:block pr-2">
+            {categorizedAssignments.length} materyal
           </div>
         </div>
 
         {/* Assignment Cards Grid */}
         {categorizedAssignments.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl bg-slate-900/40 border border-dashed border-slate-800 space-y-2">
-            <BookOpen className="w-8 h-8 mx-auto text-slate-500" />
+          <div className="p-12 text-center rounded-2xl bg-[#0c0d12] border border-dashed border-zinc-800 space-y-2">
+            <BookOpen className="w-7 h-7 mx-auto text-zinc-600" />
             <h4 className="font-medium text-white text-sm">
               {assignmentFilterTab === 'pending'
                 ? 'Harika! Bekleyen hiçbir ödeviniz bulunmuyor.'
                 : assignmentFilterTab === 'evaluating'
                 ? 'Şu anda öğretmen değerlendirmesinde olan bir ödeviniz yok.'
                 : assignmentFilterTab === 'completed'
-                ? 'Henüz tamamlanmış veya notlandırılmış ödeviniz bulunmuyor.'
+                ? 'Henüz tamamlanmış ödeviniz bulunmuyor.'
                 : 'Henüz atanmış bir ödev veya not bulunmuyor.'}
             </h4>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-zinc-400">
               {assignmentFilterTab === 'pending'
                 ? 'Yeni bir ödev yayınlandığında bu alanda görüntülenecektir.'
                 : 'Ödevlerinizi teslim ettikçe durumları burada güncellenecektir.'}
@@ -862,56 +658,31 @@ export function StudentView() {
               const isTest = a.type === 'test';
               const isBook = a.type === 'book';
               const isNote = a.type === 'note';
-              const activeTimer = timers[a.id];
-              const isTestRunning = isTest && activeTimer?.active;
 
               return (
                 <div
                   key={a.id}
-                  className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 hover:shadow-lg transition-all flex flex-col justify-between gap-4"
+                  className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 hover:border-zinc-700 transition-all flex flex-col justify-between gap-4 group"
                 >
                   <div className="space-y-3">
-                    {/* Badge Row with Explicit Format Type Badges */}
+                    {/* Badge Row with Format & Status */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {/* Format Badge */}
                         <span
                           className={cn(
-                            'px-2.5 py-0.5 rounded-md text-[11px] font-semibold flex items-center gap-1',
+                            'px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1',
                             isNote
-                              ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30'
+                              ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20'
                               : isTest
-                              ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                              : a.fileName
-                              ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                              : 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
+                              ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20'
+                              : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
                           )}
                         >
-                          {isNote ? (
-                            <>
-                              <BookOpen className="w-3 h-3" />
-                              <span>Ders Notu & Okuma</span>
-                            </>
-                          ) : isTest ? (
-                            <>
-                              <ListCheck className="w-3 h-3" />
-                              <span>Çoktan Seçmeli Test</span>
-                            </>
-                          ) : a.fileName ? (
-                            <>
-                              <FileUp className="w-3 h-3" />
-                              <span>Dosya Yüklemeli PDF</span>
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="w-3 h-3" />
-                              <span>Klasik Yazılı / Metin</span>
-                            </>
-                          )}
+                          {isNote ? 'Ders Notu' : isTest ? 'İnteraktif Test' : 'Yazılı Ödev'}
                         </span>
 
                         {a.classroomName && (
-                          <span className="text-xs text-indigo-400 font-semibold">
+                          <span className="text-[11px] text-zinc-400 font-medium">
                             • {a.classroomName}
                           </span>
                         )}
@@ -920,28 +691,23 @@ export function StudentView() {
                       {/* Status Badge */}
                       {sub ? (
                         sub.status === 'reviewed' ? (
-                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Not: %{sub.finalScore ?? 85}</span>
+                            <span>Puan: %{sub.finalScore ?? 85}</span>
                           </span>
                         ) : isTest ? (
-                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Puan: %{sub.percent}</span>
+                            <span>Skor: %{sub.percent}</span>
                           </span>
                         ) : (
-                          <span className="px-2.5 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5" />
                             <span>Değerlendirmede</span>
                           </span>
                         )
-                      ) : isTestRunning ? (
-                        <div className="px-2.5 py-0.5 rounded-md bg-purple-500/20 border border-purple-500/40 text-purple-300 text-xs font-semibold flex items-center gap-1.5">
-                          <Timer className="w-3.5 h-3.5" />
-                          <span>Kalan: {fmtTime(activeTimer.remaining)}</span>
-                        </div>
                       ) : (
-                        <span className="px-2.5 py-0.5 rounded-md bg-slate-800 text-slate-400 text-xs font-medium">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 text-amber-400 border border-zinc-800">
                           Bekliyor
                         </span>
                       )}
@@ -949,31 +715,44 @@ export function StudentView() {
 
                     {/* Title & Description */}
                     <div>
-                      <h3 className="font-heading font-bold text-base text-white">{a.title}</h3>
-                      <div className="text-xs text-slate-400 mt-0.5">Ünite / Konu: {a.folder}</div>
+                      <h3 className="font-heading font-bold text-base text-white group-hover:text-emerald-300 transition-colors">
+                        {a.title}
+                      </h3>
+                      <div className="text-xs text-zinc-400 mt-0.5">Konu: {a.folder}</div>
                     </div>
 
                     {a.desc && (
-                      <p className="text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap line-clamp-3">
+                      <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2">
                         {a.desc}
                       </p>
                     )}
+
+                    {/* Teacher Feedback Bubble if completed */}
+                    {sub?.status === 'reviewed' && sub.feedback && (
+                      <div className="p-3 rounded-xl bg-zinc-950/90 border border-emerald-500/20 text-xs space-y-1">
+                        <div className="font-semibold text-emerald-400 flex items-center gap-1 text-[11px]">
+                          <MessageSquareQuote className="w-3 h-3" />
+                          <span>Öğretmen Değerlendirmesi:</span>
+                        </div>
+                        <p className="text-zinc-300 italic text-[11px]">
+                          &ldquo;{sub.feedback}&rdquo;
+                        </p>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Actions Area */}
-                  <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
-                    {/* Note Action */}
+                  {/* Card Action Buttons */}
+                  <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between">
                     {isNote && (
                       <button
                         onClick={() => setViewingNote(a)}
-                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                        className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5 text-cyan-400" />
                         <span>Ders Notunu Oku</span>
                       </button>
                     )}
 
-                    {/* Written / Book Action */}
                     {isBook && (
                       <button
                         onClick={() => setSubmitModalAssignment(a)}
@@ -981,70 +760,42 @@ export function StudentView() {
                           'px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer',
                           sub
                             ? sub.status === 'reviewed'
-                              ? 'bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold'
-                              : 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300'
-                            : 'bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow-sm'
+                              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold'
+                              : 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300'
+                            : 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold shadow-sm'
                         )}
                       >
                         <BookOpen className="w-3.5 h-3.5" />
                         <span>
                           {sub
                             ? sub.status === 'reviewed'
-                              ? 'Öğretmen Değerlendirmesini Gör'
-                              : 'Tesliminizi İnceleyin (Beklemede)'
+                              ? 'Değerlendirmeyi İncele'
+                              : 'Tesliminizi İnceleyin'
                             : 'Ödevi Teslim Et'}
                         </span>
                       </button>
                     )}
 
-                    {/* Test Action */}
-                    {isTest && !isTestRunning && !sub && (
+                    {isTest && !sub && (
                       <button
-                        onClick={() => handleStartTest(a)}
-                        className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                        onClick={() => handleStartFocusTest(a)}
+                        className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                       >
                         <Play className="w-3.5 h-3.5" />
-                        <span>Testi Başlat</span>
+                        <span>Quizlet Odak Modunda Başlat</span>
                       </button>
                     )}
 
                     {isTest && sub && (
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleRetry(a.id)}
-                          className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1 transition-all cursor-pointer"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Tekrar Çöz</span>
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleStartFocusTest(a)}
+                        className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Tekrar Çöz (Pratik)</span>
+                      </button>
                     )}
                   </div>
-
-                  {/* Test Active Running Form */}
-                  {isTestRunning && a.questions && (
-                    <div className="space-y-4 pt-3 border-t border-slate-800">
-                      {a.questions.map((q, idx) => (
-                        <div key={idx} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                          <span className="text-xs font-semibold text-slate-400">Soru {idx + 1}</span>
-                          <p className="text-xs sm:text-sm text-slate-200 font-medium">{q.q}</p>
-                          <input
-                            type="text"
-                            value={testAnswers[a.id]?.[idx] || ''}
-                            onChange={(e) => handleAnswerChange(a.id, idx, e.target.value)}
-                            placeholder="Cevabınızı giriniz..."
-                            className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 focus:border-indigo-400 rounded-lg text-white text-xs placeholder:text-slate-500 focus:outline-none"
-                          />
-                        </div>
-                      ))}
-                      <button
-                        onClick={() => handleSubmitTest(a.id)}
-                        className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-all cursor-pointer shadow-sm"
-                      >
-                        Testi Bitir ve Gönder
-                      </button>
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -1053,15 +804,15 @@ export function StudentView() {
       </section>
 
       {/* 6. Kişisel Çalışma Asistanı (Coach Chat) */}
-      <section className="p-5 sm:p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-800">
-          <MessageSquare className="w-5 h-5 text-indigo-400" />
+      <section className="p-5 sm:p-6 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
+        <div className="flex items-center gap-2.5 pb-3 border-b border-zinc-800/80">
+          <MessageSquare className="w-4 h-4 text-emerald-400" />
           <div>
-            <h3 className="font-heading font-semibold text-base text-white">
-              Çalışma Asistanı (Soru & Konu Danışmanı)
+            <h3 className="font-heading font-semibold text-sm text-white">
+              Kişisel Soru & Konu Danışmanı
             </h3>
-            <p className="text-xs text-slate-400">
-              Takıldığınız soruları, formülleri veya konu özetlerini 7/24 asistanınıza danışabilirsiniz.
+            <p className="text-xs text-zinc-400">
+              Takıldığınız soruları, formülleri ve konu özetlerini 7/24 sorabilirsiniz.
             </p>
           </div>
         </div>
@@ -1072,17 +823,17 @@ export function StudentView() {
             <div
               key={idx}
               className={cn(
-                'p-4 rounded-xl text-xs sm:text-sm leading-relaxed max-w-[85%]',
+                'p-3.5 rounded-xl text-xs leading-relaxed max-w-[85%]',
                 m.role === 'user'
-                  ? 'ml-auto bg-indigo-600 text-white'
-                  : 'bg-slate-950 border border-slate-800 text-slate-200'
+                  ? 'ml-auto bg-emerald-500 text-zinc-950 font-medium'
+                  : 'bg-zinc-950 border border-zinc-800 text-zinc-200'
               )}
             >
               {m.text}
             </div>
           ))}
           {isCoachLoading && (
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400 flex items-center gap-2 w-fit">
+            <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-400 flex items-center gap-2 w-fit">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               <span>Asistan yanıt hazırlıyor...</span>
             </div>
@@ -1096,12 +847,12 @@ export function StudentView() {
             value={coachInput}
             onChange={(e) => setCoachInput(e.target.value)}
             placeholder="Sorunuzu buraya yazınız (örn: Fotosentez evrelerini kısaca özetler misin?)..."
-            className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-slate-500 focus:outline-none"
+            className="flex-1 px-4 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-zinc-500 focus:outline-none"
           />
           <button
             type="submit"
             disabled={!coachInput.trim() || isCoachLoading}
-            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+            className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Gönder</span>
@@ -1109,7 +860,20 @@ export function StudentView() {
         </form>
       </section>
 
-      {/* Modals */}
+      {/* Focus Study Modal (Quizlet Engine) */}
+      {activeStudyQuiz && (
+        <QuizStudyModal
+          isOpen={!!activeStudyQuiz}
+          title={activeStudyQuiz.title}
+          folder={activeStudyQuiz.folder}
+          questions={activeStudyQuiz.questions}
+          timeLimit={activeStudyQuiz.timeLimit}
+          onClose={() => setActiveStudyQuiz(null)}
+          onComplete={handleStudyQuizComplete}
+        />
+      )}
+
+      {/* Additional Modals */}
       {isJoinClassModalOpen && (
         <JoinClassroomModal
           isOpen={isJoinClassModalOpen}

@@ -16,6 +16,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getAuthHeaders } from '@/lib/api-client';
 
 interface AiAssistantModalProps {
   isOpen: boolean;
@@ -68,9 +69,10 @@ export function AiAssistantModal({
     if (!quizTopic.trim()) return showToast('Lütfen bir konu yazın.', 'warn');
     setIsQuizLoading(true);
     try {
+      const headers = await getAuthHeaders(state.session);
       const res = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           action: 'generate_quiz',
           topic: quizTopic,
@@ -83,7 +85,7 @@ export function AiAssistantModal({
         setGeneratedQuiz(data.data);
         showToast('Gemini AI soruları başarıyla üretti! 🎉', 'success');
       } else {
-        showToast('Test oluşturulamadı.', 'error');
+        showToast(data.error || 'Test oluşturulamadı.', 'error');
       }
     } catch (e) {
       showToast('Bağlantı hatası oluştu.', 'error');
@@ -96,9 +98,10 @@ export function AiAssistantModal({
     if (!noteTopic.trim()) return showToast('Lütfen bir konu yazın.', 'warn');
     setIsNoteLoading(true);
     try {
+      const headers = await getAuthHeaders(state.session);
       const res = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           action: 'generate_notes',
           topic: noteTopic,
@@ -109,7 +112,7 @@ export function AiAssistantModal({
         setGeneratedNote(data.data);
         showToast('Ders notu ve özeti oluşturuldu! 📝', 'success');
       } else {
-        showToast('Ders notu oluşturulamadı.', 'error');
+        showToast(data.error || 'Ders notu oluşturulamadı.', 'error');
       }
     } catch (e) {
       showToast('Bağlantı hatası oluştu.', 'error');
@@ -128,9 +131,10 @@ export function AiAssistantModal({
     setIsChatLoading(true);
 
     try {
+      const headers = await getAuthHeaders(state.session);
       const res = await fetch('/api/ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           action: 'chat_assistant',
           message: userText,
@@ -142,7 +146,7 @@ export function AiAssistantModal({
       } else {
         setChatMessages((prev) => [
           ...prev,
-          { role: 'assistant', text: 'Üzgünüm, şu an yanıt üretirken bir sorun oluştu.' },
+          { role: 'assistant', text: data.error || 'Üzgünüm, şu an yanıt üretirken bir sorun oluştu.' },
         ]);
       }
     } catch (e) {

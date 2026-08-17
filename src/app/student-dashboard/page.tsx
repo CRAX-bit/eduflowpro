@@ -60,6 +60,21 @@ export default function StudentDashboardPage() {
             <span>·</span>
             <span className="text-slate-400">Öğrenci Portalı</span>
           </div>
+          <div className="flex items-center gap-4 text-slate-400 text-xs">
+            <a
+              href="/gizlilik-politikasi"
+              className="hover:text-cyan-400 transition-colors underline-offset-4 hover:underline"
+            >
+              Gizlilik & KVKK
+            </a>
+            <span>·</span>
+            <a
+              href="/kullanim-kosullari"
+              className="hover:text-cyan-400 transition-colors underline-offset-4 hover:underline"
+            >
+              Kullanım Koşulları
+            </a>
+          </div>
           <div className="text-[11px] text-slate-500">
             Güvenli & Doğrulanmış Oturum
           </div>
