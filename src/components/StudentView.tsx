@@ -123,6 +123,14 @@ function getCoachWelcomeMessage(grade?: string): string {
   return 'Merhaba! Derslerin, dil pratiğin ve merak ettiğin tüm akademik konular için kişisel çalışma asistanın hazır! 🎓';
 }
 
+const GRADE_LEVEL_OPTIONS = [
+  'Ortaokul (5-8. Sınıf / LGS Hazırlık)',
+  'Lise (9-12. Sınıf / YKS Hazırlık - Sayısal)',
+  'Lise (9-12. Sınıf / YKS Hazırlık - Eşit Ağırlık / Sözel)',
+  'Lisans & Mezun (KPSS / ALES Hazırlık)',
+  'Genel Gelişim / Dil Eğitimi',
+];
+
 export function StudentView() {
   const {
     state,
@@ -131,6 +139,7 @@ export function StudentView() {
     submitTestAnswers,
     retryTest,
     leaveClassroom,
+    updateStudentGradeLevel,
     showToast,
   } = useEduFlow();
 
@@ -159,14 +168,16 @@ export function StudentView() {
     studentName?: string;
   } | null>(null);
 
-  const studentGradeLevel = state.session?.gradeLevel || currentStudent?.gradeLevel;
-  const practiceChips = useMemo(() => getCurriculumTopics(studentGradeLevel), [studentGradeLevel]);
+  const currentGradeLevel = state.session?.gradeLevel || currentStudent?.gradeLevel || 'Ortaokul (5-8. Sınıf / LGS Hazırlık)';
+  const [isLevelDropdownOpen, setIsLevelDropdownOpen] = useState(false);
+  const [isUpdatingLevel, setIsUpdatingLevel] = useState(false);
+  const practiceChips = useMemo(() => getCurriculumTopics(currentGradeLevel), [currentGradeLevel]);
 
   // --- Kişisel Çalışma Asistanı (Coach Chat) State ---
   const [coachMessages, setCoachMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
     {
       role: 'assistant',
-      text: getCoachWelcomeMessage(studentGradeLevel),
+      text: getCoachWelcomeMessage(currentGradeLevel),
     },
   ]);
   const [coachInput, setCoachInput] = useState('');
@@ -174,9 +185,9 @@ export function StudentView() {
 
   // Update coach welcome message when grade level is loaded/changed
   useEffect(() => {
-    const welcome = getCoachWelcomeMessage(studentGradeLevel);
+    const welcome = getCoachWelcomeMessage(currentGradeLevel);
     setCoachMessages([{ role: 'assistant', text: welcome }]);
-  }, [studentGradeLevel]);
+  }, [currentGradeLevel]);
 
   // --- Konu Alıştırması (Quick Practice) State ---
   const [isPracticeModalOpen, setIsPracticeModalOpen] = useState(false);
@@ -184,12 +195,12 @@ export function StudentView() {
   const [practiceCount, setPracticeCount] = useState<number>(5);
   const [isPracticeLoading, setIsPracticeLoading] = useState(false);
 
-  // Initialize practice topic from dynamic chips
+  // Initialize and update practice topic from dynamic chips when level changes
   useEffect(() => {
-    if (practiceChips.length > 0 && !practiceTopic) {
+    if (practiceChips.length > 0) {
       setPracticeTopic(practiceChips[0]);
     }
-  }, [practiceChips, practiceTopic]);
+  }, [practiceChips]);
 
   if (!state.session && !state.currentStudentId) {
     return (
@@ -308,7 +319,7 @@ export function StudentView() {
           action: 'chat_assistant',
           message: userText,
           role: 'student',
-          gradeLevel: studentGradeLevel,
+          gradeLevel: currentGradeLevel,
         }),
       });
       const data = await res.json();
@@ -346,7 +357,7 @@ export function StudentView() {
           action: 'generate_quiz',
           topic,
           count: practiceCount,
-          grade: studentGradeLevel || 'Ortaokul / LGS (5-8. Sınıf)',
+          grade: currentGradeLevel,
         }),
       });
       const data = await res.json();
@@ -386,11 +397,69 @@ export function StudentView() {
                 <Sparkles className="w-3 h-3" />
                 <span>Öğrenci Portalı</span>
               </div>
-              {studentGradeLevel && (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-medium">
-                  <span>🎯 {studentGradeLevel}</span>
-                </div>
-              )}
+
+              {/* Interactive Level Selector Badge & Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  disabled={isUpdatingLevel}
+                  onClick={() => setIsLevelDropdownOpen(!isLevelDropdownOpen)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 hover:border-emerald-500/50 text-zinc-200 text-xs font-medium transition-all cursor-pointer shadow-sm group"
+                  title="Hedef sınav veya eğitim seviyenizi değiştirmek için tıklayın"
+                >
+                  <span className="text-emerald-400">🎯 Hedef:</span>
+                  <span className="font-semibold text-white max-w-[200px] sm:max-w-[280px] truncate">
+                    {currentGradeLevel}
+                  </span>
+                  {isUpdatingLevel ? (
+                    <Loader2 className="w-3 h-3 text-emerald-400 animate-spin" />
+                  ) : (
+                    <ChevronDown className={cn("w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-transform", isLevelDropdownOpen && "rotate-180")} />
+                  )}
+                </button>
+
+                {isLevelDropdownOpen && (
+                  <>
+                    {/* Backdrop for closing dropdown */}
+                    <div
+                      className="fixed inset-0 z-20"
+                      onClick={() => setIsLevelDropdownOpen(false)}
+                    />
+                    <div className="absolute left-0 top-full mt-1.5 w-72 sm:w-80 p-1.5 rounded-2xl bg-zinc-900/95 border border-zinc-800 shadow-2xl backdrop-blur-xl z-30 space-y-1 animate-fade">
+                      <div className="px-2.5 py-1.5 text-[11px] font-semibold text-zinc-400 border-b border-zinc-800/80 flex items-center justify-between">
+                        <span>Eğitim Seviyesi / Hedef Sınav</span>
+                        <span className="text-[10px] text-emerald-400 font-normal">Tek tıkla değiştir</span>
+                      </div>
+                      {GRADE_LEVEL_OPTIONS.map((lvl) => {
+                        const isSelected = currentGradeLevel === lvl;
+                        return (
+                          <button
+                            key={lvl}
+                            type="button"
+                            onClick={async () => {
+                              setIsLevelDropdownOpen(false);
+                              if (lvl !== currentGradeLevel) {
+                                setIsUpdatingLevel(true);
+                                await updateStudentGradeLevel(lvl);
+                                setIsUpdatingLevel(false);
+                              }
+                            }}
+                            className={cn(
+                              'w-full px-3 py-2 rounded-xl text-left text-xs font-medium transition-all flex items-center justify-between gap-2 cursor-pointer',
+                              isSelected
+                                ? 'bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-500/30'
+                                : 'text-zinc-300 hover:text-white hover:bg-zinc-800/80'
+                            )}
+                          >
+                            <span className="truncate">{lvl}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <h1 className="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">
               Hoş Geldin, {studentDisplayName}

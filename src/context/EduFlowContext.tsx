@@ -52,6 +52,7 @@ interface EduFlowContextType {
     gradeLevel?: string;
     branch?: string;
   }) => void;
+  updateStudentGradeLevel: (newGradeLevel: string) => Promise<boolean>;
   logout: () => void;
   addStudent: (name: string, password: string) => boolean;
   deleteStudent: (id: string) => void;
@@ -593,6 +594,61 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [showToast, loadSupabaseAssignments, loadTeacherClassrooms, loadStudentJoinedClassrooms]
+  );
+
+  const updateStudentGradeLevel = useCallback(
+    async (newGradeLevel: string): Promise<boolean> => {
+      const cleanLevel = newGradeLevel.trim();
+      if (!cleanLevel) return false;
+
+      // Optimistic local state update
+      setState((prev) => {
+        const nextStudents = prev.students.map((s) => {
+          if (
+            (prev.session?.studentId && s.id === prev.session.studentId) ||
+            (prev.session?.supabaseId && s.id === prev.session.supabaseId)
+          ) {
+            return { ...s, gradeLevel: cleanLevel };
+          }
+          return s;
+        });
+
+        return {
+          ...prev,
+          students: nextStudents,
+          session: prev.session
+            ? {
+                ...prev.session,
+                gradeLevel: cleanLevel,
+              }
+            : null,
+        };
+      });
+
+      // Supabase DB and metadata sync
+      const supabaseId = state.session?.supabaseId;
+      if (supabaseId) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              grade_level: cleanLevel,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', supabaseId);
+
+          await supabase.auth.updateUser({
+            data: { grade_level: cleanLevel },
+          });
+        } catch (err) {
+          console.warn('Failed to persist grade_level to Supabase', err);
+        }
+      }
+
+      showToast(`Hedef seviyeniz güncellendi: ${cleanLevel} 🎯`, 'success');
+      return true;
+    },
+    [state.session, showToast]
   );
 
   const logout = useCallback(async () => {
@@ -1346,6 +1402,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         openAuthModal,
         closeAuthModal,
         loginSupabaseUser,
+        updateStudentGradeLevel,
         logout,
         addStudent,
         deleteStudent,
