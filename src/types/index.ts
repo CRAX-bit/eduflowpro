@@ -43,6 +43,7 @@ export interface Submission {
   aiStrengths?: string[];
   aiImprovements?: string[];
   status?: 'pending' | 'graded_by_ai' | 'reviewed';
+  note?: string; // Öğrencinin "Yapamadım" notu
   at: number;
   timedOut?: boolean;
 }
@@ -73,12 +74,14 @@ export interface Assignment {
   title: string;
   folder: string;
   target: string; // 'all' or studentId
+  targetMode?: 'all' | 'individual'; // Atama modu toggle'ı
   classroomId?: string; // Target classroom id
   classroomName?: string;
   desc?: string;
   fileName?: string | null;
   fileData?: string | null;
   timeLimit?: number; // seconds
+  deadline?: number; // Unix ms timestamp — son teslim tarihi
   questions?: Question[];
   createdAt: number;
   submissions: Record<string, Submission>; // key is studentId

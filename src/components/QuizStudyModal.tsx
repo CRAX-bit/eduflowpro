@@ -21,47 +21,58 @@ import {
 import { fmtTime, cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 
-interface QuizStudyModalProps {
+export interface QuizStudyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title?: string;
   folder?: string;
-  questions: Question[];
+  questions?: Question[];
   timeLimit?: number; // in seconds
+  quiz?: {
+    id?: string;
+    title: string;
+    folder?: string;
+    questions: Question[];
+    timeLimit?: number;
+  } | null;
   onComplete: (answers: string[], scorePercent: number) => void;
 }
 
 export function QuizStudyModal({
   isOpen,
   onClose,
-  title,
-  folder,
-  questions,
-  timeLimit,
+  title: propTitle,
+  folder: propFolder,
+  questions: propQuestions,
+  timeLimit: propTimeLimit,
+  quiz,
   onComplete,
 }: QuizStudyModalProps) {
+  const activeTitle = quiz?.title || propTitle || 'İnteraktif Soru Çözümü';
+  const activeFolder = quiz?.folder || propFolder || '';
+  const activeQuestions = quiz?.questions || propQuestions || [];
+  const activeTimeLimit = quiz?.timeLimit || propTimeLimit || 0;
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [remainingTime, setRemainingTime] = useState<number>(timeLimit || 0);
+  const [remainingTime, setRemainingTime] = useState<number>(activeTimeLimit);
   const [startTime] = useState<number>(Date.now());
   const [totalElapsedSeconds, setTotalElapsedSeconds] = useState(0);
 
-  // Reset state on open
   useEffect(() => {
     if (isOpen) {
       setCurrentIndex(0);
       setSelectedAnswers({});
       setIsAnswerRevealed(false);
       setIsCompleted(false);
-      setRemainingTime(timeLimit || 0);
+      setRemainingTime(activeTimeLimit);
     }
-  }, [isOpen, questions]);
+  }, [isOpen, activeQuestions, activeTimeLimit]);
 
-  // Countdown timer if timeLimit is provided
   useEffect(() => {
-    if (!isOpen || isCompleted || !timeLimit || timeLimit <= 0) return;
+    if (!isOpen || isCompleted || !activeTimeLimit || activeTimeLimit <= 0) return;
 
     const timer = setInterval(() => {
       setRemainingTime((prev) => {
@@ -75,14 +86,12 @@ export function QuizStudyModal({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isOpen, isCompleted, timeLimit]);
+  }, [isOpen, isCompleted, activeTimeLimit]);
 
-  // Current question data
-  const currentQ = questions[currentIndex];
-  const totalQuestions = questions.length;
+  const currentQ = activeQuestions[currentIndex];
+  const totalQuestions = activeQuestions.length;
   const progressPercent = totalQuestions > 0 ? Math.round(((currentIndex + (isAnswerRevealed ? 1 : 0)) / totalQuestions) * 100) : 0;
 
-  // Generate 4 multiple choice options if not pre-configured in Question object
   const questionOptions = useMemo(() => {
     if (!currentQ) return [];
     if (currentQ.options && Array.isArray(currentQ.options) && currentQ.options.length >= 2) {
@@ -111,7 +120,7 @@ export function QuizStudyModal({
     : false;
 
   const handleSelectOption = (option: string) => {
-    if (isAnswerRevealed) return; // Prevent change after answer is revealed
+    if (isAnswerRevealed) return;
 
     const isCorrect = option.trim().toLowerCase() === currentQ.a.trim().toLowerCase();
     setSelectedAnswers((prev) => ({ ...prev, [currentIndex]: option }));
@@ -122,7 +131,7 @@ export function QuizStudyModal({
         particleCount: 40,
         spread: 60,
         origin: { y: 0.8 },
-        colors: ['#10b981', '#06b6d4', '#6366f1'],
+        colors: ['#2563eb', '#10b981', '#6366f1'],
       });
     }
   };
@@ -140,11 +149,10 @@ export function QuizStudyModal({
     const elapsed = Math.round((Date.now() - startTime) / 1000);
     setTotalElapsedSeconds(elapsed);
 
-    // Calculate final score
     let correctCount = 0;
     const answerList: string[] = [];
 
-    questions.forEach((q, idx) => {
+    activeQuestions.forEach((q, idx) => {
       const ans = selectedAnswers[idx] || '';
       answerList.push(ans);
       if (ans.trim().toLowerCase() === q.a.trim().toLowerCase()) {
@@ -160,44 +168,42 @@ export function QuizStudyModal({
         particleCount: 100,
         spread: 80,
         origin: { y: 0.6 },
-        colors: ['#10b981', '#38bdf8', '#818cf8', '#f59e0b'],
+        colors: ['#2563eb', '#10b981', '#3b82f6', '#f59e0b'],
       });
     }
 
     onComplete(answerList, percent);
   };
 
-  // Completion Summary Metrics
   const correctTotal = Object.entries(selectedAnswers).filter(([idx, ans]) => {
-    const q = questions[Number(idx)];
+    const q = activeQuestions[Number(idx)];
     return q && ans.trim().toLowerCase() === q.a.trim().toLowerCase();
   }).length;
   const scorePercent = totalQuestions > 0 ? Math.round((correctTotal / totalQuestions) * 100) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-2xl animate-fade">
-      <div className="relative w-full max-w-3xl bg-[#090a0f] border border-zinc-800 rounded-3xl shadow-[0_25px_80px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col max-h-[92vh]">
-        
-        {/* 1. TOP FOCUS HEADER & DYNAMIC PROGRESS BAR */}
-        <header className="px-6 py-4 border-b border-zinc-800/80 bg-zinc-950/80 flex items-center justify-between gap-4 shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/50 backdrop-blur-xs animate-fade">
+      <div className="relative w-full max-w-3xl bg-white border border-slate-200/90 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+        {/* Header */}
+        <header className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
               <Zap className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-heading font-bold text-sm text-white truncate">
-                {title}
+              <h3 className="font-heading font-bold text-sm text-slate-900 truncate">
+                {activeTitle}
               </h3>
-              <div className="text-[11px] text-zinc-400 flex items-center gap-1.5">
-                {folder && <span>{folder} ·</span>}
-                <span>Quizlet Odak Çalışma Modu</span>
+              <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                {activeFolder && <span>{activeFolder} ·</span>}
+                <span>Quiz Odak Çalışma Modu</span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            {timeLimit && timeLimit > 0 && !isCompleted && (
-              <div className="px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-mono text-xs font-semibold flex items-center gap-1.5">
+            {activeTimeLimit > 0 && !isCompleted && (
+              <div className="px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 font-mono text-xs font-semibold flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
                 <span>{fmtTime(remainingTime)}</span>
               </div>
@@ -205,7 +211,7 @@ export function QuizStudyModal({
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer"
+              className="p-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-700 transition-all cursor-pointer shadow-2xs"
               title="Çıkış Yap"
             >
               <X className="w-4 h-4" />
@@ -213,54 +219,53 @@ export function QuizStudyModal({
           </div>
         </header>
 
-        {/* Dynamic Smooth Animated Progress Bar */}
+        {/* Progress Bar */}
         {!isCompleted && (
-          <div className="w-full bg-zinc-900 h-1.5 overflow-hidden">
+          <div className="w-full bg-slate-100 h-1.5 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500 transition-all duration-300 ease-out"
+              className="h-full bg-blue-600 transition-all duration-300 ease-out"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
         )}
 
-        {/* 2. BODY CONTENT: QUESTION CARD or COMPLETION SUMMARY */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col justify-center">
+        {/* Body Content */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col justify-center bg-slate-50/40">
           {!isCompleted ? (
             <div className="max-w-2xl mx-auto w-full space-y-6 animate-fade">
-              
-              {/* Question Count & Status Pill */}
+              {/* Question Count */}
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 font-semibold">
+                <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 font-semibold shadow-2xs">
                   Soru {currentIndex + 1} / {totalQuestions}
                 </span>
-                <span className="text-zinc-500">
+                <span className="text-slate-500 font-medium">
                   %{progressPercent} Tamamlandı
                 </span>
               </div>
 
-              {/* Central Large Question Box */}
-              <div className="p-6 sm:p-7 rounded-2xl bg-zinc-950/90 border border-zinc-800 shadow-lg space-y-3">
-                <h4 className="font-heading font-bold text-base sm:text-xl text-white leading-relaxed">
+              {/* Question Box */}
+              <div className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-3">
+                <h4 className="font-heading font-bold text-base sm:text-xl text-slate-900 leading-relaxed">
                   {currentQ.q}
                 </h4>
               </div>
 
-              {/* Interactive Multiple Choice Option Cards */}
+              {/* Multiple Choice Options */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {questionOptions.map((option, idx) => {
-                  const letter = String.fromCharCode(65 + idx); // A, B, C, D
+                  const letter = String.fromCharCode(65 + idx);
                   const isSelected = currentSelectedAnswer === option;
                   const isCorrectAnswer = option.trim().toLowerCase() === currentQ.a.trim().toLowerCase();
 
-                  let cardStyle = 'bg-zinc-950/70 hover:bg-zinc-900/90 border-zinc-800 hover:border-indigo-500/50 text-zinc-200';
+                  let cardStyle = 'bg-white hover:bg-slate-50 border-slate-200 hover:border-blue-300 text-slate-800 shadow-2xs';
 
                   if (isAnswerRevealed) {
                     if (isCorrectAnswer) {
-                      cardStyle = 'bg-emerald-500/15 border-emerald-500 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.2)] font-semibold';
+                      cardStyle = 'bg-emerald-50 border-emerald-500 text-emerald-800 font-semibold shadow-xs';
                     } else if (isSelected && !isCorrectAnswer) {
-                      cardStyle = 'bg-red-500/15 border-red-500 text-red-300 shadow-[0_0_20px_rgba(239,68,68,0.2)]';
+                      cardStyle = 'bg-rose-50 border-rose-500 text-rose-800 shadow-xs';
                     } else {
-                      cardStyle = 'bg-zinc-950/40 border-zinc-800/50 text-zinc-500 opacity-60';
+                      cardStyle = 'bg-slate-50 border-slate-200 text-slate-400 opacity-60';
                     }
                   }
 
@@ -279,11 +284,11 @@ export function QuizStudyModal({
                           'w-7 h-7 rounded-lg flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-colors',
                           isAnswerRevealed
                             ? isCorrectAnswer
-                              ? 'bg-emerald-500 text-zinc-950'
+                              ? 'bg-emerald-600 text-white'
                               : isSelected
-                              ? 'bg-red-500 text-white'
-                              : 'bg-zinc-800 text-zinc-500'
-                            : 'bg-zinc-800 group-hover:bg-indigo-600 text-zinc-300 group-hover:text-white'
+                              ? 'bg-rose-600 text-white'
+                              : 'bg-slate-200 text-slate-500'
+                            : 'bg-slate-100 group-hover:bg-blue-600 text-slate-600 group-hover:text-white'
                         )}
                       >
                         {letter}
@@ -294,43 +299,43 @@ export function QuizStudyModal({
                       </span>
 
                       {isAnswerRevealed && isCorrectAnswer && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       )}
                       {isAnswerRevealed && isSelected && !isCorrectAnswer && (
-                        <XCircle className="w-4 h-4 text-red-400 shrink-0" />
+                        <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
                       )}
                     </button>
                   );
                 })}
               </div>
 
-              {/* Instant Pedagogical Explanation Feedback Bubble */}
+              {/* Feedback Bubble */}
               {isAnswerRevealed && (
                 <div
                   className={cn(
-                    'p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed space-y-1.5 animate-fade',
+                    'p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed space-y-1.5 animate-fade shadow-2xs',
                     isCurrentCorrect
-                      ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-200'
-                      : 'bg-zinc-900 border-zinc-800 text-zinc-300'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                      : 'bg-slate-50 border-slate-200 text-slate-800'
                   )}
                 >
                   <div className="font-bold flex items-center gap-1.5">
                     {isCurrentCorrect ? (
                       <>
-                        <Check className="w-4 h-4 text-emerald-400" />
-                        <span className="text-emerald-400">Harika Çözüm! Doğru Yanıt.</span>
+                        <Check className="w-4 h-4 text-emerald-600" />
+                        <span className="text-emerald-700">Harika Çözüm! Doğru Yanıt.</span>
                       </>
                     ) : (
                       <>
-                        <BrainCircuit className="w-4 h-4 text-indigo-400" />
-                        <span className="text-white">
-                          Doğru Cevap: <b className="text-emerald-400">{currentQ.a}</b>
+                        <BrainCircuit className="w-4 h-4 text-blue-600" />
+                        <span className="text-slate-900">
+                          Doğru Cevap: <b className="text-emerald-600">{currentQ.a}</b>
                         </span>
                       </>
                     )}
                   </div>
 
-                  <p className="text-xs text-zinc-300">
+                  <p className="text-xs text-slate-600">
                     {currentQ.explanation
                       ? currentQ.explanation
                       : `Bu soru tipinde temel kavram tanımı ve konu mantığı gereği doğru yanıt "${currentQ.a}" olarak kabul edilir.`}
@@ -338,12 +343,12 @@ export function QuizStudyModal({
                 </div>
               )}
 
-              {/* Next Question Navigation Action */}
+              {/* Next Question Navigation */}
               {isAnswerRevealed && (
                 <div className="pt-2 flex justify-end">
                   <button
                     onClick={handleNextQuestion}
-                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-zinc-950 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 transition-all cursor-pointer"
+                    className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md shadow-blue-600/25 transition-all cursor-pointer"
                   >
                     <span>
                       {currentIndex < totalQuestions - 1 ? 'Sonraki Soruya Geç' : 'Testi Tamamla'}
@@ -354,39 +359,39 @@ export function QuizStudyModal({
               )}
             </div>
           ) : (
-            /* 3. QUIZLET COMPLETION SUMMARY CARD ("Tebrikler!" Özet Kartı) */
+            /* Completion Summary Card */
             <div className="max-w-md mx-auto w-full text-center space-y-6 animate-fade">
               <div className="space-y-2">
-                <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-xl shadow-emerald-500/10">
+                <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
                   <Award className="w-8 h-8" />
                 </div>
-                <h3 className="font-heading font-extrabold text-2xl text-white">
+                <h3 className="font-heading font-extrabold text-2xl text-slate-900">
                   {scorePercent >= 80 ? 'Harika Performans! 🌟' : scorePercent >= 50 ? 'Güzel Gayret! 👏' : 'Pratik Tamamlandı! 📚'}
                 </h3>
-                <p className="text-xs sm:text-sm text-zinc-400">
-                  {title} çalışmasını başarıyla tamamladınız.
+                <p className="text-xs sm:text-sm text-slate-500">
+                  {activeTitle} çalışmasını başarıyla tamamladınız.
                 </p>
               </div>
 
               {/* Metric Highlights Grid */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1">
-                  <div className="text-[11px] text-zinc-400">Başarı Oranı</div>
-                  <div className="font-heading font-extrabold text-xl text-emerald-400">
+                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1 shadow-2xs">
+                  <div className="text-[11px] text-slate-500">Başarı Oranı</div>
+                  <div className="font-heading font-extrabold text-xl text-blue-600">
                     %{scorePercent}
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1">
-                  <div className="text-[11px] text-zinc-400">Doğru / Toplam</div>
-                  <div className="font-heading font-extrabold text-xl text-white">
+                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1 shadow-2xs">
+                  <div className="text-[11px] text-slate-500">Doğru / Toplam</div>
+                  <div className="font-heading font-extrabold text-xl text-slate-900">
                     {correctTotal} / {totalQuestions}
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1">
-                  <div className="text-[11px] text-zinc-400">Süre</div>
-                  <div className="font-heading font-extrabold text-xl text-cyan-400">
+                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1 shadow-2xs">
+                  <div className="text-[11px] text-slate-500">Süre</div>
+                  <div className="font-heading font-extrabold text-xl text-indigo-600">
                     {totalElapsedSeconds > 0 ? `${totalElapsedSeconds}s` : '—'}
                   </div>
                 </div>
@@ -401,7 +406,7 @@ export function QuizStudyModal({
                     setIsAnswerRevealed(false);
                     setIsCompleted(false);
                   }}
-                  className="flex-1 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="flex-1 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Tekrar Çöz (Pratik)</span>
@@ -409,7 +414,7 @@ export function QuizStudyModal({
 
                 <button
                   onClick={onClose}
-                  className="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                  className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/25 transition-all cursor-pointer"
                 >
                   <Check className="w-4 h-4" />
                   <span>Ödevlerime Dön</span>

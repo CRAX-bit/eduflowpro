@@ -185,45 +185,43 @@ export function AiAssistantModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade">
-      <div className="w-full max-w-3xl bg-[#0d1424] border border-cyan-500/30 rounded-3xl p-6 relative shadow-[0_20px_60px_rgba(0,242,254,0.15)] max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade">
+      <div className="w-full max-w-3xl bg-white border border-slate-200/90 rounded-3xl p-6 relative shadow-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4 mb-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-500 p-[1px] shadow-[0_0_20px_rgba(0,242,254,0.3)]">
-              <div className="w-full h-full bg-[#0a0f1d] rounded-[11px] flex items-center justify-center text-cyan-300">
-                <BrainCircuit className="w-5 h-5" />
-              </div>
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
+              <BrainCircuit className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-heading font-bold text-lg text-white">EduFlow Gemini AI Asistanı</h3>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 font-semibold">
+                <h3 className="font-heading font-bold text-lg text-slate-900">EduFlow Gemini AI Asistanı</h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-semibold">
                   PRO
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Öğretmen ve öğrenciler için yapay zeka eğitim gücü</p>
+              <p className="text-xs text-slate-500">Öğretmen ve öğrenciler için yapay zeka eğitim gücü</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-white/[0.04] border border-white/10 text-slate-400 hover:text-white transition-all"
+            className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Mode Selector Tabs */}
-        <div className="flex gap-2 p-1 bg-white/[0.03] border border-white/10 rounded-2xl mb-4 shrink-0">
+        <div className="flex gap-2 p-1 bg-slate-100 border border-slate-200 rounded-2xl mb-4 shrink-0">
           <button
             type="button"
             onClick={() => setActiveMode('quiz')}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all',
+              'flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
               activeMode === 'quiz'
-                ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-[0_0_15px_rgba(157,78,221,0.3)]'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-blue-600 text-white font-bold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
             )}
           >
             <FileQuestion className="w-4 h-4" />
@@ -234,10 +232,10 @@ export function AiAssistantModal({
             type="button"
             onClick={() => setActiveMode('note')}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all',
+              'flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
               activeMode === 'note'
-                ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold shadow-[0_0_15px_rgba(16,185,129,0.3)]'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-blue-600 text-white font-bold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
             )}
           >
             <BookOpen className="w-4 h-4" />
@@ -248,10 +246,10 @@ export function AiAssistantModal({
             type="button"
             onClick={() => setActiveMode('chat')}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all',
+              'flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
               activeMode === 'chat'
-                ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-blue-600 text-white font-bold shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
             )}
           >
             <MessageSquare className="w-4 h-4" />
@@ -266,7 +264,7 @@ export function AiAssistantModal({
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                 <div className="sm:col-span-6">
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Konu / Ünite Adı
                   </label>
                   <input
@@ -274,18 +272,18 @@ export function AiAssistantModal({
                     value={quizTopic}
                     onChange={(e) => setQuizTopic(e.target.value)}
                     placeholder={MODAL_LEVEL_CONFIGS[quizGrade]?.placeholder || 'Örn: Çarpanlar ve Katlar...'}
-                    className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs focus:outline-none"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs focus:outline-none"
                   />
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Eğitim Seviyesi
                   </label>
                   <select
                     value={quizGrade}
                     onChange={(e) => setQuizGrade(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#0a0f1d] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs focus:outline-none"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs focus:outline-none"
                   >
                     <option value="İlkokul (1-4. Sınıf)">İlkokul (1-4)</option>
                     <option value="Ortaokul / LGS (5-8. Sınıf)">Ortaokul (5-8)</option>
@@ -296,13 +294,13 @@ export function AiAssistantModal({
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Soru Sayısı
                   </label>
                   <select
                     value={quizCount}
                     onChange={(e) => setQuizCount(Number(e.target.value))}
-                    className="w-full px-3.5 py-2.5 bg-[#0a0f1d] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs focus:outline-none"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs focus:outline-none"
                   >
                     <option value={3}>3 Soru (Hızlı)</option>
                     <option value={5}>5 Soru (Standart)</option>
@@ -321,8 +319,8 @@ export function AiAssistantModal({
                     className={cn(
                       'px-2.5 py-1 rounded-lg border text-[11px] transition-all cursor-pointer',
                       quizTopic === s
-                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-semibold'
-                        : 'bg-white/[0.03] border-white/10 text-slate-300 hover:text-white'
+                        ? 'bg-blue-50 border-blue-300 text-blue-700 font-bold'
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-blue-700 hover:bg-blue-50'
                     )}
                   >
                     {s}
@@ -334,25 +332,25 @@ export function AiAssistantModal({
                 type="button"
                 onClick={handleGenerateQuiz}
                 disabled={isQuizLoading}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-cyan-500 text-white font-semibold text-xs flex items-center justify-center gap-2 hover:shadow-[0_0_25px_rgba(0,242,254,0.4)] transition-all disabled:opacity-50 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isQuizLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Sparkles className="w-4 h-4 text-cyan-300" />
+                  <Sparkles className="w-4 h-4 text-blue-200" />
                 )}
                 <span>{isQuizLoading ? 'Sorular Hazırlanıyor...' : 'Yapay Zeka ile Soruları Üret'}</span>
               </button>
 
               {/* Generated Quiz Result */}
               {generatedQuiz && (
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-cyan-500/30 space-y-3">
-                  <div className="flex items-center justify-between">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-blue-200 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                     <div>
-                      <h4 className="font-heading font-bold text-sm text-cyan-300">
+                      <h4 className="font-heading font-bold text-sm text-slate-900">
                         {generatedQuiz.title}
                       </h4>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-blue-600 font-semibold">
                         {generatedQuiz.questions?.length} soru · Süre: {Math.round(generatedQuiz.timeLimit / 60)} dk
                       </p>
                     </div>
@@ -365,7 +363,7 @@ export function AiAssistantModal({
                           setActiveTab('teacher');
                           showToast('Üretilen test forma aktarıldı!', 'success');
                         }}
-                        className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md"
+                        className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                         <span>Forma Aktar</span>
@@ -373,14 +371,14 @@ export function AiAssistantModal({
                     )}
                   </div>
 
-                  <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+                  <div className="space-y-2 pt-2">
                     {generatedQuiz.questions?.map((q: any, i: number) => (
-                      <div key={i} className="p-2.5 rounded-xl bg-black/20 border border-white/5 text-xs">
-                        <div className="font-medium text-slate-200">
-                          <span className="text-cyan-400 font-bold">{i + 1}.</span> {q.q}
+                      <div key={i} className="p-2.5 rounded-xl bg-white border border-slate-200 text-xs shadow-2xs">
+                        <div className="font-semibold text-slate-900">
+                          <span className="text-blue-600 font-bold">{i + 1}.</span> {q.q}
                         </div>
-                        <div className="text-emerald-400 font-semibold mt-1">
-                          Doğru Cevap: <span className="text-white underline">{q.a}</span>
+                        <div className="text-emerald-700 font-semibold mt-1">
+                          Doğru Cevap: <span className="underline">{q.a}</span>
                         </div>
                       </div>
                     ))}
@@ -394,7 +392,7 @@ export function AiAssistantModal({
           {activeMode === 'note' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Ders Notu Konusu
                 </label>
                 <input
@@ -402,7 +400,7 @@ export function AiAssistantModal({
                   value={noteTopic}
                   onChange={(e) => setNoteTopic(e.target.value)}
                   placeholder="Örn: Newton'un Hareket Yasaları veya LGS Türkçe Fiilimsiler"
-                  className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs focus:outline-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs focus:outline-none"
                 />
               </div>
 
@@ -410,10 +408,10 @@ export function AiAssistantModal({
                 type="button"
                 onClick={handleGenerateNote}
                 disabled={isNoteLoading}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 hover:shadow-[0_0_25px_rgba(16,185,129,0.4)] transition-all disabled:opacity-50 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isNoteLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <BookOpen className="w-4 h-4" />
                 )}
@@ -421,9 +419,9 @@ export function AiAssistantModal({
               </button>
 
               {generatedNote && (
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-emerald-500/30 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-heading font-bold text-sm text-emerald-300">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-blue-200 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                    <h4 className="font-heading font-bold text-sm text-slate-900">
                       {generatedNote.title}
                     </h4>
 
@@ -435,7 +433,7 @@ export function AiAssistantModal({
                           setActiveTab('teacher');
                           showToast('Ders notu forma aktarıldı!', 'success');
                         }}
-                        className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md"
+                        className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                         <span>Forma Aktar</span>
@@ -443,7 +441,7 @@ export function AiAssistantModal({
                     )}
                   </div>
 
-                  <div className="p-3 rounded-xl bg-black/20 border border-white/5 text-xs text-slate-300 leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto">
+                  <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto shadow-2xs">
                     {generatedNote.content}
                   </div>
                 </div>
@@ -459,18 +457,18 @@ export function AiAssistantModal({
                   <div
                     key={i}
                     className={cn(
-                      'p-3 rounded-2xl text-xs max-w-[85%] leading-relaxed',
+                      'p-3 rounded-2xl text-xs max-w-[85%] leading-relaxed shadow-2xs',
                       m.role === 'user'
-                        ? 'ml-auto bg-blue-600/30 border border-blue-500/40 text-blue-100'
-                        : 'mr-auto bg-white/[0.04] border border-white/10 text-slate-200'
+                        ? 'ml-auto bg-blue-600 text-white font-medium'
+                        : 'mr-auto bg-slate-50 border border-slate-200 text-slate-800'
                     )}
                   >
                     {m.text}
                   </div>
                 ))}
                 {isChatLoading && (
-                  <div className="mr-auto p-3 rounded-2xl bg-white/[0.04] border border-white/10 text-slate-400 text-xs flex items-center gap-2">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                  <div className="mr-auto p-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-600 text-xs flex items-center gap-2">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
                     <span>Gemini yanıt yazıyor...</span>
                   </div>
                 )}
@@ -482,12 +480,12 @@ export function AiAssistantModal({
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Bir soru veya konu sor..."
-                  className="flex-1 px-4 py-2.5 bg-white/[0.04] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs focus:outline-none"
+                  className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs focus:outline-none"
                 />
                 <button
                   type="submit"
                   disabled={isChatLoading || !chatInput.trim()}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-cyan-500 text-white text-xs font-semibold flex items-center gap-1.5 hover:shadow-lg disabled:opacity-50 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs disabled:opacity-50 cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Gönder</span>

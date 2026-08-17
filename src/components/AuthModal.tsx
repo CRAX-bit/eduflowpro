@@ -32,7 +32,7 @@ function getTurkishAuthErrorMessage(error: any): string {
     return 'E-posta adresi veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.';
   }
   if (msg.includes('email not confirmed')) {
-    return 'E-posta adresiniz henüz doğrulanmamış. Lütfen gelen kutunuzdaki (veya spam klasöründeki) onay bağlantısına tıklayın.';
+    return 'E-posta adresiniz henüz doğrulanmamış. Lütfen gelen kutunuzdaki onay bağlantısına tıklayın.';
   }
   if (
     msg.includes('user already registered') ||
@@ -101,10 +101,31 @@ export function AuthModal() {
       setAcceptedTerms(false);
       setErrorMessage(null);
       setMode('signin');
+
+      try {
+        const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
+        if (savedEmail) {
+          setEmail(savedEmail);
+          setRememberMe(true);
+        }
+      } catch (e) {
+        // non-blocking
+      }
     }
   }, [isAuthModalOpen, authModalInitialRole]);
 
-  // Resend cooldown timer
+  // Handle ESC key to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isAuthModalOpen) {
+        closeAuthModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAuthModalOpen, closeAuthModal]);
+
+  // Cooldown countdown timer for resend email
   useEffect(() => {
     if (resendCooldown > 0) {
       cooldownTimerRef.current = setTimeout(() => {
@@ -118,10 +139,40 @@ export function AuthModal() {
 
   if (!isAuthModalOpen) return null;
 
-  // Resend Verification Email Action
-  const handleResendEmail = async () => {
-    if (resendCooldown > 0 || resendLoading || !submittedEmail) return;
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setErrorMessage('Lütfen e-posta adresinizi giriniz.');
+      return;
+    }
 
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      });
+
+      if (error) {
+        const trError = getTurkishAuthErrorMessage(error);
+        setErrorMessage(trError);
+        showToast(trError, 'error');
+      } else {
+        setSubmittedEmail(cleanEmail);
+        setMode('reset_sent');
+        showToast('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi! ✉️', 'success');
+      }
+    } catch (err: any) {
+      const trError = getTurkishAuthErrorMessage(err);
+      setErrorMessage(trError);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (resendCooldown > 0 || !submittedEmail) return;
     setResendLoading(true);
     setErrorMessage(null);
 
@@ -135,77 +186,34 @@ export function AuthModal() {
         const trError = getTurkishAuthErrorMessage(error);
         setErrorMessage(trError);
         showToast(trError, 'error');
-        return;
+      } else {
+        setResendCooldown(60);
+        showToast('Doğrulama e-postası tekrar gönderildi. ✉️', 'success');
       }
-
-      setResendCooldown(60);
-      showToast('Doğrulama bağlantısı e-posta adresinize tekrar gönderildi! ✉️', 'success');
     } catch (err: any) {
       const trError = getTurkishAuthErrorMessage(err);
       setErrorMessage(trError);
-      showToast(trError, 'error');
     } finally {
       setResendLoading(false);
     }
   };
 
-  // Password Reset (Forgot Password) Action
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (loading) return;
-
-    const cleanEmail = email.trim();
-    if (!cleanEmail) {
-      setErrorMessage('Lütfen e-posta adresinizi giriniz.');
-      return;
-    }
-
-    setLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
-      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: redirectUrl,
-      });
-
-      if (error) {
-        const trError = getTurkishAuthErrorMessage(error);
-        setErrorMessage(trError);
-        showToast(`Şifre sıfırlama hatası: ${trError}`, 'error');
-        return;
-      }
-
-      setSubmittedEmail(cleanEmail);
-      setMode('reset_sent');
-      showToast('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi! ✉️', 'success');
-    } catch (err: any) {
-      const trError = getTurkishAuthErrorMessage(err);
-      setErrorMessage(trError);
-      showToast(trError, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Switch back to Sign In
   const handleBackToSignIn = () => {
     setMode('signin');
-    setPassword('');
     setErrorMessage(null);
+    setPassword('');
   };
 
-  // Main Submit Handler (Sign In & Sign Up)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    setErrorMessage(null);
 
     const cleanEmail = email.trim();
     const cleanPass = password.trim();
     const cleanName = fullName.trim();
 
     if (!cleanEmail) {
-      setErrorMessage('Lütfen e-posta adresinizi giriniz.');
+      setErrorMessage('Lütfen geçerli bir e-posta adresi giriniz.');
       return;
     }
 
@@ -214,18 +222,33 @@ export function AuthModal() {
       return;
     }
 
-    if (mode === 'signup' && !cleanName) {
-      setErrorMessage('Lütfen adınızı ve soyadınızı giriniz.');
+    if (cleanPass.length < 6) {
+      setErrorMessage('Şifreniz en az 6 karakter olmalıdır.');
       return;
     }
 
-    if (mode === 'signup' && !acceptedTerms) {
-      setErrorMessage('Kayıt olmak için Kullanım Koşulları ve KVKK Aydınlatma Metni\'ni onaylamanız gerekmektedir.');
-      return;
+    if (mode === 'signup') {
+      if (!cleanName) {
+        setErrorMessage('Lütfen adınızı ve soyadınızı giriniz.');
+        return;
+      }
+      if (!acceptedTerms) {
+        setErrorMessage('Devam etmek için Kullanım Koşulları ve KVKK metnini onaylamanız gerekmektedir.');
+        return;
+      }
+    }
+
+    try {
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_EMAIL_KEY, cleanEmail);
+      } else {
+        localStorage.removeItem(REMEMBER_EMAIL_KEY);
+      }
+    } catch (e) {
+      // ignore
     }
 
     setLoading(true);
-    setErrorMessage(null);
 
     try {
       if (mode === 'signup') {
@@ -245,12 +268,11 @@ export function AuthModal() {
         if (error) {
           const trError = getTurkishAuthErrorMessage(error);
           setErrorMessage(trError);
-          showToast(`Kayıt hatası: ${trError}`, 'error');
+          showToast(`Kayıt başarısız: ${trError}`, 'error');
           setLoading(false);
           return;
         }
 
-        // Try upserting to profiles table for data consistency
         if (data.user?.id) {
           try {
             await supabase.from('profiles').upsert({
@@ -279,13 +301,11 @@ export function AuthModal() {
           return;
         }
 
-        // Email confirmation is pending
         setSubmittedEmail(cleanEmail);
         setMode('verification_sent');
         setResendCooldown(60);
         showToast('Kayıt başarılı! Doğrulama e-postası gönderildi. ✉️', 'success');
       } else {
-        // Direct Standard Supabase Sign In with Email & Password
         const { data, error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password: cleanPass,
@@ -306,7 +326,6 @@ export function AuthModal() {
           let userGradeLevel: string | undefined = data.user.user_metadata?.grade_level;
           let userBranch: string | undefined = data.user.user_metadata?.branch;
 
-          // Fetch verified role & full name from profiles table
           try {
             const { data: profile } = await supabase
               .from('profiles')
@@ -314,23 +333,14 @@ export function AuthModal() {
               .eq('id', data.user.id)
               .single();
 
-            if (profile?.role) {
-              actualRole = profile.role as 'teacher' | 'student';
-            }
-            if (profile?.full_name) {
-              userFullName = profile.full_name;
-            }
-            if (profile?.grade_level) {
-              userGradeLevel = profile.grade_level;
-            }
-            if (profile?.branch) {
-              userBranch = profile.branch;
-            }
+            if (profile?.role) actualRole = profile.role as 'teacher' | 'student';
+            if (profile?.full_name) userFullName = profile.full_name;
+            if (profile?.grade_level) userGradeLevel = profile.grade_level;
+            if (profile?.branch) userBranch = profile.branch;
           } catch (e) {
-            // fallback to user_metadata
+            // fallback
           }
 
-          // Strict Role Guard Check
           if (role === 'student' && actualRole === 'teacher') {
             await supabase.auth.signOut();
             setPassword('');
@@ -380,59 +390,57 @@ export function AuthModal() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="auth-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-[#0c0d12] border border-zinc-800/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 relative shadow-2xl overflow-hidden transition-all backdrop-blur-xl"
+        className="w-full max-w-md bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 relative shadow-2xl overflow-hidden transition-all"
       >
         {/* Close Button */}
         <button
           onClick={closeAuthModal}
           type="button"
           aria-label="Kapat"
-          className="absolute top-5 right-5 p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer z-10"
+          className="absolute top-5 right-5 p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-700 transition-all cursor-pointer z-10"
         >
           <X className="w-4 h-4" />
         </button>
 
-        {/* ==================================================================== */}
-        {/* SCREEN 1: VERIFICATION EMAIL SENT NOTICE SCREEN                      */}
-        {/* ==================================================================== */}
+        {/* SCREEN 1: VERIFICATION EMAIL SENT NOTICE */}
         {mode === 'verification_sent' && (
           <div className="text-center py-2 space-y-5 animate-fade">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-200 shadow-md">
-              <Mail className="w-8 h-8 text-emerald-400" />
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
+              <Mail className="w-8 h-8" />
             </div>
 
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                 <span>Hesap Aktivasyonu Gerekli</span>
               </div>
 
-              <h3 id="auth-modal-title" className="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">
+              <h3 id="auth-modal-title" className="font-heading font-bold text-xl sm:text-2xl text-slate-900 tracking-tight">
                 Doğrulama E-postası Gönderildi
               </h3>
 
-              <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed px-2">
-                <span className="inline-block px-2.5 py-1 my-1 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-200 font-mono font-medium text-xs break-all">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed px-2">
+                <span className="inline-block px-2.5 py-1 my-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-mono font-medium text-xs break-all">
                   {submittedEmail}
                 </span>{' '}
-                adresine bir onay bağlantısı ilettik. Hesabınızı aktifleştirmek için lütfen gelen kutunuzu (ve spam klasörünü) kontrol edin.
+                adresine bir onay bağlantısı ilettik. Hesabınızı aktifleştirmek için gelen kutunuzu kontrol edin.
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 text-left flex items-start gap-3">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-zinc-400 leading-relaxed">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-left flex items-start gap-3">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <p className="text-xs text-slate-600 leading-relaxed">
                 E-postadaki bağlantıya tıkladıktan sonra hesabınız hemen aktif hale gelecektir.
               </p>
             </div>
 
             {errorMessage && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center gap-2 text-left animate-fade">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 text-left animate-fade">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
                 <span>{errorMessage}</span>
               </div>
             )}
@@ -441,7 +449,7 @@ export function AuthModal() {
               <button
                 type="button"
                 onClick={handleBackToSignIn}
-                className="w-full py-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 <LogIn className="w-4 h-4" />
                 <span>Giriş Ekranına Dön</span>
@@ -451,9 +459,9 @@ export function AuthModal() {
                 type="button"
                 onClick={handleResendEmail}
                 disabled={resendCooldown > 0 || resendLoading}
-                className="w-full py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                <RefreshCw className={cn('w-3.5 h-3.5 text-zinc-400', resendLoading && 'animate-spin')} />
+                <RefreshCw className={cn('w-3.5 h-3.5 text-slate-500', resendLoading && 'animate-spin')} />
                 <span>
                   {resendLoading
                     ? 'E-posta Gönderiliyor...'
@@ -466,33 +474,31 @@ export function AuthModal() {
           </div>
         )}
 
-        {/* ==================================================================== */}
-        {/* SCREEN 3: FORGOT PASSWORD FORM SCREEN                                */}
-        {/* ==================================================================== */}
+        {/* SCREEN 3: FORGOT PASSWORD */}
         {mode === 'forgot_password' && (
           <div className="space-y-5 animate-fade">
             <div className="text-center space-y-1.5">
-              <div className="w-11 h-11 mx-auto mb-2 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-200">
-                <Key className="w-5 h-5 text-emerald-400" />
+              <div className="w-11 h-11 mx-auto mb-2 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+                <Key className="w-5 h-5" />
               </div>
-              <h3 id="auth-modal-title" className="font-heading font-bold text-xl text-white tracking-tight">
+              <h3 id="auth-modal-title" className="font-heading font-bold text-xl text-slate-900 tracking-tight">
                 Şifremi Unuttum
               </h3>
-              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 Hesabınıza kayıtlı e-posta adresinizi giriniz. Size şifre sıfırlama bağlantısı ileteceğiz.
               </p>
             </div>
 
             {errorMessage && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-start gap-2.5 animate-fade">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5 animate-fade">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
                 <span className="leading-relaxed">{errorMessage}</span>
               </div>
             )}
 
             <form onSubmit={handleForgotPassword} className="space-y-3.5">
               <div>
-                <label htmlFor="reset-email" className="block text-xs font-medium text-zinc-300 mb-1">
+                <label htmlFor="reset-email" className="block text-xs font-semibold text-slate-700 mb-1">
                   E-posta Adresi
                 </label>
                 <input
@@ -506,23 +512,23 @@ export function AuthModal() {
                     if (errorMessage) setErrorMessage(null);
                   }}
                   placeholder="ornek@mail.com"
-                  className="w-full px-3.5 py-2.5 bg-zinc-950/60 border border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-xl text-zinc-100 placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none transition-all disabled:opacity-50"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 placeholder:text-slate-400 text-xs sm:text-sm focus:outline-none transition-all disabled:opacity-50"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin text-zinc-950" />
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
                     <span>Bağlantı Gönderiliyor...</span>
                   </>
                 ) : (
                   <>
-                    <Mail className="w-4 h-4 text-zinc-950" />
+                    <Mail className="w-4 h-4 text-white" />
                     <span>Sıfırlama Bağlantısı Gönder</span>
                   </>
                 )}
@@ -533,7 +539,7 @@ export function AuthModal() {
               <button
                 type="button"
                 onClick={handleBackToSignIn}
-                className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 font-medium cursor-pointer transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 font-medium cursor-pointer transition-colors"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Giriş Ekranına Dön</span>
@@ -542,27 +548,25 @@ export function AuthModal() {
           </div>
         )}
 
-        {/* ==================================================================== */}
-        {/* SCREEN 4: PASSWORD RESET EMAIL SENT NOTICE                           */}
-        {/* ==================================================================== */}
+        {/* SCREEN 4: PASSWORD RESET SENT */}
         {mode === 'reset_sent' && (
           <div className="text-center py-2 space-y-5 animate-fade">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-200 shadow-md">
-              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-xs">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
 
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                 <span>Bağlantı Gönderildi</span>
               </div>
 
-              <h3 id="auth-modal-title" className="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">
+              <h3 id="auth-modal-title" className="font-heading font-bold text-xl sm:text-2xl text-slate-900 tracking-tight">
                 Şifre Sıfırlama E-postası
               </h3>
 
-              <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed px-2">
-                <span className="inline-block px-2.5 py-1 my-1 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-200 font-mono font-medium text-xs break-all">
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed px-2">
+                <span className="inline-block px-2.5 py-1 my-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-900 font-mono font-medium text-xs break-all">
                   {submittedEmail}
                 </span>{' '}
                 adresine şifrenizi yenilemeniz için bir bağlantı gönderdik. Lütfen gelen kutunuzu kontrol edin.
@@ -572,7 +576,7 @@ export function AuthModal() {
             <button
               type="button"
               onClick={handleBackToSignIn}
-              className="w-full py-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <LogIn className="w-4 h-4" />
               <span>Giriş Ekranına Dön</span>
@@ -580,29 +584,27 @@ export function AuthModal() {
           </div>
         )}
 
-        {/* ==================================================================== */}
-        {/* SCREEN 2: SIGN IN & SIGN UP FORMS (Matte Minimalist SaaS Style)       */}
-        {/* ==================================================================== */}
+        {/* SCREEN 2: SIGN IN & SIGN UP FORMS */}
         {(mode === 'signin' || mode === 'signup') && (
           <>
             {/* Header */}
             <div className="text-center mb-5 space-y-1.5">
-              <div className="w-11 h-11 mx-auto mb-2 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-200">
-                <GraduationCap className="w-5 h-5 text-emerald-400" />
+              <div className="w-11 h-11 mx-auto mb-2 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
+                <GraduationCap className="w-6 h-6" />
               </div>
-              <h3 id="auth-modal-title" className="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">
+              <h3 id="auth-modal-title" className="font-heading font-bold text-xl sm:text-2xl text-slate-900 tracking-tight">
                 {mode === 'signin' ? 'EduFlow Pro Giriş' : 'Yeni Hesap Oluştur'}
               </h3>
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-slate-500">
                 {mode === 'signin'
                   ? 'Çalışma alanınıza erişmek için bilgilerinizi giriniz'
                   : 'Öğretmen veya öğrenci hesabınızı saniyeler içinde açın'}
               </p>
             </div>
 
-            {/* Role Switcher (Matte Linear Segmented Control) */}
+            {/* Role Switcher */}
             <div className="mb-4">
-              <div className="flex gap-1.5 p-1 bg-zinc-950/80 border border-zinc-800 rounded-xl">
+              <div className="flex gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-xl">
                 <button
                   type="button"
                   disabled={loading}
@@ -614,10 +616,10 @@ export function AuthModal() {
                     setErrorMessage(null);
                   }}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+                    'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:opacity-50',
                     role === 'teacher'
-                      ? 'bg-zinc-800 text-white font-bold shadow-sm border border-zinc-700/60'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                      ? 'bg-blue-600 text-white font-bold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                   )}
                 >
                   <span>👨‍🏫 Öğretmen Girişi</span>
@@ -633,10 +635,10 @@ export function AuthModal() {
                     setErrorMessage(null);
                   }}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed',
+                    'flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:opacity-50',
                     role === 'student'
-                      ? 'bg-zinc-800 text-white font-bold shadow-sm border border-zinc-700/60'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                      ? 'bg-blue-600 text-white font-bold shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                   )}
                 >
                   <span>🎓 Öğrenci Girişi</span>
@@ -646,8 +648,8 @@ export function AuthModal() {
 
             {/* Inline Error Alert Box */}
             {errorMessage && (
-              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-start gap-2.5 animate-fade">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start gap-2.5 animate-fade">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500 mt-0.5" />
                 <span className="leading-relaxed">{errorMessage}</span>
               </div>
             )}
@@ -659,7 +661,7 @@ export function AuthModal() {
                 <div className="animate-fade">
                   <label
                     htmlFor="auth-fullname"
-                    className="block text-xs font-medium text-zinc-300 mb-1"
+                    className="block text-xs font-semibold text-slate-700 mb-1"
                   >
                     Ad Soyad
                   </label>
@@ -668,9 +670,6 @@ export function AuthModal() {
                     name="eduflow_reg_fullname_field"
                     type="text"
                     autoComplete="off"
-                    data-lpignore="true"
-                    data-1p-ignore="true"
-                    data-form-type="other"
                     required
                     disabled={loading}
                     value={fullName}
@@ -679,7 +678,7 @@ export function AuthModal() {
                       if (errorMessage) setErrorMessage(null);
                     }}
                     placeholder={role === 'teacher' ? 'Örn: Ahmet Yılmaz' : 'Örn: Zeynep Kaya'}
-                    className="w-full px-3.5 py-2 bg-zinc-950/60 border border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-xl text-zinc-100 placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none transition-all disabled:opacity-50"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 placeholder:text-slate-400 text-xs sm:text-sm focus:outline-none transition-all disabled:opacity-50"
                   />
                 </div>
               )}
@@ -688,7 +687,7 @@ export function AuthModal() {
               <div>
                 <label
                   htmlFor="auth-email"
-                  className="block text-xs font-medium text-zinc-300 mb-1"
+                  className="block text-xs font-semibold text-slate-700 mb-1"
                 >
                   E-posta Adresi
                 </label>
@@ -697,9 +696,6 @@ export function AuthModal() {
                   name={mode === 'signup' ? 'eduflow_reg_email_field' : 'eduflow_auth_identity_field'}
                   type="email"
                   autoComplete="off"
-                  data-lpignore="true"
-                  data-1p-ignore="true"
-                  data-form-type="other"
                   required
                   disabled={loading}
                   value={email}
@@ -708,16 +704,16 @@ export function AuthModal() {
                     if (errorMessage) setErrorMessage(null);
                   }}
                   placeholder="ornek@mail.com"
-                  className="w-full px-3.5 py-2 bg-zinc-950/60 border border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-xl text-zinc-100 placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none transition-all disabled:opacity-50"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 placeholder:text-slate-400 text-xs sm:text-sm focus:outline-none transition-all disabled:opacity-50"
                 />
               </div>
 
-              {/* Password Input with Show/Hide Toggle & Forgot Password Link */}
+              {/* Password Input */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label
                     htmlFor="auth-password"
-                    className="block text-xs font-medium text-zinc-300"
+                    className="block text-xs font-semibold text-slate-700"
                   >
                     Şifre
                   </label>
@@ -729,7 +725,7 @@ export function AuthModal() {
                         setMode('forgot_password');
                         setErrorMessage(null);
                       }}
-                      className="text-[11px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+                      className="text-[11px] text-blue-600 hover:text-blue-700 font-medium transition-colors cursor-pointer"
                     >
                       Şifremi unuttum?
                     </button>
@@ -741,9 +737,6 @@ export function AuthModal() {
                     name={mode === 'signup' ? 'eduflow_reg_secret_field' : 'eduflow_auth_secret_field'}
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
-                    data-lpignore="true"
-                    data-1p-ignore="true"
-                    data-form-type="other"
                     required
                     disabled={loading}
                     minLength={6}
@@ -753,7 +746,7 @@ export function AuthModal() {
                       if (errorMessage) setErrorMessage(null);
                     }}
                     placeholder="••••••••"
-                    className="w-full px-3.5 py-2 pr-10 bg-zinc-950/60 border border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-xl text-zinc-100 placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none transition-all disabled:opacity-50"
+                    className="w-full px-3.5 py-2 pr-10 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 placeholder:text-slate-400 text-xs sm:text-sm focus:outline-none transition-all disabled:opacity-50"
                   />
                   <button
                     type="button"
@@ -761,7 +754,7 @@ export function AuthModal() {
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
                     tabIndex={-1}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors p-1 cursor-pointer disabled:opacity-50"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1 cursor-pointer disabled:opacity-50"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -773,9 +766,9 @@ export function AuthModal() {
                 <div className="space-y-1 animate-fade">
                   <label
                     htmlFor="auth-grade-level"
-                    className="block text-xs font-medium text-zinc-300"
+                    className="block text-xs font-semibold text-slate-700"
                   >
-                    Eğitim Seviyesi / Hedef Sınav <span className="text-emerald-400">*</span>
+                    Eğitim Seviyesi / Hedef Sınav <span className="text-blue-600">*</span>
                   </label>
                   <select
                     id="auth-grade-level"
@@ -785,7 +778,7 @@ export function AuthModal() {
                       setGradeLevel(e.target.value);
                       if (errorMessage) setErrorMessage(null);
                     }}
-                    className="w-full px-3.5 py-2.5 bg-zinc-950/60 border border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-xl text-zinc-100 text-xs sm:text-sm focus:outline-none transition-all cursor-pointer"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs sm:text-sm focus:outline-none transition-all cursor-pointer"
                   >
                     <option value="Ortaokul (5-8. Sınıf / LGS Hazırlık)">
                       Ortaokul (5-8. Sınıf / LGS Hazırlık)
@@ -803,9 +796,6 @@ export function AuthModal() {
                       Genel Gelişim / Dil Eğitimi
                     </option>
                   </select>
-                  <p className="text-[11px] text-zinc-500">
-                    Yapay zeka asistanı test ve pratikleri bu seviyeye göre kişiselleştirir.
-                  </p>
                 </div>
               )}
 
@@ -814,7 +804,7 @@ export function AuthModal() {
                 <div className="space-y-1 animate-fade">
                   <label
                     htmlFor="auth-teacher-branch"
-                    className="block text-xs font-medium text-zinc-300"
+                    className="block text-xs font-semibold text-slate-700"
                   >
                     Branş / Uzmanlık Alanı
                   </label>
@@ -826,7 +816,7 @@ export function AuthModal() {
                       setTeacherBranch(e.target.value);
                       if (errorMessage) setErrorMessage(null);
                     }}
-                    className="w-full px-3.5 py-2.5 bg-zinc-950/60 border border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-xl text-zinc-100 text-xs sm:text-sm focus:outline-none transition-all cursor-pointer"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs sm:text-sm focus:outline-none transition-all cursor-pointer"
                   >
                     <option value="Matematik">Matematik</option>
                     <option value="Fen Bilimleri / Biyoloji">Fen Bilimleri / Biyoloji</option>
@@ -839,7 +829,7 @@ export function AuthModal() {
                 </div>
               )}
 
-              {/* Remember Me Checkbox (Sign In only) */}
+              {/* Remember Me Checkbox */}
               {mode === 'signin' && (
                 <div className="flex items-center justify-between pt-1">
                   <label className="flex items-center gap-2 cursor-pointer select-none group">
@@ -855,25 +845,25 @@ export function AuthModal() {
                       className={cn(
                         'w-4 h-4 rounded border flex items-center justify-center transition-all',
                         rememberMe
-                          ? 'bg-zinc-100 border-zinc-100 text-zinc-950 font-bold'
-                          : 'border-zinc-700 bg-zinc-950 group-hover:border-zinc-500',
+                          ? 'bg-blue-600 border-blue-600 text-white font-bold'
+                          : 'border-slate-300 bg-white group-hover:border-blue-400',
                         loading && 'opacity-50 cursor-not-allowed'
                       )}
                     >
                       {rememberMe && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>
-                    <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                    <span className="text-xs text-slate-600 group-hover:text-slate-900 transition-colors">
                       Beni Hatırla
                     </span>
                   </label>
 
-                  <span className="text-[11px] text-zinc-500">
+                  <span className="text-[11px] text-slate-400 font-medium">
                     {role === 'teacher' ? 'Öğretmen Hesabı' : 'Öğrenci Hesabı'}
                   </span>
                 </div>
               )}
 
-              {/* Terms and KVKK Consent Checkbox (Sign Up only) */}
+              {/* Terms Checkbox */}
               {mode === 'signup' && (
                 <div className="pt-1.5 animate-fade">
                   <label className="flex items-start gap-2.5 cursor-pointer select-none group">
@@ -892,20 +882,20 @@ export function AuthModal() {
                       className={cn(
                         'w-4 h-4 mt-0.5 rounded border flex items-center justify-center transition-all shrink-0',
                         acceptedTerms
-                          ? 'bg-zinc-100 border-zinc-100 text-zinc-950 font-bold'
-                          : 'border-zinc-700 bg-zinc-950 group-hover:border-zinc-500',
+                          ? 'bg-blue-600 border-blue-600 text-white font-bold'
+                          : 'border-slate-300 bg-white group-hover:border-blue-400',
                         loading && 'opacity-50 cursor-not-allowed'
                       )}
                     >
                       {acceptedTerms && <Check className="w-3 h-3 stroke-[3]" />}
                     </div>
-                    <span className="text-[11px] text-zinc-400 leading-relaxed group-hover:text-zinc-300 transition-colors">
+                    <span className="text-[11px] text-slate-600 leading-relaxed group-hover:text-slate-800 transition-colors">
                       <a
                         href="/kullanim-kosullari"
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-zinc-200 hover:underline font-medium"
+                        className="text-blue-600 hover:underline font-semibold"
                       >
                         Kullanım Koşulları&apos;nı
                       </a>{' '}
@@ -915,7 +905,7 @@ export function AuthModal() {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-zinc-200 hover:underline font-medium"
+                        className="text-blue-600 hover:underline font-semibold"
                       >
                         KVKK Aydınlatma Metni&apos;ni
                       </a>{' '}
@@ -925,14 +915,14 @@ export function AuthModal() {
                 </div>
               )}
 
-              {/* Linear-Style High Contrast Primary Submit Button */}
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50 mt-2"
               >
                 {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-zinc-950" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
                 ) : mode === 'signin' ? (
                   <LogIn className="w-4 h-4" />
                 ) : (
@@ -951,9 +941,9 @@ export function AuthModal() {
             </form>
 
             {/* Mode Switch (Sign In <-> Sign Up) */}
-            <div className="mt-5 pt-4 border-t border-zinc-800/80 text-center">
+            <div className="mt-5 pt-4 border-t border-slate-100 text-center">
               {mode === 'signin' ? (
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-slate-500">
                   Henüz bir hesabınız yok mu?{' '}
                   <button
                     type="button"
@@ -966,13 +956,13 @@ export function AuthModal() {
                       setAcceptedTerms(false);
                       setErrorMessage(null);
                     }}
-                    className="text-zinc-200 hover:text-white font-bold hover:underline cursor-pointer ml-1 disabled:opacity-50"
+                    className="text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer ml-1 disabled:opacity-50"
                   >
                     Kayıt Ol
                   </button>
                 </p>
               ) : (
-                <p className="text-xs text-zinc-400">
+                <p className="text-xs text-slate-500">
                   Zaten bir hesabınız var mı?{' '}
                   <button
                     type="button"
@@ -985,7 +975,7 @@ export function AuthModal() {
                       setAcceptedTerms(false);
                       setErrorMessage(null);
                     }}
-                    className="text-zinc-200 hover:text-white font-bold hover:underline cursor-pointer ml-1 disabled:opacity-50"
+                    className="text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer ml-1 disabled:opacity-50"
                   >
                     Giriş Yap
                   </button>

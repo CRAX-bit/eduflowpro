@@ -23,12 +23,14 @@ interface CreateAssignmentParams {
   title: string;
   folder: string;
   target: string;
+  targetMode?: 'all' | 'individual';
   classroomId?: string;
   classroomName?: string;
   desc?: string;
   fileName?: string | null;
   fileData?: string | null;
   timeLimit?: number;
+  deadline?: number; // Unix ms timestamp
   questions?: Question[];
 }
 
@@ -73,7 +75,8 @@ interface EduFlowContextType {
     assignmentId: string,
     responseText: string,
     fileAttachment?: { fileUrl: string; fileName: string; fileType: string; fileSize: number },
-    photoDataUrl?: string
+    photoDataUrl?: string,
+    note?: string
   ) => Promise<{ success: boolean; aiScore?: number; aiFeedback?: string }>;
   reviewSubmission: (assignmentId: string, studentId: string, finalScore: number, feedback: string) => Promise<void>;
   saveFeedback: (assignmentId: string, studentId: string, feedback: string) => void;
@@ -242,6 +245,8 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
           title: row.title || 'Başlıksız Ödev',
           folder: row.folder || 'Genel',
           target: row.target || 'all',
+          targetMode: row.target_mode || row.targetMode || 'all',
+          deadline: row.deadline ? new Date(row.deadline).getTime() : undefined,
           classroomId: row.classroom_id || row.classroomId || undefined,
           classroomName: row.classroom_name || row.classroomName || undefined,
           desc: row.desc || '',
@@ -903,6 +908,8 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         fileName: params.fileName || null,
         fileData: params.fileData || null,
         timeLimit: params.timeLimit || 0,
+        deadline: params.deadline || undefined,
+        targetMode: params.targetMode || 'all',
         questions: params.questions || [],
         createdAt: Date.now(),
         submissions: {},
@@ -926,12 +933,14 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         title: newAssignment.title,
         folder: newAssignment.folder,
         target: newAssignment.target,
+        target_mode: newAssignment.targetMode || 'all',
         classroom_id: newAssignment.classroomId || null,
         classroom_name: newAssignment.classroomName || null,
         desc: newAssignment.desc,
         file_name: newAssignment.fileName,
         file_data: newAssignment.fileData,
         time_limit: newAssignment.timeLimit,
+        deadline: newAssignment.deadline ? new Date(newAssignment.deadline).toISOString() : null,
         questions: newAssignment.questions,
         submissions: {},
       };
@@ -1172,7 +1181,8 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       assignmentId: string,
       responseText: string,
       fileAttachment?: { fileUrl: string; fileName: string; fileType: string; fileSize: number },
-      photoDataUrl?: string
+      photoDataUrl?: string,
+      note?: string
     ): Promise<{ success: boolean; aiScore?: number; aiFeedback?: string }> => {
       const sid = state.currentStudentId || state.session?.studentId || state.session?.supabaseId;
       if (!sid) {
@@ -1196,6 +1206,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         fileType: fileAttachment?.fileType,
         fileSize: fileAttachment?.fileSize,
         photo: photoDataUrl || (fileAttachment?.fileType?.startsWith('image') ? fileAttachment.fileUrl : undefined),
+        note: note || undefined,
         at: Date.now(),
         status: 'pending',
       };

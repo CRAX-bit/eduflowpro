@@ -11,9 +11,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'EduFlow Pro — Özel Ders Yönetim Platformu & Yapay Zeka Asistanı',
+  title: 'EduFlow Pro — Özel Ders & Sınıf Yönetim Platformu',
   description:
-    'Özel ders takibinde kaosu bitirin. Ders notları, interaktif süreli testler, fotoğraflı ödev teslimi ve Google Gemini Pro yapay zeka gücüyle öğrenci başarısını katlayın.',
+    'Özel ders ve sınıf takibinde kaosu bitirin. Ders notları, interaktif süreli testler, fotoğraflı ödev teslimi ve yapay zeka gücüyle öğrenci başarısını katlayın.',
   keywords: [
     'Özel Ders',
     'EduFlow Pro',
@@ -32,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" className="dark">
-      <body className="antialiased bg-[#0a0f1d] text-[#e8edf7] selection:bg-[#00f2fe] selection:text-[#04121a]">
+    <html lang="tr" className="bg-slate-50">
+      <body className="antialiased bg-slate-50 text-slate-900 selection:bg-blue-600 selection:text-white min-h-screen">
         <EduFlowProvider>
           {children}
           <AuthModal />

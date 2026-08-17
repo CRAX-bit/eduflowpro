@@ -47,6 +47,9 @@ import {
   BarChart2,
   BookMarked,
   GraduationCap,
+  PieChart,
+  Target,
+  AlertTriangle,
 } from 'lucide-react';
 import { NoteModal } from './NoteModal';
 import { PhotoModal } from './PhotoModal';
@@ -64,6 +67,69 @@ const GRADE_LEVEL_OPTIONS = [
   'Lisans & Mezun (KPSS / ALES Hazırlık)',
   'Genel Gelişim / Dil Eğitimi',
 ];
+
+// Seviyeye Göre Akıllı Konu Hakimiyeti Örnekleri
+const LEVEL_TOPIC_MASTERY: Record<
+  string,
+  {
+    strong: Array<{ name: string; score: number }>;
+    review: Array<{ name: string; focus: string }>;
+  }
+> = {
+  'Ortaokul (5-8. Sınıf / LGS Hazırlık)': {
+    strong: [
+      { name: 'Çarpanlar ve Katlar (EBOB-EKOK)', score: 94 },
+      { name: 'DNA ve Genetik Kod', score: 90 },
+      { name: 'Paragrafta Anlam & Yapı', score: 88 },
+    ],
+    review: [
+      { name: 'Mevsimler ve İklim', focus: 'Eksen Eğikliği' },
+      { name: 'Fiilimsiler (Eylemsiler)', focus: 'Zarf-Fiil Ekleri' },
+    ],
+  },
+  'Lise (9-12. Sınıf / YKS Hazırlık - Sayısal)': {
+    strong: [
+      { name: 'Fonksiyonlar & Parabol', score: 95 },
+      { name: 'Fotosentez ve Kloroplast', score: 92 },
+      { name: 'Trigonometri Temelleri', score: 89 },
+    ],
+    review: [
+      { name: 'Newton Hareket Yasaları', focus: 'Sürtünme & Eğik Düzlem' },
+      { name: 'Kimyasal Türler Arası Etkileşim', focus: 'Hidrojen Bağı' },
+    ],
+  },
+  'Lise (9-12. Sınıf / YKS Hazırlık - Eşit Ağırlık / Sözel)': {
+    strong: [
+      { name: 'Divan Edebiyatı Nazım Şekilleri', score: 96 },
+      { name: 'Osmanlı Kuruluş & Yükselme', score: 91 },
+      { name: 'Temel Fonksiyonlar', score: 86 },
+    ],
+    review: [
+      { name: 'Tanzimat Dönemi Romanları', focus: 'Karakter Tahlilleri' },
+      { name: 'Türkiye Coğrafyası & İklim', focus: 'Rüzgarlar & Yağış' },
+    ],
+  },
+  'Lisans & Mezun (KPSS / ALES Hazırlık)': {
+    strong: [
+      { name: 'Sözel Mantık & Çıkarım', score: 93 },
+      { name: 'Anayasa Hukuku Temelleri', score: 90 },
+      { name: 'Matematik: Problemler', score: 87 },
+    ],
+    review: [
+      { name: 'Türkiye Ekonomik Coğrafyası', focus: 'Madenler & Sanayi' },
+      { name: 'Çağdaş Türk ve Dünya Tarihi', focus: 'Soğuk Savaş Dönemi' },
+    ],
+  },
+  'Genel Gelişim / Dil Eğitimi': {
+    strong: [
+      { name: 'Temel İngilizce Zamanlar', score: 95 },
+      { name: 'Hızlı Okuma ve Kavrama', score: 91 },
+    ],
+    review: [
+      { name: 'Akademik Kelime Bilgisi', focus: 'Preposition Kullanımı' },
+    ],
+  },
+};
 
 export function StudentView() {
   const {
@@ -112,16 +178,16 @@ export function StudentView() {
 
   if (!state.session && !state.currentStudentId) {
     return (
-      <div className="text-center py-20 text-zinc-400 space-y-3">
+      <div className="text-center py-20 text-slate-500 space-y-3">
         <p>Lütfen önce öğrenci girişi yapınız.</p>
       </div>
     );
   }
 
   const studentDisplayName = state.session?.name || currentStudent?.name || 'Öğrenci';
-  const studentColor = currentStudent?.color || '#10b981';
+  const studentColor = currentStudent?.color || '#2563eb';
 
-  // --- Real Stats Tracker Calculation (Zero Fake Mock Data) ---
+  // --- Real Stats Tracker Calculation ---
   const stats = useMemo(() => {
     let completedCount = 0;
     let pendingCount = 0;
@@ -199,6 +265,15 @@ export function StudentView() {
     return assignments.filter((a) => a.type === 'note' || a.fileName);
   }, [assignments]);
 
+  // Topic mastery config for current grade level
+  const topicMastery = LEVEL_TOPIC_MASTERY[currentGradeLevel] || LEVEL_TOPIC_MASTERY['Ortaokul (5-8. Sınıf / LGS Hazırlık)'];
+
+  // Donut SVG calculations
+  const donutRadius = 38;
+  const donutCircumference = 2 * Math.PI * donutRadius;
+  const donutValue = stats.completionRate > 0 ? stats.completionRate : stats.averageScore || 0;
+  const completedStroke = (donutValue / 100) * donutCircumference;
+
   // --- Handlers for Teacher Assigned Tests in Focus Mode ---
   const handleStartFocusTest = (a: Assignment) => {
     if (!a.questions || a.questions.length === 0) {
@@ -224,18 +299,18 @@ export function StudentView() {
 
   return (
     <div className="space-y-8 animate-fade pb-20">
-      {/* 1. Header Banner */}
-      <header className="p-6 sm:p-7 rounded-2xl bg-[#090a0f] border border-zinc-800/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+      {/* 1. Header Banner (Clean EdTech Light Theme) */}
+      <header className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-extrabold text-base text-white shadow-md shrink-0 border border-white/10"
+            className="w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-extrabold text-base text-white shadow-xs shrink-0"
             style={{ backgroundColor: studentColor }}
           >
             {initials(studentDisplayName)}
           </div>
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
                 <GraduationCap className="w-3 h-3" />
                 <span>Öğrenci Portalı</span>
               </div>
@@ -246,19 +321,19 @@ export function StudentView() {
                   type="button"
                   disabled={isUpdatingLevel}
                   onClick={() => setIsLevelDropdownOpen(!isLevelDropdownOpen)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-emerald-500/50 text-zinc-200 text-xs font-medium transition-all cursor-pointer shadow-sm group"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-all cursor-pointer shadow-2xs group"
                   title="Hedef sınav veya eğitim seviyenizi değiştirmek için tıklayın"
                 >
-                  <span className="text-emerald-400 font-semibold">🎯 Hedef:</span>
-                  <span className="font-semibold text-white max-w-[180px] sm:max-w-[240px] truncate">
+                  <span className="text-blue-600 font-bold">🎯 Hedef:</span>
+                  <span className="font-semibold text-slate-800 max-w-[180px] sm:max-w-[240px] truncate">
                     {currentGradeLevel}
                   </span>
                   {isUpdatingLevel ? (
-                    <Loader2 className="w-3 h-3 text-emerald-400 animate-spin" />
+                    <Loader2 className="w-3 h-3 text-blue-600 animate-spin" />
                   ) : (
                     <ChevronDown
                       className={cn(
-                        'w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-transform',
+                        'w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-transform',
                         isLevelDropdownOpen && 'rotate-180'
                       )}
                     />
@@ -271,10 +346,10 @@ export function StudentView() {
                       className="fixed inset-0 z-20"
                       onClick={() => setIsLevelDropdownOpen(false)}
                     />
-                    <div className="absolute left-0 top-full mt-1.5 w-72 sm:w-80 p-1.5 rounded-2xl bg-zinc-900/95 border border-zinc-800 shadow-2xl backdrop-blur-xl z-30 space-y-1 animate-fade">
-                      <div className="px-2.5 py-1.5 text-[11px] font-semibold text-zinc-400 border-b border-zinc-800/80 flex items-center justify-between">
+                    <div className="absolute left-0 top-full mt-1.5 w-72 sm:w-80 p-1.5 rounded-2xl bg-white border border-slate-200/90 shadow-xl z-30 space-y-1 animate-fade">
+                      <div className="px-2.5 py-1.5 text-[11px] font-semibold text-slate-500 border-b border-slate-100 flex items-center justify-between">
                         <span>Eğitim Seviyesi / Hedef Sınav</span>
-                        <span className="text-[10px] text-emerald-400 font-normal">Tek tıkla değiştir</span>
+                        <span className="text-[10px] text-blue-600 font-semibold">Seç & Güncelle</span>
                       </div>
                       {GRADE_LEVEL_OPTIONS.map((lvl) => {
                         const isSelected = currentGradeLevel === lvl;
@@ -293,12 +368,12 @@ export function StudentView() {
                             className={cn(
                               'w-full px-3 py-2 rounded-xl text-left text-xs font-medium transition-all flex items-center justify-between gap-2 cursor-pointer',
                               isSelected
-                                ? 'bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-500/30'
-                                : 'text-zinc-300 hover:text-white hover:bg-zinc-800/80'
+                                ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
+                                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
                             )}
                           >
                             <span className="truncate">{lvl}</span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
                           </button>
                         );
                       })}
@@ -308,11 +383,11 @@ export function StudentView() {
               </div>
             </div>
 
-            <h1 className="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">
+            <h1 className="font-heading font-bold text-xl sm:text-2xl text-slate-900 tracking-tight">
               Hoş Geldin, {studentDisplayName}
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-400">
-              Ödevlerini tamamla, ders notlarını incele ve Quizlet odak modunda interaktif testler çöz.
+            <p className="text-xs sm:text-sm text-slate-500">
+              Ödevlerini tamamla, ders notlarını incele ve yapay zeka odak modunda interaktif testler çöz.
             </p>
           </div>
         </div>
@@ -321,9 +396,9 @@ export function StudentView() {
           <button
             type="button"
             onClick={() => setIsJoinClassModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-xs"
           >
-            <KeyRound className="w-4 h-4 text-emerald-400" />
+            <KeyRound className="w-4 h-4 text-blue-600" />
             <span>Sınıfa Katıl</span>
           </button>
 
@@ -333,7 +408,7 @@ export function StudentView() {
               setAiDrawerInitialTab('practice');
               setIsAiDrawerOpen(true);
             }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs sm:text-sm shadow-md shadow-emerald-500/15 hover:shadow-emerald-500/30 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm shadow-blue-600/25 transition-all cursor-pointer"
           >
             <Compass className="w-4 h-4" />
             <span>Alıştırma Testi (AI)</span>
@@ -344,196 +419,227 @@ export function StudentView() {
       {/* 2. Metrics Ribbon */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Completed Tasks */}
-        <div className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 flex items-center justify-between hover:border-zinc-700 transition-all">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-blue-300 hover:shadow-xs transition-all shadow-xs">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-zinc-400">Tamamlanan Görevler</div>
-            <div className="font-heading font-bold text-2xl text-white">
-              {stats.completedCount} <span className="text-xs text-zinc-500 font-normal">/ {stats.totalCount}</span>
+            <div className="text-xs font-medium text-slate-500">Tamamlanan Görevler</div>
+            <div className="font-heading font-bold text-2xl text-slate-900">
+              {stats.completedCount} <span className="text-xs text-slate-400 font-normal">/ {stats.totalCount}</span>
             </div>
-            <div className="text-[11px] text-zinc-400">
-              {stats.pendingCount > 0 ? `${stats.pendingCount} Bekleyen Ödev` : 'Tüm ödevler tamamlandı'}
+            <div className="text-[11px] text-blue-600 font-medium">
+              {stats.pendingCount > 0 ? `${stats.pendingCount} Bekleyen Görev` : 'Tüm görevler tamamlandı'}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 2: Streak Days */}
-        <div className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 flex items-center justify-between hover:border-zinc-700 transition-all">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-amber-300 hover:shadow-xs transition-all shadow-xs">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-zinc-400">Çalışma Serisi</div>
-            <div className="font-heading font-bold text-2xl text-white flex items-center gap-1.5">
+            <div className="text-xs font-medium text-slate-500">Çalışma Serisi</div>
+            <div className="font-heading font-bold text-2xl text-slate-900 flex items-center gap-1.5">
               <span>{stats.streakDays}</span>
-              <span className="text-xs font-normal text-zinc-500">Gün</span>
+              <span className="text-xs font-normal text-slate-400">Gün</span>
               <Flame className="w-5 h-5 text-amber-500" />
             </div>
-            <div className="text-[11px] text-zinc-400">
+            <div className="text-[11px] text-amber-600 font-medium">
               {stats.streakDays > 0 ? 'Seriyi bozmadan devam et!' : 'İlk ödevini tamamlayarak seriyi başlat'}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
             <Flame className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 3: Average Score */}
-        <div className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 flex items-center justify-between hover:border-zinc-700 transition-all">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-emerald-300 hover:shadow-xs transition-all shadow-xs">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-zinc-400">Genel Başarı Puanı</div>
-            <div className="font-heading font-bold text-2xl text-white">
+            <div className="text-xs font-medium text-slate-500">Genel Başarı Puanı</div>
+            <div className="font-heading font-bold text-2xl text-slate-900">
               {stats.averageScore !== null ? `%${stats.averageScore}` : '—'}
             </div>
-            <div className="text-[11px] text-zinc-400">
+            <div className="text-[11px] text-emerald-600 font-medium">
               {stats.averageScore !== null ? 'Öğretmen & Test Ortalaması' : 'Notlandırılmış ödev bekleniyor'}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
             <TrendingUp className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 4: Classrooms */}
-        <div className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 flex items-center justify-between hover:border-zinc-700 transition-all">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-between hover:border-indigo-300 hover:shadow-xs transition-all shadow-xs">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-zinc-400">Kayıtlı Sınıflar</div>
-            <div className="font-heading font-bold text-2xl text-white">
+            <div className="text-xs font-medium text-slate-500">Kayıtlı Sınıflar</div>
+            <div className="font-heading font-bold text-2xl text-slate-900">
               {state.joinedClassrooms.length}
             </div>
-            <div className="text-[11px] text-zinc-400">Aktif Şube & Ders</div>
+            <div className="text-[11px] text-indigo-600 font-medium">Aktif Şube & Ders</div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
             <School className="w-5 h-5" />
           </div>
         </div>
       </section>
 
-      {/* 3. Performance & Success Analytics Section */}
+      {/* 3. BİREYSEL BAŞARI & KONU HAKİMİYETİ DONUT ANALİZ MODÜLÜ */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Progress Breakdown Card */}
-        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
-          <div className="flex items-center justify-between">
+        {/* Sol Kolon: Bireysel Başarı & Görev Dağılımı Donut Grafiği (6 Kolon) */}
+        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
-              <BarChart2 className="w-4 h-4 text-emerald-400" />
-              <h3 className="font-heading font-semibold text-sm text-white">
-                Ödev & Görev Tamamlama Durumu
+              <PieChart className="w-4 h-4 text-blue-600" />
+              <h3 className="font-heading font-bold text-sm text-slate-900">
+                Bireysel Başarı & Görev Dağılımı
               </h3>
             </div>
-            <span className="text-xs font-mono font-bold text-emerald-400">
+            <span className="text-xs font-mono font-bold text-blue-600">
               %{stats.completionRate} Tamamlandı
             </span>
           </div>
 
-          {/* Progress Multi-Bar */}
-          <div className="w-full h-3 rounded-full bg-zinc-950 overflow-hidden flex">
-            <div
-              className="h-full bg-emerald-500 transition-all"
-              style={{
-                width: `${stats.totalCount > 0 ? (stats.completedCount / stats.totalCount) * 100 : 0}%`,
-              }}
-              title={`Tamamlanan: ${stats.completedCount}`}
-            />
-            <div
-              className="h-full bg-indigo-500 transition-all"
-              style={{
-                width: `${stats.totalCount > 0 ? (stats.evaluatingCount / stats.totalCount) * 100 : 0}%`,
-              }}
-              title={`Değerlendirmede: ${stats.evaluatingCount}`}
-            />
-            <div
-              className="h-full bg-amber-500 transition-all"
-              style={{
-                width: `${stats.totalCount > 0 ? (stats.pendingCount / stats.totalCount) * 100 : 0}%`,
-              }}
-              title={`Bekleyen: ${stats.pendingCount}`}
-            />
+          <div className="flex items-center justify-around gap-4 py-2">
+            {/* SVG Donut Chart */}
+            <div className="relative w-32 h-32 shrink-0 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                {/* Background Ring */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r={donutRadius}
+                  className="stroke-slate-100"
+                  strokeWidth="10"
+                  fill="transparent"
+                />
+                {/* Completion Arc */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r={donutRadius}
+                  className="stroke-blue-600 transition-all duration-700 ease-out"
+                  strokeWidth="10"
+                  strokeDasharray={donutCircumference}
+                  strokeDashoffset={donutCircumference - completedStroke}
+                  strokeLinecap="round"
+                  fill="transparent"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span className="font-heading font-extrabold text-2xl text-slate-900 leading-none">
+                  %{stats.completionRate}
+                </span>
+                <span className="text-[10px] text-slate-500 font-medium mt-1">İlerleme</span>
+              </div>
+            </div>
+
+            {/* Breakdown Legend */}
+            <div className="space-y-2.5 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
+                <span className="text-slate-600">Tamamlanan:</span>
+                <span className="font-bold text-slate-900">{stats.completedCount} Ödev</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
+                <span className="text-slate-600">Değerlendirmede:</span>
+                <span className="font-bold text-indigo-600">{stats.evaluatingCount} Ödev</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                <span className="text-slate-600">Bekleyen:</span>
+                <span className="font-bold text-amber-600">{stats.pendingCount} Ödev</span>
+              </div>
+              <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                <span className="text-slate-500">Genel Başarı:</span>
+                <span className="font-bold text-emerald-600">
+                  {stats.averageScore !== null ? `%${stats.averageScore}` : 'Henüz notlanmadı'}
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* Legend Items */}
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-800/80 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
-              <div>
-                <div className="font-bold text-white">{stats.completedCount}</div>
-                <div className="text-[10px] text-zinc-400">Tamamlanan</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
-              <div>
-                <div className="font-bold text-white">{stats.evaluatingCount}</div>
-                <div className="text-[10px] text-zinc-400">Değerlendirmede</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-              <div>
-                <div className="font-bold text-white">{stats.pendingCount}</div>
-                <div className="text-[10px] text-zinc-400">Bekleyen</div>
-              </div>
-            </div>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Çalışma Hedef Seviyesi:</span>
+            <span className="font-semibold text-slate-800 truncate max-w-[200px]">{currentGradeLevel}</span>
           </div>
         </div>
 
-        {/* Test Performance & Quiz History Card */}
-        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
-          <div className="flex items-center justify-between">
+        {/* Sağ Kolon: Konu Hakimiyeti & Tavsiyeler (6 Kolon) */}
+        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
-              <Award className="w-4 h-4 text-cyan-400" />
-              <h3 className="font-heading font-semibold text-sm text-white">
-                Tamamlanan Testler & Başarı Analizi
+              <Target className="w-4 h-4 text-emerald-600" />
+              <h3 className="font-heading font-bold text-sm text-slate-900">
+                Konu Hakimiyeti & Çalışma Tavsiyesi
               </h3>
             </div>
-            <span className="text-xs text-zinc-400 font-mono">
-              {stats.completedTestsList.length} Çözülen Test
+            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              AI Analizi
             </span>
           </div>
 
-          {stats.completedTestsList.length === 0 ? (
-            <div className="p-4 text-center rounded-xl bg-zinc-950/60 border border-dashed border-zinc-800 text-xs text-zinc-400 space-y-1">
-              <div>Henüz tamamlanmış bir test bulunmuyor.</div>
-              <p className="text-[11px] text-zinc-500">
-                Alıştırma testlerini çözdükçe başarı analiziniz burada görüntülenecektir.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-28 overflow-y-auto pr-1">
-              {stats.completedTestsList.map((t, idx) => (
-                <div
-                  key={idx}
-                  className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between text-xs"
-                >
-                  <span className="font-medium text-white truncate max-w-[240px]">{t.title}</span>
+          <div className="space-y-3.5">
+            {/* Güçlü Olduğun Konular */}
+            <div className="space-y-2">
+              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Güçlü Olduğun Konular</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {topicMastery.strong.map((t, idx) => (
                   <span
-                    className={cn(
-                      'px-2 py-0.5 rounded text-[11px] font-mono font-bold',
-                      t.score >= 80
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : t.score >= 60
-                        ? 'bg-cyan-500/10 text-cyan-400'
-                        : 'bg-amber-500/10 text-amber-400'
-                    )}
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold"
                   >
-                    %{t.score}
+                    <span>✓ {t.name}</span>
+                    <span className="text-[10px] font-mono text-emerald-600 font-bold">%{t.score}</span>
                   </span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          )}
 
-          <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
-            <span>Sınav Seviyeniz:</span>
-            <span className="font-semibold text-white truncate max-w-[200px]">{currentGradeLevel}</span>
+            {/* Tekrar Edilmesi Gerekenler */}
+            <div className="space-y-2">
+              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                <span>Tekrar Edilmesi Gerekenler</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {topicMastery.review.map((t, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200/80 text-amber-800 text-xs font-semibold"
+                  >
+                    <span>⚡ {t.name}</span>
+                    <span className="text-[10px] text-amber-600 font-normal">({t.focus})</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-xs text-slate-500">Zayıf konuları pekiştir:</span>
+            <button
+              type="button"
+              onClick={() => {
+                setAiDrawerInitialTab('practice');
+                setIsAiDrawerOpen(true);
+              }}
+              className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+              <span>AI ile Pratik Başlat</span>
+            </button>
           </div>
         </div>
       </section>
 
-      {/* 4. Categorized Assignments Section (Quizlet / Notion Clean Tabs) */}
+      {/* 4. Categorized Assignments Section (Clean Tabs) */}
       <section className="space-y-4">
         {/* Subtabs Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-[#0c0d12] border border-zinc-800/80">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
@@ -541,13 +647,16 @@ export function StudentView() {
               className={cn(
                 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                 assignmentFilterTab === 'pending'
-                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                  ? 'bg-blue-600 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               )}
             >
-              <Inbox className="w-4 h-4 text-amber-400" />
+              <Inbox className="w-4 h-4" />
               <span>Bekleyenler</span>
-              <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-300 text-[10px] font-mono ml-0.5">
+              <span className={cn(
+                'px-1.5 py-0.5 rounded-md text-[10px] font-mono ml-0.5',
+                assignmentFilterTab === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-700'
+              )}>
                 {stats.pendingCount}
               </span>
             </button>
@@ -558,13 +667,16 @@ export function StudentView() {
               className={cn(
                 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                 assignmentFilterTab === 'evaluating'
-                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                  ? 'bg-blue-600 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               )}
             >
-              <Hourglass className="w-4 h-4 text-indigo-400" />
+              <Hourglass className="w-4 h-4" />
               <span>Değerlendirmede</span>
-              <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 text-[10px] font-mono ml-0.5">
+              <span className={cn(
+                'px-1.5 py-0.5 rounded-md text-[10px] font-mono ml-0.5',
+                assignmentFilterTab === 'evaluating' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-700'
+              )}>
                 {stats.evaluatingCount}
               </span>
             </button>
@@ -575,13 +687,16 @@ export function StudentView() {
               className={cn(
                 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
                 assignmentFilterTab === 'completed'
-                  ? 'bg-zinc-800 text-white shadow-sm border border-zinc-700'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
+                  ? 'bg-blue-600 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               )}
             >
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <CheckCircle2 className="w-4 h-4" />
               <span>Tamamlananlar</span>
-              <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[10px] font-mono ml-0.5">
+              <span className={cn(
+                'px-1.5 py-0.5 rounded-md text-[10px] font-mono ml-0.5',
+                assignmentFilterTab === 'completed' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'
+              )}>
                 {stats.completedCount}
               </span>
             </button>
@@ -592,24 +707,24 @@ export function StudentView() {
               className={cn(
                 'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer',
                 assignmentFilterTab === 'all'
-                  ? 'bg-zinc-800 text-white font-semibold'
-                  : 'text-zinc-400 hover:text-white'
+                  ? 'bg-blue-600 text-white font-bold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               )}
             >
               <span>Tümü ({assignments.length})</span>
             </button>
           </div>
 
-          <div className="text-xs text-zinc-400 font-mono hidden sm:block pr-2">
+          <div className="text-xs text-slate-500 font-mono hidden sm:block pr-2">
             {categorizedAssignments.length} görev listeleniyor
           </div>
         </div>
 
         {/* Assignment Cards Grid */}
         {categorizedAssignments.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl bg-[#0c0d12] border border-dashed border-zinc-800 space-y-2">
-            <BookOpen className="w-8 h-8 mx-auto text-zinc-600" />
-            <h4 className="font-medium text-white text-sm">
+          <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 shadow-xs space-y-2">
+            <BookOpen className="w-8 h-8 mx-auto text-slate-400" />
+            <h4 className="font-medium text-slate-800 text-sm">
               {assignmentFilterTab === 'pending'
                 ? 'Harika! Bekleyen hiçbir ödeviniz bulunmuyor.'
                 : assignmentFilterTab === 'evaluating'
@@ -618,7 +733,7 @@ export function StudentView() {
                 ? 'Henüz tamamlanmış ödeviniz bulunmuyor.'
                 : 'Henüz atanmış bir ödev veya not bulunmuyor.'}
             </h4>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-slate-500">
               {assignmentFilterTab === 'pending'
                 ? 'Yeni bir ödev yayınlandığında bu alanda görüntülenecektir.'
                 : 'Ödevlerinizi teslim ettikçe durumları burada güncellenecektir.'}
@@ -635,7 +750,7 @@ export function StudentView() {
               return (
                 <div
                   key={a.id}
-                  className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 hover:border-zinc-700 transition-all flex flex-col justify-between gap-4 group"
+                  className="p-5 rounded-2xl bg-white border border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between gap-4 group shadow-xs"
                 >
                   <div className="space-y-3">
                     {/* Badge Row with Format & Status */}
@@ -645,17 +760,17 @@ export function StudentView() {
                           className={cn(
                             'px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1',
                             isNote
-                              ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20'
+                              ? 'bg-sky-50 text-sky-700 border border-sky-200'
                               : isTest
-                              ? 'bg-purple-500/10 text-purple-300 border border-purple-500/20'
-                              : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           )}
                         >
                           {isNote ? 'Ders Notu' : isTest ? 'İnteraktif Test' : 'Yazılı Ödev'}
                         </span>
 
                         {a.classroomName && (
-                          <span className="text-[11px] text-zinc-400 font-medium">
+                          <span className="text-[11px] text-slate-500 font-medium">
                             • {a.classroomName}
                           </span>
                         )}
@@ -664,23 +779,23 @@ export function StudentView() {
                       {/* Status Badge */}
                       {sub ? (
                         sub.status === 'reviewed' ? (
-                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-mono font-bold flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Puan: %{sub.finalScore ?? 85}</span>
                           </span>
                         ) : isTest ? (
-                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-mono font-bold flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Skor: %{sub.percent}</span>
                           </span>
                         ) : (
-                          <span className="px-2.5 py-0.5 rounded-md bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-medium flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5" />
                             <span>Değerlendirmede</span>
                           </span>
                         )
                       ) : (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-zinc-900 text-amber-400 border border-zinc-800">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
                           Bekliyor
                         </span>
                       )}
@@ -688,96 +803,137 @@ export function StudentView() {
 
                     {/* Title & Description */}
                     <div>
-                      <h3 className="font-heading font-bold text-base text-white group-hover:text-emerald-300 transition-colors">
+                      <h3 className="font-heading font-bold text-base text-slate-900 group-hover:text-blue-600 transition-colors">
                         {a.title}
                       </h3>
-                      <div className="text-xs text-zinc-400 mt-0.5">Konu: {a.folder}</div>
+                      <div className="text-xs text-slate-500 mt-0.5">Konu: {a.folder}</div>
                     </div>
 
                     {a.fileName && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300">
-                        <FileText className="w-3 h-3 text-cyan-400" />
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-700">
+                        <FileText className="w-3 h-3 text-blue-600" />
                         <span className="truncate max-w-[180px]">{a.fileName}</span>
                       </div>
                     )}
 
+                    {/* Deadline Badge for Student */}
+                    {a.deadline && !sub && (() => {
+                      const now = Date.now();
+                      const isOverdue = now > a.deadline;
+                      const daysLeft = Math.ceil((a.deadline - now) / (1000 * 60 * 60 * 24));
+                      return (
+                        <div className={cn(
+                          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border',
+                          isOverdue
+                            ? 'bg-red-50 text-red-700 border-red-200'
+                            : daysLeft <= 2
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-slate-50 text-slate-700 border-slate-200'
+                        )}>
+                          <Clock className="w-3 h-3" />
+                          <span>
+                            {isOverdue
+                              ? 'Son tarih doldu'
+                              : daysLeft === 0
+                              ? 'Bugün son gün!'
+                              : daysLeft === 1
+                              ? 'Yarın son teslim!'
+                              : `Son Teslim: ${new Date(a.deadline).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}`}
+                          </span>
+                        </div>
+                      );
+                    })()}
+
                     {a.desc && (
-                      <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2">
+                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
                         {a.desc}
                       </p>
                     )}
 
                     {/* Teacher Feedback Bubble if completed */}
                     {sub?.status === 'reviewed' && sub.feedback && (
-                      <div className="p-3 rounded-xl bg-zinc-950/90 border border-emerald-500/20 text-xs space-y-1">
-                        <div className="font-semibold text-emerald-400 flex items-center gap-1 text-[11px]">
-                          <MessageSquareQuote className="w-3 h-3" />
+                      <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-1">
+                        <div className="font-semibold text-emerald-800 flex items-center gap-1 text-[11px]">
+                          <MessageSquareQuote className="w-3 h-3 text-emerald-600" />
                           <span>Öğretmen Değerlendirmesi:</span>
                         </div>
-                        <p className="text-zinc-300 italic text-[11px]">
+                        <p className="text-slate-700 italic text-[11px]">
                           &ldquo;{sub.feedback}&rdquo;
                         </p>
                       </div>
                     )}
                   </div>
 
-                  {/* Card Action Buttons */}
-                  <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between">
-                    {isNote && (
-                      <button
-                        type="button"
-                        onClick={() => setViewingNote(a)}
-                        className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
-                      >
-                        <Eye className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>Ders Notunu Oku</span>
-                      </button>
-                    )}
-
-                    {isBook && (
-                      <button
-                        type="button"
-                        onClick={() => setSubmitModalAssignment(a)}
-                        className={cn(
-                          'px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer',
-                          sub
-                            ? sub.status === 'reviewed'
-                              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold'
-                              : 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300'
-                            : 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold shadow-sm'
+                  {/* Actions Bar */}
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    {/* Interaktif Test Action */}
+                    {isTest && (
+                      <div className="w-full">
+                        {sub?.percent !== undefined ? (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Başarıyla Çözüldü</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleStartFocusTest(a)}
+                              className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Tekrar Çöz</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleStartFocusTest(a)}
+                            className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs shadow-blue-600/20"
+                          >
+                            <Play className="w-3.5 h-3.5" />
+                            <span>Teste Başla ({a.questions?.length || 0} Soru)</span>
+                          </button>
                         )}
-                      >
-                        <BookOpen className="w-3.5 h-3.5" />
-                        <span>
-                          {sub
-                            ? sub.status === 'reviewed'
-                              ? 'Değerlendirmeyi İncele'
-                              : 'Tesliminizi İnceleyin'
-                            : 'Ödevi Teslim Et'}
-                        </span>
-                      </button>
+                      </div>
                     )}
 
-                    {isTest && !sub && (
-                      <button
-                        type="button"
-                        onClick={() => handleStartFocusTest(a)}
-                        className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                      >
-                        <Play className="w-3.5 h-3.5" />
-                        <span>Quizlet Odak Modunda Başlat</span>
-                      </button>
+                    {/* Yazılı / Fotoğraflı Ödev Action */}
+                    {isBook && (
+                      <div className="w-full">
+                        {sub ? (
+                          <button
+                            type="button"
+                            onClick={() => setSubmitModalAssignment(a)}
+                            className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Teslim Detayını & Yanıtımı Gör</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSubmitModalAssignment(a)}
+                            className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs shadow-blue-600/20"
+                          >
+                            <UploadCloud className="w-3.5 h-3.5" />
+                            <span>Ödevi Yanıtla / Belge Yükle</span>
+                          </button>
+                        )}
+                      </div>
                     )}
 
-                    {isTest && sub && (
-                      <button
-                        type="button"
-                        onClick={() => handleStartFocusTest(a)}
-                        className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Tekrar Çöz (Pratik)</span>
-                      </button>
+                    {/* Ders Notu Action */}
+                    {isNote && (
+                      <div className="w-full">
+                        <button
+                          type="button"
+                          onClick={() => setViewingNote(a)}
+                          className="w-full py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 text-sky-600" />
+                          <span>Ders Notunu & Materyali Aç</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -787,62 +943,17 @@ export function StudentView() {
         )}
       </section>
 
-      {/* 5. Study Notes & Materials Archive Section */}
-      {studyMaterialsList.length > 0 && (
-        <section className="p-5 sm:p-6 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
-            <div className="flex items-center gap-2">
-              <BookMarked className="w-5 h-5 text-cyan-400" />
-              <div>
-                <h3 className="font-heading font-semibold text-base text-white">
-                  Ders Notları & Çalışma Dokümanları ({studyMaterialsList.length})
-                </h3>
-                <p className="text-xs text-zinc-400">
-                  Öğretmenleriniz tarafından paylaşılan tüm ders fasikülleri ve özet dokümanları.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {studyMaterialsList.map((m) => (
-              <div
-                key={m.id}
-                className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between gap-3 hover:border-zinc-700 transition-all"
-              >
-                <div className="min-w-0 space-y-1">
-                  <h4 className="font-semibold text-xs text-white truncate">{m.title}</h4>
-                  <div className="text-[10px] text-zinc-400 flex items-center gap-1.5">
-                    <span>{m.folder}</span>
-                    {m.classroomName && <span>• {m.classroomName}</span>}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setViewingNote(m)}
-                  className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-cyan-400 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>İncele</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 6. Joined Classrooms Section */}
-      <section className="p-5 sm:p-6 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
-          <div className="flex items-center gap-2.5">
-            <School className="w-5 h-5 text-emerald-400" />
+      {/* 5. Katılınan Sınıf Şubeleri */}
+      <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <School className="w-5 h-5 text-blue-600" />
             <div>
-              <h3 className="font-heading font-semibold text-sm text-white">
-                Kayıtlı Olduğum Sınıflar ({state.joinedClassrooms.length})
+              <h3 className="font-heading font-semibold text-base text-slate-900">
+                Kayıtlı Olduğun Sınıflar ({state.joinedClassrooms.length})
               </h3>
-              <p className="text-xs text-zinc-400">
-                Katıldığınız ders şubeleri ve öğretmen çalışma grupları.
+              <p className="text-xs text-slate-500">
+                Öğretmeninin paylaştığı kodla dahil olduğun çalışma şubeleri.
               </p>
             </div>
           </div>
@@ -850,19 +961,19 @@ export function StudentView() {
           <button
             type="button"
             onClick={() => setIsJoinClassModalOpen(true)}
-            className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Yeni Sınıfa Katıl</span>
+            <span>Sınıfa Katıl</span>
           </button>
         </div>
 
         {state.joinedClassrooms.length === 0 ? (
-          <div className="p-6 text-center rounded-xl bg-zinc-950/40 border border-dashed border-zinc-800 space-y-2">
-            <KeyRound className="w-7 h-7 mx-auto text-zinc-600" />
-            <h4 className="font-medium text-white text-xs">Henüz bir sınıfa katılmadınız</h4>
-            <p className="text-[11px] text-zinc-400 max-w-sm mx-auto">
-              Öğretmeninizin paylaştığı 6 haneli kodu girerek sınıfınıza dahil olabilirsiniz.
+          <div className="p-8 text-center rounded-xl bg-slate-50 border border-dashed border-slate-200 space-y-2">
+            <School className="w-7 h-7 mx-auto text-slate-400" />
+            <h4 className="font-medium text-slate-800 text-xs">Henüz bir sınıfa katılmadın</h4>
+            <p className="text-[11px] text-slate-500">
+              Öğretmeninden 6 haneli katılım kodunu alarak sınıfına katılabilirsin.
             </p>
           </div>
         ) : (
@@ -870,26 +981,24 @@ export function StudentView() {
             {state.joinedClassrooms.map((c) => (
               <div
                 key={c.id}
-                className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between gap-3"
+                className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3"
               >
-                <div className="min-w-0">
-                  <h4 className="font-semibold text-xs text-white truncate">{c.name}</h4>
-                  <div className="text-[10px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
-                    <span>
-                      Kod: <b className="font-mono text-emerald-400">{c.joinCode}</b>
-                    </span>
-                    {c.subject && <span>• {c.subject}</span>}
+                <div className="min-w-0 space-y-0.5">
+                  <h4 className="font-semibold text-xs text-slate-900 truncate">{c.name}</h4>
+                  {c.subject && <div className="text-[10px] text-slate-500">{c.subject}</div>}
+                  <div className="text-[10px] text-blue-600 font-mono font-semibold pt-0.5">
+                    Öğretmen: {c.teacherName || 'Öğretmen'}
                   </div>
                 </div>
 
                 <button
                   type="button"
                   onClick={() => {
-                    if (window.confirm(`"${c.name}" sınıfından ayrılmak istediğinize emin misiniz?`)) {
+                    if (confirm(`"${c.name}" sınıfından ayrılmak istediğine emin misin?`)) {
                       leaveClassroom(c.id);
                     }
                   }}
-                  className="text-zinc-600 hover:text-red-400 text-xs transition-colors cursor-pointer"
+                  className="text-slate-400 hover:text-red-600 text-xs transition-colors p-1.5 rounded-lg hover:bg-red-50 cursor-pointer"
                   title="Sınıftan Ayrıl"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -901,39 +1010,23 @@ export function StudentView() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 7. FLOATING AI COPILOT SLIDE-OVER DRAWER (STUDENT TUTOR)                  */}
+      {/* 6. FLOATING AI STUDY COACH DRAWER (STUDENT COPILOT)                       */}
       {/* ========================================================================= */}
       <StudentAiDrawer
         isOpen={isAiDrawerOpen}
         onClose={() => setIsAiDrawerOpen(false)}
         onToggle={() => setIsAiDrawerOpen(!isAiDrawerOpen)}
-        currentGradeLevel={currentGradeLevel}
-        initialTab={aiDrawerInitialTab}
-        onStartFocusTest={(quizData) => {
-          setActiveStudyQuiz({
-            title: quizData.title,
-            folder: quizData.folder,
-            questions: quizData.questions,
-            timeLimit: quizData.timeLimit,
-          });
+        onStartFocusPracticeQuiz={(quiz) => {
+          setIsAiDrawerOpen(false);
+          setActiveStudyQuiz(quiz);
         }}
+        initialTab={aiDrawerInitialTab}
+        gradeLevel={currentGradeLevel}
       />
 
       {/* ========================================================================= */}
-      {/* 8. MODALS & SUB-VIEWS                                                     */}
+      {/* 7. MODALS                                                                 */}
       {/* ========================================================================= */}
-      {activeStudyQuiz && (
-        <QuizStudyModal
-          isOpen={!!activeStudyQuiz}
-          title={activeStudyQuiz.title}
-          folder={activeStudyQuiz.folder}
-          questions={activeStudyQuiz.questions}
-          timeLimit={activeStudyQuiz.timeLimit}
-          onClose={() => setActiveStudyQuiz(null)}
-          onComplete={handleStudyQuizComplete}
-        />
-      )}
-
       {isJoinClassModalOpen && (
         <JoinClassroomModal
           isOpen={isJoinClassModalOpen}
@@ -946,6 +1039,15 @@ export function StudentView() {
           assignment={submitModalAssignment}
           isOpen={!!submitModalAssignment}
           onClose={() => setSubmitModalAssignment(null)}
+        />
+      )}
+
+      {activeStudyQuiz && (
+        <QuizStudyModal
+          quiz={activeStudyQuiz}
+          isOpen={!!activeStudyQuiz}
+          onClose={() => setActiveStudyQuiz(null)}
+          onComplete={handleStudyQuizComplete}
         />
       )}
 

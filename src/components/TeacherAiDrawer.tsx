@@ -251,7 +251,7 @@ export function TeacherAiDrawer({
         method: 'POST',
         headers,
         body: JSON.stringify({
-          action: 'generate_notes',
+          action: 'generate_note',
           topic: noteTopic.trim(),
           grade: quizGrade,
         }),
@@ -274,7 +274,7 @@ export function TeacherAiDrawer({
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
-    showToast('Panoya kopyalandı!', 'success');
+    showToast('Panoya kopyalandı!', 'info');
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -285,11 +285,11 @@ export function TeacherAiDrawer({
         <button
           type="button"
           onClick={onToggle || (() => {})}
-          className="group relative flex items-center gap-2.5 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs sm:text-sm shadow-2xl shadow-indigo-500/30 hover:shadow-indigo-500/50 border border-indigo-400/30 transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xl"
+          className="group relative flex items-center gap-2.5 px-5 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xl shadow-blue-600/30 hover:shadow-blue-600/40 border border-blue-400/30 transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xl"
           title="EduFlow AI Araçlarını Aç"
         >
           <div className="relative">
-            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-200 transition-transform group-hover:rotate-12" />
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200 transition-transform group-hover:rotate-12" />
             <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400" />
           </div>
@@ -301,33 +301,33 @@ export function TeacherAiDrawer({
       {isOpen && (
         <div
           onClick={onClose}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity duration-300 print:hidden"
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs transition-opacity duration-300 print:hidden"
         />
       )}
 
-      {/* 3. Slide-Over Drawer Container */}
+      {/* 3. Slide-Over Drawer Container (Clean EdTech Light Theme) */}
       <div
         className={cn(
-          'fixed inset-y-0 right-0 z-50 w-full sm:w-[540px] md:w-[580px] bg-[#0c0d12] border-l border-zinc-800 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out print:hidden',
+          'fixed inset-y-0 right-0 z-50 w-full sm:w-[540px] md:w-[580px] bg-white border-l border-slate-200/90 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out print:hidden',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}
       >
         {/* Drawer Header */}
-        <div className="p-4 sm:p-5 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-xl flex items-center justify-between gap-3">
+        <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="font-heading font-bold text-base text-white">
+                <h2 className="font-heading font-bold text-base text-slate-900">
                   EduFlow AI Copilot
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 border border-blue-200 text-blue-700">
                   Öğretmen
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-400">
+              <p className="text-[11px] text-slate-500">
                 Gemini 2.5 Pro • Müfredat, Soru & Planlama Asistanı
               </p>
             </div>
@@ -336,7 +336,7 @@ export function TeacherAiDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white transition-all cursor-pointer"
+            className="p-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-900 transition-all cursor-pointer shadow-xs"
             title="Çekmeceyi Kapat"
           >
             <X className="w-4 h-4" />
@@ -344,16 +344,16 @@ export function TeacherAiDrawer({
         </div>
 
         {/* Tab Navigation Switcher */}
-        <div className="p-3 border-b border-zinc-800/80 bg-zinc-950/40">
-          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-zinc-900 border border-zinc-800">
+        <div className="p-3 border-b border-slate-200 bg-white">
+          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200/80">
             <button
               type="button"
               onClick={() => setActiveTab('chat')}
               className={cn(
                 'flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer',
                 activeTab === 'chat'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                  ? 'bg-blue-600 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               )}
             >
               <MessageSquare className="w-3.5 h-3.5" />
@@ -366,8 +366,8 @@ export function TeacherAiDrawer({
               className={cn(
                 'flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer',
                 activeTab === 'generator'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                  ? 'bg-blue-600 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               )}
             >
               <Sliders className="w-3.5 h-3.5" />
@@ -385,7 +385,7 @@ export function TeacherAiDrawer({
             <div className="flex flex-col h-full space-y-4">
               {/* Prompt Suggestions */}
               <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-zinc-400">
+                <span className="text-[11px] font-semibold text-slate-500">
                   Hızlı Öneri İstekleri:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -394,7 +394,7 @@ export function TeacherAiDrawer({
                       key={idx}
                       type="button"
                       onClick={() => handleSendMessage(prompt)}
-                      className="px-2.5 py-1 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800/80 hover:border-indigo-500/40 text-zinc-300 text-[11px] font-medium transition-all text-left cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-[11px] font-medium transition-all text-left cursor-pointer"
                     >
                       {prompt}
                     </button>
@@ -408,25 +408,25 @@ export function TeacherAiDrawer({
                   <div
                     key={idx}
                     className={cn(
-                      'p-3.5 rounded-2xl text-xs leading-relaxed max-w-[90%] space-y-1.5',
+                      'p-3.5 rounded-2xl text-xs leading-relaxed max-w-[90%] space-y-1.5 shadow-xs',
                       m.role === 'user'
-                        ? 'ml-auto bg-indigo-600 text-white font-medium shadow-sm'
-                        : 'bg-zinc-950 border border-zinc-800/90 text-zinc-200 shadow-sm'
+                        ? 'ml-auto bg-blue-600 text-white font-medium'
+                        : 'bg-slate-50 border border-slate-200 text-slate-800'
                     )}
                   >
-                    <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-1 text-[10px] opacity-75">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200/40 pb-1 text-[10px] opacity-75">
                       <span>{m.role === 'user' ? 'Siz' : 'EduFlow AI Öğretmen Asistanı'}</span>
                       {m.role === 'assistant' && (
                         <button
                           type="button"
                           onClick={() => copyToClipboard(m.text, `chat-${idx}`)}
-                          className="hover:text-white transition-colors cursor-pointer"
+                          className="hover:text-blue-600 transition-colors cursor-pointer"
                           title="Yanıtı Kopyala"
                         >
                           {copiedId === `chat-${idx}` ? (
-                            <Check className="w-3 h-3 text-emerald-400" />
+                            <Check className="w-3 h-3 text-emerald-600" />
                           ) : (
-                            <Copy className="w-3 h-3" />
+                            <Copy className="w-3 h-3 text-slate-400" />
                           )}
                         </button>
                       )}
@@ -436,8 +436,8 @@ export function TeacherAiDrawer({
                 ))}
 
                 {isChatLoading && (
-                  <div className="p-3 rounded-2xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-400 flex items-center gap-2 w-fit">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2 w-fit shadow-xs">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
                     <span>Öğretmen asistanı yanıt hazırlıyor...</span>
                   </div>
                 )}
@@ -457,12 +457,12 @@ export function TeacherAiDrawer({
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Sorunuzu veya talebinizi yazın (örn: 8. sınıf fotosentez için 3 soru hazırla)..."
-                  className="flex-1 px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-zinc-500 focus:outline-none"
+                  className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
                 />
                 <button
                   type="submit"
                   disabled={!chatInput.trim() || isChatLoading}
-                  className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-xs shadow-blue-600/20"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Gönder</span>
@@ -477,18 +477,18 @@ export function TeacherAiDrawer({
           {activeTab === 'generator' && (
             <div className="space-y-5 animate-fade">
               {/* Generator SubMode Switch */}
-              <div className="flex items-center gap-2 p-1 rounded-xl bg-zinc-950 border border-zinc-800 text-xs">
+              <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs">
                 <button
                   type="button"
                   onClick={() => setGeneratorMode('quiz')}
                   className={cn(
                     'flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5',
                     generatorMode === 'quiz'
-                      ? 'bg-zinc-800 text-white border border-zinc-700'
-                      : 'text-zinc-400 hover:text-white'
+                      ? 'bg-white text-blue-600 shadow-xs font-bold border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900'
                   )}
                 >
-                  <FileQuestion className="w-3.5 h-3.5 text-indigo-400" />
+                  <FileQuestion className="w-3.5 h-3.5 text-blue-600" />
                   <span>Soru & Test Üretici</span>
                 </button>
 
@@ -498,129 +498,124 @@ export function TeacherAiDrawer({
                   className={cn(
                     'flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5',
                     generatorMode === 'note'
-                      ? 'bg-zinc-800 text-white border border-zinc-700'
-                      : 'text-zinc-400 hover:text-white'
+                      ? 'bg-white text-blue-600 shadow-xs font-bold border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900'
                   )}
                 >
-                  <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Ders Notu / Özet Üretici</span>
+                  <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Ders Özeti & Not Üretici</span>
                 </button>
               </div>
 
-              {/* Grade Level Selector */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-zinc-300">
-                  Hedef Seviye / Müfredat
-                </label>
-                <select
-                  value={quizGrade}
-                  onChange={(e) => setQuizGrade(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-indigo-400 rounded-xl text-white text-xs focus:outline-none"
-                >
-                  {Object.keys(LEVEL_CONFIGS).map((lvl) => (
-                    <option key={lvl} value={lvl}>
-                      {lvl}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Submode 1: QUIZ GENERATOR */}
+              {/* MODE 1: QUIZ GENERATOR */}
               {generatorMode === 'quiz' && (
                 <div className="space-y-4">
-                  {/* Topic Suggestions */}
+                  {/* Grade Level Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Hedef Eğitim Seviyesi
+                    </label>
+                    <select
+                      value={quizGrade}
+                      onChange={(e) => setQuizGrade(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs focus:outline-none"
+                    >
+                      {Object.keys(LEVEL_CONFIGS).map((lvl) => (
+                        <option key={lvl} value={lvl}>
+                          {lvl}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Topic Input */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Kazanım / Konu Başlığı
+                    </label>
+                    <input
+                      type="text"
+                      value={quizTopic}
+                      onChange={(e) => setQuizTopic(e.target.value)}
+                      placeholder={currentLevelConfig.placeholder}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Suggestions Chips */}
                   <div className="space-y-1.5">
-                    <span className="text-[11px] font-semibold text-zinc-400">
-                      Müfredat Örnekleri:
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      Önerilen Konu Başlıkları:
                     </span>
                     <div className="flex flex-wrap gap-1.5">
-                      {currentLevelConfig.suggestions.map((s, idx) => (
+                      {currentLevelConfig.suggestions.map((sug, idx) => (
                         <button
                           key={idx}
                           type="button"
-                          onClick={() => setQuizTopic(s)}
-                          className={cn(
-                            'px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer',
-                            quizTopic === s
-                              ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300'
-                              : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'
-                          )}
+                          onClick={() => setQuizTopic(sug)}
+                          className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-[11px] transition-all cursor-pointer text-left"
                         >
-                          {s}
+                          {sug}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Topic & Count Inputs */}
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-300 mb-1">
-                        Kazanım / Konu Başlığı
-                      </label>
-                      <input
-                        type="text"
-                        value={quizTopic}
-                        onChange={(e) => setQuizTopic(e.target.value)}
-                        placeholder={currentLevelConfig.placeholder}
-                        className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-zinc-500 focus:outline-none"
-                      />
+                  {/* Soru Sayısı */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Soru Sayısı: <b className="text-blue-600 font-mono">{quizCount} Soru</b>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {[3, 5, 8, 10].map((cnt) => (
+                        <button
+                          key={cnt}
+                          type="button"
+                          onClick={() => setQuizCount(cnt)}
+                          className={cn(
+                            'flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer',
+                            quizCount === cnt
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
+                          )}
+                        >
+                          {cnt} Soru
+                        </button>
+                      ))}
                     </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-300 mb-1">
-                        Soru Sayısı
-                      </label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[3, 5, 8, 10].map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => setQuizCount(c)}
-                            className={cn(
-                              'py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer',
-                              quizCount === c
-                                ? 'bg-indigo-600 border-indigo-500 text-white'
-                                : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white'
-                            )}
-                          >
-                            {c} Soru
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={isQuizLoading || !quizTopic.trim()}
-                      onClick={handleGenerateQuiz}
-                      className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-md shadow-indigo-600/20"
-                    >
-                      {isQuizLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Müfredat Uyumlu Sorular Hazırlanıyor...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 text-indigo-200" />
-                          <span>Soruları Üret & Yapılandır</span>
-                        </>
-                      )}
-                    </button>
                   </div>
 
-                  {/* Generated Quiz Result View */}
+                  {/* Generate Button */}
+                  <button
+                    type="button"
+                    onClick={handleGenerateQuiz}
+                    disabled={isQuizLoading || !quizTopic.trim()}
+                    className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isQuizLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>MEB Müfredatına Uygun Soru Üretiliyor...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        <span>Yapay Zeka ile Soruları Hazırla</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Generated Quiz Result Area */}
                   {generatedQuiz && (
-                    <div className="p-4 rounded-2xl bg-zinc-950 border border-indigo-500/30 space-y-4 animate-fade">
-                      <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-blue-200 space-y-3.5 animate-fade shadow-xs">
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                         <div>
-                          <h4 className="font-heading font-bold text-xs text-white">
-                            {generatedQuiz.title || 'Üretilen Test'}
+                          <h4 className="font-heading font-bold text-sm text-slate-900">
+                            {generatedQuiz.title || quizTopic}
                           </h4>
-                          <p className="text-[10px] text-zinc-400">
-                            {generatedQuiz.questions?.length || 0} soru hazırlandı
-                          </p>
+                          <span className="text-[11px] text-blue-600 font-semibold">
+                            {generatedQuiz.questions?.length || 0} Soru Hazırlandı
+                          </span>
                         </div>
 
                         <button
@@ -629,55 +624,33 @@ export function TeacherAiDrawer({
                             onClose();
                             onOpenCreateAssignmentModal({
                               type: 'test',
-                              title: generatedQuiz.title,
+                              title: generatedQuiz.title || quizTopic,
                               folder: generatedQuiz.folder || quizTopic,
-                              desc: generatedQuiz.desc || `${quizGrade} seviyesinde ${generatedQuiz.questions?.length} soruluk test.`,
-                              timeLimit: generatedQuiz.timeLimit || 180,
+                              desc: generatedQuiz.desc || `${quizTopic} konusu için AI tarafından oluşturulan test.`,
+                              timeLimit: (generatedQuiz.questions?.length || 3) * 60,
                               questions: generatedQuiz.questions,
                             });
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                         >
                           <PlusCircle className="w-3.5 h-3.5" />
                           <span>Ödev Olarak Yayınla</span>
                         </button>
                       </div>
 
-                      {/* Question previews */}
-                      <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                        {generatedQuiz.questions?.map((q: any, i: number) => (
+                      {/* Question Preview List */}
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {generatedQuiz.questions?.map((q: Question, i: number) => (
                           <div
                             key={i}
-                            className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs space-y-2"
+                            className="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1 shadow-2xs"
                           >
-                            <div className="font-semibold text-white">
-                              {i + 1}. {q.q || q.question}
+                            <div className="font-semibold text-slate-900">
+                              Soru {i + 1}: {q.q}
                             </div>
-                            {q.options && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-zinc-300">
-                                {q.options.map((opt: string, optIdx: number) => {
-                                  const isCorrect = opt === (q.correctAnswer || q.a);
-                                  return (
-                                    <div
-                                      key={optIdx}
-                                      className={cn(
-                                        'px-2 py-1 rounded-md border text-[10px]',
-                                        isCorrect
-                                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 font-semibold'
-                                          : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400'
-                                      )}
-                                    >
-                                      {String.fromCharCode(65 + optIdx)}) {opt}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                            {q.explanation && (
-                              <p className="text-[10px] text-zinc-400 italic pt-1 border-t border-zinc-800/60">
-                                Çözüm: {q.explanation}
-                              </p>
-                            )}
+                            <div className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded w-fit">
+                              Doğru Cevap: {q.a}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -686,79 +659,67 @@ export function TeacherAiDrawer({
                 </div>
               )}
 
-              {/* Submode 2: NOTE GENERATOR */}
+              {/* MODE 2: NOTE GENERATOR */}
               {generatorMode === 'note' && (
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-zinc-300">
-                      Ders Notu / Özet Konusu
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Ders / Konu Başlığı
                     </label>
                     <input
                       type="text"
                       value={noteTopic}
                       onChange={(e) => setNoteTopic(e.target.value)}
-                      placeholder="Örn: Newton Hareket Yasaları ve Günlük Hayat Örnekleri..."
-                      className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-indigo-400 rounded-xl text-white text-xs placeholder:text-zinc-500 focus:outline-none"
+                      placeholder="Örn: 9. Sınıf Fotosentez ve Solunum Özeti"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
                     />
-
-                    <button
-                      type="button"
-                      disabled={isNoteLoading || !noteTopic.trim()}
-                      onClick={handleGenerateNote}
-                      className="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-md shadow-cyan-600/20"
-                    >
-                      {isNoteLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Ders Notu Çıkarılıyor...</span>
-                        </>
-                      ) : (
-                        <>
-                          <BookOpen className="w-4 h-4" />
-                          <span>Özet Ders Notu Üret</span>
-                        </>
-                      )}
-                    </button>
                   </div>
 
-                  {/* Generated Note Result View */}
+                  <button
+                    type="button"
+                    onClick={handleGenerateNote}
+                    disabled={isNoteLoading || !noteTopic.trim()}
+                    className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isNoteLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Ders Notu Hazırlanıyor...</span>
+                      </>
+                    ) : (
+                      <>
+                        <BookOpen className="w-4 h-4" />
+                        <span>Ders Notu ve Özeti Oluştur</span>
+                      </>
+                    )}
+                  </button>
+
                   {generatedNote && (
-                    <div className="p-4 rounded-2xl bg-zinc-950 border border-cyan-500/30 space-y-3 animate-fade">
-                      <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-                        <h4 className="font-heading font-bold text-xs text-white truncate max-w-[200px]">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-blue-200 space-y-3 animate-fade shadow-xs">
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                        <h4 className="font-heading font-bold text-sm text-slate-900 truncate max-w-[240px]">
                           {generatedNote.title || noteTopic}
                         </h4>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => copyToClipboard(generatedNote.content, 'gen-note')}
-                            className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs transition-colors cursor-pointer"
-                            title="Metni Kopyala"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onClose();
-                              onOpenCreateAssignmentModal({
-                                type: 'note',
-                                title: generatedNote.title || noteTopic,
-                                folder: generatedNote.folder || noteTopic,
-                                desc: generatedNote.content,
-                              });
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
-                          >
-                            <PlusCircle className="w-3.5 h-3.5" />
-                            <span>Not Olarak Yayınla</span>
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onClose();
+                            onOpenCreateAssignmentModal({
+                              type: 'note',
+                              title: generatedNote.title || noteTopic,
+                              folder: generatedNote.folder || noteTopic,
+                              desc: generatedNote.content || '',
+                            });
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5" />
+                          <span>Materyal Olarak Yayınla</span>
+                        </button>
                       </div>
 
-                      <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                      <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed max-h-56 overflow-y-auto whitespace-pre-wrap">
                         {generatedNote.content}
                       </div>
                     </div>

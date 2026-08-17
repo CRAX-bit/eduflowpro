@@ -1,26 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Sora:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #0B0F17;
-  --bg-2: #111827;
-  --indigo: #6366f1;
-  --purple: #8b5cf6;
-  --cyan: #06b6d4;
-  --emerald: #10b981;
-  --mint: #6ee7b7;
-  --blue: #3b82f6;
-  --sky: #60a5fa;
-  --amber: #f59e0b;
-  --orange: #ff512f;
-  --pink: #ec4899;
-  --red: #ef4444;
-  --yellow: #facc15;
-  --text: #f1f5f9;
-  --muted: #94a3b8;
+  --bg: #f8fafc;
+  --bg-card: #ffffff;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #eff6ff;
+  --indigo: #4f46e5;
+  --purple: #7c3aed;
+  --cyan: #0284c7;
+  --emerald: #059669;
+  --mint: #10b981;
+  --blue: #2563eb;
+  --sky: #0ea5e9;
+  --amber: #d97706;
+  --orange: #ea580c;
+  --red: #dc2626;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
 }
 
 * {
@@ -40,32 +42,19 @@ body {
   position: relative;
 }
 
-/* Ambient glow orbs */
-body::before,
-body::after {
+/* Subtle clean background ambient highlight */
+body::before {
   content: "";
   position: fixed;
-  border-radius: 50%;
-  filter: blur(140px);
-  opacity: 0.22;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1000px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, rgba(248, 250, 252, 0) 70%);
+  filter: blur(80px);
   z-index: 0;
   pointer-events: none;
-}
-
-body::before {
-  width: 540px;
-  height: 540px;
-  background: var(--purple);
-  top: -140px;
-  left: -120px;
-}
-
-body::after {
-  width: 580px;
-  height: 580px;
-  background: var(--cyan);
-  bottom: -180px;
-  right: -160px;
 }
 
 h1, h2, h3, h4, .font-heading {
@@ -74,32 +63,31 @@ h1, h2, h3, h4, .font-heading {
 }
 
 ::selection {
-  background: var(--cyan);
-  color: #04121a;
+  background: #2563eb;
+  color: #ffffff;
 }
 
-/* Custom modern scrollbar */
+/* Custom clean light scrollbar */
 ::-webkit-scrollbar {
   width: 7px;
   height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0f1d;
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: #cbd5e1;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 242, 254, 0.4);
+  background: #94a3b8;
 }
 
 @media print {
-  body::before,
-  body::after {
+  body::before {
     display: none !important;
   }
 }
