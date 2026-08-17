@@ -107,11 +107,6 @@ export function HomeView() {
             <Check className="w-3.5 h-3.5 text-emerald-400" />
             <span>KVKK Uyumlu Altyapı</span>
           </span>
-          <span className="text-zinc-700">·</span>
-          <span className="flex items-center gap-1.5">
-            <Check className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Anında Sınıf Kurulumu</span>
-          </span>
         </div>
       </section>
 
