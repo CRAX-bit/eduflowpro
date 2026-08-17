@@ -113,3 +113,12 @@ export interface ToastMessage {
   message: string;
   type: 'success' | 'warn' | 'info' | 'error';
 }
+
+export interface ActionResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  code?: string;
+}
+
