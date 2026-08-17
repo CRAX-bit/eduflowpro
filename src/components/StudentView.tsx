@@ -178,7 +178,7 @@ export function StudentView() {
 
   if (!state.session && !state.currentStudentId) {
     return (
-      <div className="text-center py-20 text-slate-500 space-y-3">
+      <div className="text-center py-20 text-slate-700 font-semibold space-y-3">
         <p>Lütfen önce öğrenci girişi yapınız.</p>
       </div>
     );
@@ -299,8 +299,8 @@ export function StudentView() {
 
   return (
     <div className="space-y-8 animate-fade pb-20">
-      {/* 1. Header Banner (Clean EdTech Light Theme) */}
-      <header className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+      {/* 1. Header Banner (Deskio Student Desk) */}
+      <header className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-300 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-extrabold text-base text-white shadow-xs shrink-0"
@@ -310,9 +310,9 @@ export function StudentView() {
           </div>
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
-                <GraduationCap className="w-3 h-3" />
-                <span>Öğrenci Portalı</span>
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
+                <GraduationCap className="w-3.5 h-3.5" />
+                <span>Deskio Öğrenci Masası</span>
               </div>
 
               {/* Interactive Target Level Selector */}
@@ -321,11 +321,11 @@ export function StudentView() {
                   type="button"
                   disabled={isUpdatingLevel}
                   onClick={() => setIsLevelDropdownOpen(!isLevelDropdownOpen)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-all cursor-pointer shadow-2xs group"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-300 text-slate-900 text-xs font-bold transition-all cursor-pointer shadow-2xs group"
                   title="Hedef sınav veya eğitim seviyenizi değiştirmek için tıklayın"
                 >
-                  <span className="text-blue-600 font-bold">🎯 Hedef:</span>
-                  <span className="font-semibold text-slate-800 max-w-[180px] sm:max-w-[240px] truncate">
+                  <span className="text-blue-700 font-extrabold">🎯 Hedef:</span>
+                  <span className="font-extrabold text-slate-950 max-w-[180px] sm:max-w-[240px] truncate">
                     {currentGradeLevel}
                   </span>
                   {isUpdatingLevel ? (
@@ -333,7 +333,7 @@ export function StudentView() {
                   ) : (
                     <ChevronDown
                       className={cn(
-                        'w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 transition-transform',
+                        'w-3.5 h-3.5 text-slate-500 group-hover:text-slate-900 transition-transform',
                         isLevelDropdownOpen && 'rotate-180'
                       )}
                     />
@@ -346,10 +346,10 @@ export function StudentView() {
                       className="fixed inset-0 z-20"
                       onClick={() => setIsLevelDropdownOpen(false)}
                     />
-                    <div className="absolute left-0 top-full mt-1.5 w-72 sm:w-80 p-1.5 rounded-2xl bg-white border border-slate-200 shadow-xl z-30 space-y-1 animate-fade">
-                      <div className="px-2.5 py-1.5 text-[11px] font-semibold text-slate-500 border-b border-slate-100 flex items-center justify-between">
+                    <div className="absolute left-0 top-full mt-1.5 w-72 sm:w-80 p-1.5 rounded-2xl bg-white border border-slate-300 shadow-xl z-30 space-y-1 animate-fade">
+                      <div className="px-3 py-1.5 text-xs font-bold text-slate-700 border-b border-slate-100 flex items-center justify-between">
                         <span>Eğitim Seviyesi / Hedef Sınav</span>
-                        <span className="text-[10px] text-blue-600 font-semibold">Seç & Güncelle</span>
+                        <span className="text-[10px] text-blue-700 font-extrabold">Seç & Güncelle</span>
                       </div>
                       {GRADE_LEVEL_OPTIONS.map((lvl) => {
                         const isSelected = currentGradeLevel === lvl;
@@ -366,10 +366,10 @@ export function StudentView() {
                               }
                             }}
                             className={cn(
-                              'w-full px-3 py-2 rounded-xl text-left text-xs font-medium transition-all flex items-center justify-between gap-2 cursor-pointer',
+                              'w-full px-3 py-2 rounded-xl text-left text-xs font-semibold transition-all flex items-center justify-between gap-2 cursor-pointer',
                               isSelected
-                                ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
-                                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-50'
+                                ? 'bg-blue-50 text-blue-800 font-extrabold border border-blue-200'
+                                : 'text-slate-800 hover:text-slate-950 hover:bg-slate-50'
                             )}
                           >
                             <span className="truncate">{lvl}</span>
@@ -383,20 +383,20 @@ export function StudentView() {
               </div>
             </div>
 
-            <h1 className="font-heading font-bold text-xl sm:text-2xl text-slate-800 tracking-tight">
+            <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-slate-950 tracking-tight">
               Hoş Geldin, {studentDisplayName}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500">
+            <p className="text-sm text-slate-700 font-medium">
               Ödevlerini tamamla, ders notlarını incele ve yapay zeka odak modunda interaktif testler çöz.
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setIsJoinClassModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-xs"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-900 text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-xs min-h-[44px] active:scale-95"
           >
             <KeyRound className="w-4 h-4 text-blue-600" />
             <span>Sınıfa Katıl</span>
@@ -408,7 +408,7 @@ export function StudentView() {
               setAiDrawerInitialTab('practice');
               setIsAiDrawerOpen(true);
             }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm shadow-blue-600/25 transition-all cursor-pointer"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm shadow-sm shadow-blue-600/25 transition-all cursor-pointer min-h-[44px] active:scale-95"
           >
             <Compass className="w-4 h-4" />
             <span>Alıştırma Testi (AI)</span>
@@ -417,65 +417,65 @@ export function StudentView() {
       </header>
 
       {/* 2. Metrics Ribbon */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
         {/* Metric 1: Completed Tasks */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-blue-300 hover:shadow-md transition-all shadow-sm">
+        <div className="p-5 rounded-2xl bg-white border border-slate-300 flex items-center justify-between hover:border-blue-400 hover:shadow-md transition-all shadow-sm">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-slate-500">Tamamlanan Görevler</div>
-            <div className="font-heading font-bold text-2xl text-slate-800">
-              {stats.completedCount} <span className="text-xs text-slate-400 font-normal">/ {stats.totalCount}</span>
+            <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">Tamamlanan Görevler</div>
+            <div className="font-heading font-extrabold text-3xl text-slate-950">
+              {stats.completedCount} <span className="text-sm text-slate-600 font-bold">/ {stats.totalCount}</span>
             </div>
-            <div className="text-[11px] text-blue-600 font-medium">
+            <div className="text-xs text-blue-700 font-bold">
               {stats.pendingCount > 0 ? `${stats.pendingCount} Bekleyen Görev` : 'Tüm görevler tamamlandı'}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
             <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 2: Streak Days */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-amber-300 hover:shadow-md transition-all shadow-sm">
+        <div className="p-5 rounded-2xl bg-white border border-slate-300 flex items-center justify-between hover:border-amber-400 hover:shadow-md transition-all shadow-sm">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-slate-500">Çalışma Serisi</div>
-            <div className="font-heading font-bold text-2xl text-slate-800 flex items-center gap-1.5">
+            <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">Çalışma Serisi</div>
+            <div className="font-heading font-extrabold text-3xl text-slate-950 flex items-center gap-1.5">
               <span>{stats.streakDays}</span>
-              <span className="text-xs font-normal text-slate-400">Gün</span>
+              <span className="text-xs font-bold text-slate-600">Gün</span>
               <Flame className="w-5 h-5 text-amber-500" />
             </div>
-            <div className="text-[11px] text-amber-600 font-medium">
+            <div className="text-xs text-amber-700 font-bold">
               {stats.streakDays > 0 ? 'Seriyi bozmadan devam et!' : 'İlk ödevini tamamlayarak seriyi başlat'}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
             <Flame className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 3: Average Score */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-emerald-300 hover:shadow-md transition-all shadow-sm">
+        <div className="p-5 rounded-2xl bg-white border border-slate-300 flex items-center justify-between hover:border-emerald-400 hover:shadow-md transition-all shadow-sm">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-slate-500">Genel Başarı Puanı</div>
-            <div className="font-heading font-bold text-2xl text-slate-800">
+            <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">Genel Başarı Puanı</div>
+            <div className="font-heading font-extrabold text-3xl text-slate-950">
               {stats.averageScore !== null ? `%${stats.averageScore}` : '—'}
             </div>
-            <div className="text-[11px] text-emerald-600 font-medium">
+            <div className="text-xs text-emerald-700 font-bold">
               {stats.averageScore !== null ? 'Öğretmen & Test Ortalaması' : 'Notlandırılmış ödev bekleniyor'}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
             <TrendingUp className="w-5 h-5" />
           </div>
         </div>
 
         {/* Metric 4: Classrooms */}
-        <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all shadow-sm">
+        <div className="p-5 rounded-2xl bg-white border border-slate-300 flex items-center justify-between hover:border-indigo-400 hover:shadow-md transition-all shadow-sm">
           <div className="space-y-1">
-            <div className="text-xs font-medium text-slate-500">Kayıtlı Sınıflar</div>
-            <div className="font-heading font-bold text-2xl text-slate-800">
+            <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">Kayıtlı Sınıflar</div>
+            <div className="font-heading font-extrabold text-3xl text-slate-950">
               {state.joinedClassrooms.length}
             </div>
-            <div className="text-[11px] text-indigo-600 font-medium">Aktif Şube & Ders</div>
+            <div className="text-xs text-indigo-700 font-bold">Aktif Şube & Ders</div>
           </div>
           <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
             <School className="w-5 h-5" />
@@ -486,15 +486,15 @@ export function StudentView() {
       {/* 3. BİREYSEL BAŞARI & KONU HAKİMİYETİ DONUT ANALİZ MODÜLÜ */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Sol Kolon: Bireysel Başarı & Görev Dağılımı Donut Grafiği (6 Kolon) */}
-        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-white border border-slate-300 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
             <div className="flex items-center gap-2">
               <PieChart className="w-4 h-4 text-blue-600" />
-              <h3 className="font-heading font-bold text-sm text-slate-800">
+              <h3 className="font-heading font-extrabold text-base text-slate-950">
                 Bireysel Başarı & Görev Dağılımı
               </h3>
             </div>
-            <span className="text-xs font-mono font-bold text-blue-600">
+            <span className="text-xs font-mono font-extrabold text-blue-700">
               %{stats.completionRate} Tamamlandı
             </span>
           </div>
@@ -526,10 +526,10 @@ export function StudentView() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="font-heading font-extrabold text-2xl text-slate-800 leading-none">
+                <span className="font-heading font-extrabold text-2xl text-slate-950 leading-none">
                   %{stats.completionRate}
                 </span>
-                <span className="text-[10px] text-slate-500 font-medium mt-1">İlerleme</span>
+                <span className="text-[10px] text-slate-700 font-bold mt-1">İlerleme</span>
               </div>
             </div>
 
@@ -537,44 +537,44 @@ export function StudentView() {
             <div className="space-y-2.5 text-xs">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
-                <span className="text-slate-500">Tamamlanan:</span>
-                <span className="font-bold text-slate-800">{stats.completedCount} Ödev</span>
+                <span className="text-slate-700 font-medium">Tamamlanan:</span>
+                <span className="font-extrabold text-slate-950">{stats.completedCount} Ödev</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
-                <span className="text-slate-500">Değerlendirmede:</span>
-                <span className="font-bold text-indigo-600">{stats.evaluatingCount} Ödev</span>
+                <span className="text-slate-700 font-medium">Değerlendirmede:</span>
+                <span className="font-extrabold text-indigo-700">{stats.evaluatingCount} Ödev</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-                <span className="text-slate-500">Bekleyen:</span>
-                <span className="font-bold text-amber-600">{stats.pendingCount} Ödev</span>
+                <span className="text-slate-700 font-medium">Bekleyen:</span>
+                <span className="font-extrabold text-amber-700">{stats.pendingCount} Ödev</span>
               </div>
-              <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                <span className="text-slate-500">Genel Başarı:</span>
-                <span className="font-bold text-emerald-600">
+              <div className="flex items-center gap-2 pt-1 border-t border-slate-200">
+                <span className="text-slate-700 font-medium">Genel Başarı:</span>
+                <span className="font-extrabold text-emerald-700">
                   {stats.averageScore !== null ? `%${stats.averageScore}` : 'Henüz notlanmadı'}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs text-slate-700 font-medium">
             <span>Çalışma Hedef Seviyesi:</span>
-            <span className="font-semibold text-slate-800 truncate max-w-[200px]">{currentGradeLevel}</span>
+            <span className="font-bold text-slate-950 truncate max-w-[200px]">{currentGradeLevel}</span>
           </div>
         </div>
 
         {/* Sağ Kolon: Konu Hakimiyeti & Tavsiyeler (6 Kolon) */}
-        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-white border border-slate-300 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4 text-emerald-600" />
-              <h3 className="font-heading font-bold text-sm text-slate-800">
+              <h3 className="font-heading font-extrabold text-base text-slate-950">
                 Konu Hakimiyeti & Çalışma Tavsiyesi
               </h3>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
               AI Analizi
             </span>
           </div>
@@ -582,7 +582,7 @@ export function StudentView() {
           <div className="space-y-3.5">
             {/* Güçlü Olduğun Konular */}
             <div className="space-y-2">
-              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Güçlü Olduğun Konular</span>
               </div>
@@ -590,10 +590,10 @@ export function StudentView() {
                 {topicMastery.strong.map((t, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-extrabold"
                   >
                     <span>✓ {t.name}</span>
-                    <span className="text-[10px] font-mono text-emerald-600 font-bold">%{t.score}</span>
+                    <span className="text-[11px] font-mono text-emerald-700 font-bold">%{t.score}</span>
                   </span>
                 ))}
               </div>
@@ -601,7 +601,7 @@ export function StudentView() {
 
             {/* Tekrar Edilmesi Gerekenler */}
             <div className="space-y-2">
-              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                 <span>Tekrar Edilmesi Gerekenler</span>
               </div>
@@ -609,28 +609,28 @@ export function StudentView() {
                 {topicMastery.review.map((t, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200/80 text-amber-800 text-xs font-semibold"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 border border-amber-300 text-amber-950 text-xs font-extrabold"
                   >
                     <span>⚡ {t.name}</span>
-                    <span className="text-[10px] text-amber-600 font-normal">({t.focus})</span>
+                    <span className="text-[11px] text-amber-800 font-semibold">({t.focus})</span>
                   </span>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-xs text-slate-500">Zayıf konuları pekiştir:</span>
+          <div className="pt-2 border-t border-slate-200 flex items-center justify-between">
+            <span className="text-xs text-slate-700 font-medium">Zayıf konuları pekiştir:</span>
             <button
               type="button"
               onClick={() => {
                 setAiDrawerInitialTab('practice');
                 setIsAiDrawerOpen(true);
               }}
-              className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-800 text-xs font-extrabold flex items-center gap-1 transition-all cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>AI ile Pratik Başlat</span>
+              <span>Deskio AI ile Pratik Başlat</span>
             </button>
           </div>
         </div>
@@ -639,23 +639,23 @@ export function StudentView() {
       {/* 4. Categorized Assignments Section (Clean Tabs) */}
       <section className="space-y-4">
         {/* Subtabs Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-white border border-slate-200 shadow-sm">
-          <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-white border border-slate-300 shadow-sm">
+          <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setAssignmentFilterTab('pending')}
               className={cn(
-                'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer min-h-[44px] active:scale-95',
                 assignmentFilterTab === 'pending'
-                  ? 'bg-blue-600 text-white shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  ? 'bg-blue-600 text-white shadow-xs font-extrabold'
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
               )}
             >
               <Inbox className="w-4 h-4" />
               <span>Bekleyenler</span>
               <span className={cn(
-                'px-1.5 py-0.5 rounded-md text-[10px] font-mono ml-0.5',
-                assignmentFilterTab === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-700'
+                'px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ml-0.5',
+                assignmentFilterTab === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900'
               )}>
                 {stats.pendingCount}
               </span>
@@ -665,17 +665,17 @@ export function StudentView() {
               type="button"
               onClick={() => setAssignmentFilterTab('evaluating')}
               className={cn(
-                'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer min-h-[44px] active:scale-95',
                 assignmentFilterTab === 'evaluating'
-                  ? 'bg-blue-600 text-white shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  ? 'bg-blue-600 text-white shadow-xs font-extrabold'
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
               )}
             >
               <Hourglass className="w-4 h-4" />
               <span>Değerlendirmede</span>
               <span className={cn(
-                'px-1.5 py-0.5 rounded-md text-[10px] font-mono ml-0.5',
-                assignmentFilterTab === 'evaluating' ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-700'
+                'px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ml-0.5',
+                assignmentFilterTab === 'evaluating' ? 'bg-white/20 text-white' : 'bg-indigo-100 text-indigo-900'
               )}>
                 {stats.evaluatingCount}
               </span>
@@ -685,17 +685,17 @@ export function StudentView() {
               type="button"
               onClick={() => setAssignmentFilterTab('completed')}
               className={cn(
-                'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer min-h-[44px] active:scale-95',
                 assignmentFilterTab === 'completed'
-                  ? 'bg-blue-600 text-white shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  ? 'bg-blue-600 text-white shadow-xs font-extrabold'
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
               )}
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Tamamlananlar</span>
               <span className={cn(
-                'px-1.5 py-0.5 rounded-md text-[10px] font-mono ml-0.5',
-                assignmentFilterTab === 'completed' ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-700'
+                'px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ml-0.5',
+                assignmentFilterTab === 'completed' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-900'
               )}>
                 {stats.completedCount}
               </span>
@@ -705,26 +705,26 @@ export function StudentView() {
               type="button"
               onClick={() => setAssignmentFilterTab('all')}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer',
+                'flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm transition-all cursor-pointer min-h-[44px] active:scale-95',
                 assignmentFilterTab === 'all'
-                  ? 'bg-blue-600 text-white font-bold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  ? 'bg-blue-600 text-white font-extrabold shadow-xs'
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100 font-bold'
               )}
             >
               <span>Tümü ({assignments.length})</span>
             </button>
           </div>
 
-          <div className="text-xs text-slate-500 font-mono hidden sm:block pr-2">
+          <div className="text-xs text-slate-700 font-mono font-semibold hidden sm:block pr-2">
             {categorizedAssignments.length} görev listeleniyor
           </div>
         </div>
 
         {/* Assignment Cards Grid */}
         {categorizedAssignments.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 shadow-sm space-y-2">
-            <BookOpen className="w-8 h-8 mx-auto text-slate-400" />
-            <h4 className="font-medium text-slate-800 text-sm">
+          <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-300 shadow-sm space-y-2">
+            <BookOpen className="w-8 h-8 mx-auto text-slate-500" />
+            <h4 className="font-extrabold text-slate-950 text-base">
               {assignmentFilterTab === 'pending'
                 ? 'Harika! Bekleyen hiçbir ödeviniz bulunmuyor.'
                 : assignmentFilterTab === 'evaluating'
@@ -733,7 +733,7 @@ export function StudentView() {
                 ? 'Henüz tamamlanmış ödeviniz bulunmuyor.'
                 : 'Henüz atanmış bir ödev veya not bulunmuyor.'}
             </h4>
-            <p className="text-xs text-slate-500">
+            <p className="text-sm text-slate-700 font-medium">
               {assignmentFilterTab === 'pending'
                 ? 'Yeni bir ödev yayınlandığında bu alanda görüntülenecektir.'
                 : 'Ödevlerinizi teslim ettikçe durumları burada güncellenecektir.'}
@@ -750,7 +750,7 @@ export function StudentView() {
               return (
                 <div
                   key={a.id}
-                  className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all flex flex-col justify-between gap-4 group shadow-sm"
+                  className="p-5 rounded-2xl bg-white border border-slate-300 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between gap-4 group shadow-sm"
                 >
                   <div className="space-y-3">
                     {/* Badge Row with Format & Status */}
@@ -758,19 +758,19 @@ export function StudentView() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span
                           className={cn(
-                            'px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1',
+                            'px-2.5 py-0.5 rounded text-xs font-bold flex items-center gap-1',
                             isNote
-                              ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                              ? 'bg-sky-50 text-sky-800 border border-sky-300'
                               : isTest
-                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              ? 'bg-purple-50 text-purple-800 border border-purple-300'
+                              : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
                           )}
                         >
                           {isNote ? 'Ders Notu' : isTest ? 'İnteraktif Test' : 'Yazılı Ödev'}
                         </span>
 
                         {a.classroomName && (
-                          <span className="text-[11px] text-slate-500 font-medium">
+                          <span className="text-xs text-slate-700 font-bold">
                             • {a.classroomName}
                           </span>
                         )}
@@ -779,23 +779,23 @@ export function StudentView() {
                       {/* Status Badge */}
                       {sub ? (
                         sub.status === 'reviewed' ? (
-                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-mono font-bold flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-mono font-extrabold flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Puan: %{sub.finalScore ?? 85}</span>
                           </span>
                         ) : isTest ? (
-                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-mono font-bold flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-mono font-extrabold flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Skor: %{sub.percent}</span>
                           </span>
                         ) : (
-                          <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-medium flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 border border-indigo-300 text-indigo-800 text-xs font-bold flex items-center gap-1">
                             <Clock className="w-3.5 h-3.5" />
                             <span>Değerlendirmede</span>
                           </span>
                         )
                       ) : (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-50 text-amber-700 border border-amber-200 font-semibold">
+                        <span className="px-2.5 py-0.5 rounded text-xs font-mono bg-amber-50 text-amber-800 border border-amber-300 font-extrabold">
                           Bekliyor
                         </span>
                       )}
@@ -803,15 +803,15 @@ export function StudentView() {
 
                     {/* Title & Description */}
                     <div>
-                      <h3 className="font-heading font-bold text-base text-slate-800 group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-heading font-extrabold text-lg text-slate-950 group-hover:text-blue-700 transition-colors">
                         {a.title}
                       </h3>
-                      <div className="text-xs text-slate-500 mt-0.5">Konu: {a.folder}</div>
+                      <div className="text-xs text-slate-700 font-bold mt-0.5">Konu: {a.folder}</div>
                     </div>
 
                     {a.fileName && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-700">
-                        <FileText className="w-3 h-3 text-blue-600" />
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-900">
+                        <FileText className="w-3.5 h-3.5 text-blue-600" />
                         <span className="truncate max-w-[180px]">{a.fileName}</span>
                       </div>
                     )}
@@ -823,14 +823,14 @@ export function StudentView() {
                       const daysLeft = Math.ceil((a.deadline - now) / (1000 * 60 * 60 * 24));
                       return (
                         <div className={cn(
-                          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border',
+                          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border',
                           isOverdue
-                            ? 'bg-red-50 text-red-700 border-red-200'
+                            ? 'bg-red-50 text-red-800 border-red-300'
                             : daysLeft <= 2
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-slate-50 text-slate-700 border-slate-200'
+                            ? 'bg-amber-50 text-amber-800 border-amber-300'
+                            : 'bg-slate-50 text-slate-800 border-slate-300'
                         )}>
-                          <Clock className="w-3 h-3" />
+                          <Clock className="w-3.5 h-3.5" />
                           <span>
                             {isOverdue
                               ? 'Son tarih doldu'
@@ -845,19 +845,19 @@ export function StudentView() {
                     })()}
 
                     {a.desc && (
-                      <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
+                      <p className="text-sm text-slate-800 leading-relaxed font-medium line-clamp-2">
                         {a.desc}
                       </p>
                     )}
 
                     {/* Teacher Feedback Bubble if completed */}
                     {sub?.status === 'reviewed' && sub.feedback && (
-                      <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-1">
-                        <div className="font-semibold text-emerald-800 flex items-center gap-1 text-[11px]">
-                          <MessageSquareQuote className="w-3 h-3 text-emerald-600" />
+                      <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-xs space-y-1">
+                        <div className="font-extrabold text-emerald-950 flex items-center gap-1 text-xs">
+                          <MessageSquareQuote className="w-3.5 h-3.5 text-emerald-700" />
                           <span>Öğretmen Değerlendirmesi:</span>
                         </div>
-                        <p className="text-slate-700 italic text-[11px]">
+                        <p className="text-slate-900 font-medium italic text-xs leading-relaxed">
                           &ldquo;{sub.feedback}&rdquo;
                         </p>
                       </div>
@@ -865,22 +865,22 @@ export function StudentView() {
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
                     {/* Interaktif Test Action */}
                     {isTest && (
                       <div className="w-full">
                         {sub?.percent !== undefined ? (
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
+                            <span className="text-xs font-extrabold text-emerald-800 flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                               <span>Başarıyla Çözüldü</span>
                             </span>
                             <button
                               type="button"
                               onClick={() => handleStartFocusTest(a)}
-                              className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                              className="px-3.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-300 text-slate-800 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
                             >
-                              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                              <RotateCcw className="w-3.5 h-3.5 text-slate-600" />
                               <span>Tekrar Çöz</span>
                             </button>
                           </div>
@@ -888,7 +888,7 @@ export function StudentView() {
                           <button
                             type="button"
                             onClick={() => handleStartFocusTest(a)}
-                            className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs shadow-blue-600/20"
+                            className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs shadow-blue-600/20"
                           >
                             <Play className="w-3.5 h-3.5" />
                             <span>Teste Başla ({a.questions?.length || 0} Soru)</span>
@@ -904,7 +904,7 @@ export function StudentView() {
                           <button
                             type="button"
                             onClick={() => setSubmitModalAssignment(a)}
-                            className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                            className="w-full py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-300 text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                           >
                             <Eye className="w-3.5 h-3.5 text-blue-600" />
                             <span>Teslim Detayını & Yanıtımı Gör</span>
@@ -913,7 +913,7 @@ export function StudentView() {
                           <button
                             type="button"
                             onClick={() => setSubmitModalAssignment(a)}
-                            className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs shadow-blue-600/20"
+                            className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs shadow-blue-600/20"
                           >
                             <UploadCloud className="w-3.5 h-3.5" />
                             <span>Ödevi Yanıtla / Belge Yükle</span>
@@ -928,9 +928,9 @@ export function StudentView() {
                         <button
                           type="button"
                           onClick={() => setViewingNote(a)}
-                          className="w-full py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                          className="w-full py-2.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-900 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                         >
-                          <BookOpen className="w-3.5 h-3.5 text-sky-600" />
+                          <BookOpen className="w-3.5 h-3.5 text-sky-700" />
                           <span>Ders Notunu & Materyali Aç</span>
                         </button>
                       </div>
@@ -944,16 +944,16 @@ export function StudentView() {
       </section>
 
       {/* 5. Katılınan Sınıf Şubeleri */}
-      <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-300 shadow-sm space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200">
           <div className="flex items-center gap-2">
             <School className="w-5 h-5 text-blue-600" />
             <div>
-              <h3 className="font-heading font-semibold text-base text-slate-800">
+              <h3 className="font-heading font-extrabold text-base sm:text-lg text-slate-950">
                 Kayıtlı Olduğun Sınıflar ({state.joinedClassrooms.length})
               </h3>
-              <p className="text-xs text-slate-500">
-                Öğretmeninin paylaştığı kodla dahil olduğun çalışma şubeleri.
+              <p className="text-xs sm:text-sm text-slate-700 font-medium">
+                Öğretmeninin paylaştığı kodla dahil olduğun çalışma masaları.
               </p>
             </div>
           </div>
@@ -961,7 +961,7 @@ export function StudentView() {
           <button
             type="button"
             onClick={() => setIsJoinClassModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold transition-all cursor-pointer shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Sınıfa Katıl</span>
@@ -969,10 +969,10 @@ export function StudentView() {
         </div>
 
         {state.joinedClassrooms.length === 0 ? (
-          <div className="p-8 text-center rounded-xl bg-slate-50 border border-dashed border-slate-200 space-y-2">
-            <School className="w-7 h-7 mx-auto text-slate-400" />
-            <h4 className="font-medium text-slate-800 text-xs">Henüz bir sınıfa katılmadın</h4>
-            <p className="text-[11px] text-slate-500">
+          <div className="p-8 text-center rounded-xl bg-slate-50 border border-dashed border-slate-300 space-y-2">
+            <School className="w-7 h-7 mx-auto text-slate-500" />
+            <h4 className="font-bold text-slate-950 text-sm">Henüz bir sınıfa katılmadın</h4>
+            <p className="text-xs text-slate-700 font-medium">
               Öğretmeninden 6 haneli katılım kodunu alarak sınıfına katılabilirsin.
             </p>
           </div>
@@ -981,12 +981,12 @@ export function StudentView() {
             {state.joinedClassrooms.map((c) => (
               <div
                 key={c.id}
-                className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3"
+                className="p-4 rounded-xl bg-slate-50 border border-slate-300 flex items-center justify-between gap-3 shadow-2xs"
               >
                 <div className="min-w-0 space-y-0.5">
-                  <h4 className="font-semibold text-xs text-slate-800 truncate">{c.name}</h4>
-                  {c.subject && <div className="text-[10px] text-slate-500">{c.subject}</div>}
-                  <div className="text-[10px] text-blue-600 font-mono font-semibold pt-0.5">
+                  <h4 className="font-bold text-sm text-slate-950 truncate">{c.name}</h4>
+                  {c.subject && <div className="text-xs text-slate-700 font-semibold">{c.subject}</div>}
+                  <div className="text-xs text-blue-700 font-mono font-bold pt-0.5">
                     Öğretmen: {c.teacherName || 'Öğretmen'}
                   </div>
                 </div>
@@ -998,10 +998,10 @@ export function StudentView() {
                       leaveClassroom(c.id);
                     }
                   }}
-                  className="text-slate-400 hover:text-red-600 text-xs transition-colors p-1.5 rounded-lg hover:bg-red-50 cursor-pointer"
+                  className="text-slate-500 hover:text-red-700 text-xs transition-colors p-1.5 rounded-lg hover:bg-red-50 cursor-pointer"
                   title="Sınıftan Ayrıl"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}

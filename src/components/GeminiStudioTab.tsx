@@ -105,7 +105,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
     {
       role: 'assistant',
-      text: 'Merhaba! Ben EduFlow Öğretmen Copilot asistanınızım. MEB müfredat kazanımları, ders planlama, çoktan seçmeli veya açık uçlu soru hazırlama ve pedagojik analizler için hazırım. Size nasıl yardımcı olabilirim? ✨',
+      text: 'Merhaba! Ben Deskio Öğretmen Copilot asistanınızım. MEB müfredat kazanımları, ders planlama, çoktan seçmeli veya açık uçlu soru hazırlama ve pedagojik analizler için hazırım. Size nasıl yardımcı olabilirim? ✨',
     },
   ]);
   const [chatInput, setChatInput] = useState('');
@@ -125,7 +125,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
     setGeneratedQuiz(null);
 
     try {
-      const headers = await getAuthHeaders(state.session);
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers,
@@ -161,7 +161,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
     setGeneratedNote(null);
 
     try {
-      const headers = await getAuthHeaders(state.session);
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers,
@@ -195,7 +195,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
     setIsChatLoading(true);
 
     try {
-      const headers = await getAuthHeaders(state.session);
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers,
@@ -234,15 +234,15 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
   return (
     <div className="space-y-6 animate-fade">
       {/* Studio Subtabs */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-300 shadow-xs">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveSubTab('quiz')}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
+              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer',
               activeSubTab === 'quiz'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? 'bg-blue-600 text-white font-extrabold shadow-xs'
+                : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
             )}
           >
             <FileQuestion className="w-4 h-4" />
@@ -252,10 +252,10 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
           <button
             onClick={() => setActiveSubTab('note')}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
+              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer',
               activeSubTab === 'note'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? 'bg-blue-600 text-white font-extrabold shadow-xs'
+                : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
             )}
           >
             <BookOpen className="w-4 h-4" />
@@ -265,10 +265,10 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
           <button
             onClick={() => setActiveSubTab('chat')}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
+              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer',
               activeSubTab === 'chat'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                ? 'bg-blue-600 text-white font-extrabold shadow-xs'
+                : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
             )}
           >
             <MessageSquare className="w-4 h-4" />
@@ -279,10 +279,10 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
 
       {/* QUIZ TAB */}
       {activeSubTab === 'quiz' && (
-        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 space-y-6 shadow-xs">
+        <div className="p-6 rounded-3xl bg-white border border-slate-300 space-y-6 shadow-xs">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
             <div className="sm:col-span-6 space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                 Konu / Kazanım Başlığı
               </label>
               <input
@@ -290,18 +290,18 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                 value={quizTopic}
                 onChange={(e) => setQuizTopic(e.target.value)}
                 placeholder={currentLevelConfig.placeholder}
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:outline-none"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none"
               />
             </div>
 
             <div className="sm:col-span-3 space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                 Hedef Seviye
               </label>
               <select
                 value={quizGrade}
                 onChange={(e) => setQuizGrade(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs sm:text-sm focus:outline-none"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-xs sm:text-sm font-bold focus:outline-none"
               >
                 {Object.keys(LEVEL_CONFIGS).map((lvl) => (
                   <option key={lvl} value={lvl}>
@@ -312,13 +312,13 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
             </div>
 
             <div className="sm:col-span-3 space-y-1.5">
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                 Soru Sayısı
               </label>
               <select
                 value={quizCount}
                 onChange={(e) => setQuizCount(Number(e.target.value))}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs sm:text-sm focus:outline-none"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-xs sm:text-sm font-bold focus:outline-none"
               >
                 <option value={3}>3 Soru (Hızlı)</option>
                 <option value={5}>5 Soru (Standart)</option>
@@ -329,7 +329,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
           </div>
 
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-slate-500">
+            <span className="text-xs font-bold text-slate-800">
               Önerilen Konu Başlıkları:
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -338,7 +338,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                   key={idx}
                   type="button"
                   onClick={() => setQuizTopic(s)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-[11px] transition-all cursor-pointer text-left"
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-300 hover:border-blue-400 text-slate-800 hover:text-blue-800 text-xs font-semibold transition-all cursor-pointer text-left"
                 >
                   {s}
                 </button>
@@ -350,7 +350,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
             type="button"
             onClick={() => handleGenerateQuiz()}
             disabled={isQuizLoading || !quizTopic.trim()}
-            className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50"
           >
             {isQuizLoading ? (
               <>
@@ -360,7 +360,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>Yapay Zeka ile Soruları Hazırla</span>
+                <span>Deskio AI ile Soruları Hazırla</span>
               </>
             )}
           </button>
@@ -369,10 +369,10 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
             <div className="p-5 rounded-2xl bg-slate-50 border border-blue-200 space-y-4 shadow-xs">
               <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                 <div>
-                  <h4 className="font-heading font-bold text-base text-slate-900">
+                  <h4 className="font-heading font-extrabold text-base text-slate-950">
                     {generatedQuiz.title || quizTopic}
                   </h4>
-                  <span className="text-xs text-blue-600 font-semibold">
+                  <span className="text-xs text-blue-800 font-bold">
                     {generatedQuiz.questions?.length || 0} Soru Hazırlandı
                   </span>
                 </div>
@@ -389,7 +389,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                       questions: generatedQuiz.questions,
                     });
                   }}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
                   <span>Ödev Olarak Yayınla</span>
@@ -400,12 +400,12 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                 {generatedQuiz.questions?.map((q: Question, i: number) => (
                   <div
                     key={i}
-                    className="p-3.5 rounded-xl bg-white border border-slate-200 text-xs space-y-1.5 shadow-2xs"
+                    className="p-3.5 rounded-xl bg-white border border-slate-300 text-sm space-y-1.5 shadow-2xs font-medium"
                   >
-                    <div className="font-semibold text-slate-900">
+                    <div className="font-bold text-slate-950">
                       Soru {i + 1}: {q.q}
                     </div>
-                    <div className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2.5 py-1 rounded w-fit">
+                    <div className="text-xs text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-1 rounded w-fit border border-emerald-200">
                       Doğru Cevap: {q.a}
                     </div>
                   </div>
@@ -418,9 +418,9 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
 
       {/* NOTE TAB */}
       {activeSubTab === 'note' && (
-        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 space-y-6 shadow-xs">
+        <div className="p-6 rounded-3xl bg-white border border-slate-300 space-y-6 shadow-xs">
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
               Ders / Konu Başlığı
             </label>
             <input
@@ -428,7 +428,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
               value={noteTopic}
               onChange={(e) => setNoteTopic(e.target.value)}
               placeholder="Örn: 9. Sınıf Fotosentez ve Solunum Özeti"
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 focus:outline-none"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none"
             />
           </div>
 
@@ -436,7 +436,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
             type="button"
             onClick={() => handleGenerateNote()}
             disabled={isNoteLoading || !noteTopic.trim()}
-            className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50"
           >
             {isNoteLoading ? (
               <>
@@ -446,7 +446,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
             ) : (
               <>
                 <BookOpen className="w-4 h-4" />
-                <span>Ders Notu ve Özeti Oluştur</span>
+                <span>Deskio AI ile Ders Notu ve Özeti Oluştur</span>
               </>
             )}
           </button>
@@ -454,7 +454,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
           {generatedNote && (
             <div className="p-5 rounded-2xl bg-slate-50 border border-blue-200 space-y-4 shadow-xs">
               <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                <h4 className="font-heading font-bold text-base text-slate-900 truncate max-w-sm">
+                <h4 className="font-heading font-extrabold text-base text-slate-950">
                   {generatedNote.title || noteTopic}
                 </h4>
 
@@ -468,14 +468,14 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                       desc: generatedNote.content || '',
                     });
                   }}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Materyal Olarak Yayınla</span>
+                  <span>Ders Notu Olarak Yayınla</span>
                 </button>
               </div>
 
-              <div className="p-4 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap shadow-2xs">
+              <div className="p-4 rounded-xl bg-white border border-slate-300 text-sm text-slate-950 font-medium leading-relaxed whitespace-pre-wrap max-h-72 overflow-y-auto shadow-2xs">
                 {generatedNote.content}
               </div>
             </div>
@@ -485,20 +485,20 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
 
       {/* CHAT TAB */}
       {activeSubTab === 'chat' && (
-        <div className="p-6 rounded-3xl bg-white border border-slate-200/90 space-y-4 shadow-xs">
+        <div className="p-6 rounded-3xl bg-white border border-slate-300 space-y-4 shadow-xs">
           <div className="space-y-3 min-h-[300px] max-h-[500px] overflow-y-auto pr-1">
             {chatMessages.map((m, idx) => (
               <div
                 key={idx}
                 className={cn(
-                  'p-4 rounded-2xl text-xs leading-relaxed max-w-[85%] space-y-1.5 shadow-2xs',
+                  'p-4 rounded-2xl text-sm leading-relaxed max-w-[85%] space-y-1.5 shadow-2xs',
                   m.role === 'user'
-                    ? 'ml-auto bg-blue-600 text-white font-medium'
-                    : 'bg-slate-50 border border-slate-200 text-slate-800'
+                    ? 'ml-auto bg-blue-600 text-white font-semibold'
+                    : 'bg-slate-50 border border-slate-300 text-slate-950 font-medium'
                 )}
               >
-                <div className="flex items-center justify-between gap-2 border-b border-slate-200/40 pb-1 text-[10px] opacity-75">
-                  <span>{m.role === 'user' ? 'Siz' : 'EduFlow Copilot'}</span>
+                <div className="flex items-center justify-between gap-2 border-b border-slate-200/40 pb-1 text-xs opacity-80 font-bold">
+                  <span>{m.role === 'user' ? 'Siz' : 'Deskio Copilot'}</span>
                   {m.role === 'assistant' && (
                     <button
                       type="button"
@@ -506,9 +506,9 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                       className="hover:text-blue-600 transition-colors cursor-pointer"
                     >
                       {copiedId === `chat-${idx}` ? (
-                        <Check className="w-3 h-3 text-emerald-600" />
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
                       ) : (
-                        <Copy className="w-3 h-3 text-slate-400" />
+                        <Copy className="w-3.5 h-3.5 text-slate-500" />
                       )}
                     </button>
                   )}
@@ -518,27 +518,27 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
             ))}
 
             {isChatLoading && (
-              <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2 w-fit">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                <span>Asistan yanıt hazırlıyor...</span>
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-300 text-slate-800 text-sm flex items-center gap-2 font-medium">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                <span>Deskio Copilot yanıt hazırlıyor...</span>
               </div>
             )}
           </div>
 
-          <form onSubmit={handleSendChat} className="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <form onSubmit={handleSendChat} className="flex gap-2 pt-2 border-t border-slate-200">
             <input
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Sorunuzu veya talebinizi yazın..."
-              className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
+              placeholder="Örn: 8. Sınıf Fen için deney önerisi veya LGS matematik çalışma programı iste..."
+              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none"
             />
             <button
               type="submit"
-              disabled={!chatInput.trim() || isChatLoading}
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs disabled:opacity-50 cursor-pointer"
+              disabled={isChatLoading || !chatInput.trim()}
+              className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm flex items-center gap-2 shadow-md shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-4 h-4" />
               <span>Gönder</span>
             </button>
           </form>

@@ -428,30 +428,30 @@ export function TeacherView({
 
   return (
     <div className="space-y-6 animate-fade pb-20">
-      {/* 1. Calm Workspace Header (Clean EdTech Light Theme) */}
-      <header className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
+      {/* 1. Calm Workspace Header (Deskio High-Contrast Style) */}
+      <header className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-300 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
             <GraduationCap className="w-3.5 h-3.5" />
-            <span>Öğretmen Yönetim Paneli</span>
+            <span>Deskio Öğretmen Masası</span>
           </div>
-          <h1 className="font-heading font-bold text-2xl sm:text-3xl text-slate-800 tracking-tight">
+          <h1 className="font-heading font-extrabold text-2xl sm:text-3xl text-slate-950 tracking-tight">
             Hoş Geldiniz, {teacherDisplayName}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">
+          <p className="text-sm text-slate-700 max-w-xl leading-relaxed font-medium">
             Ders materyallerinizi paylaşın, ödev ve testler yayınlayın, öğrenci not çizelgesini (Gradebook) anlık olarak takip edin.
           </p>
         </div>
 
         {/* Topbar Actions */}
-        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto w-full md:w-auto">
           <button
             type="button"
             onClick={() => {
               setCreateModalPrefill(null);
               setIsCreateModalOpen(true);
             }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-sm shadow-blue-600/25 transition-all cursor-pointer"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm shadow-sm shadow-blue-600/25 transition-all cursor-pointer min-h-[44px] active:scale-95"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Yeni Ödev Oluştur</span>
@@ -460,16 +460,16 @@ export function TeacherView({
           <button
             type="button"
             onClick={() => setIsAiDrawerOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 text-xs sm:text-sm font-bold transition-all cursor-pointer min-h-[44px] active:scale-95"
           >
             <Sparkles className="w-4 h-4 text-blue-600" />
-            <span>AI Araçları</span>
+            <span>Deskio AI Araçları</span>
           </button>
 
           <button
             type="button"
             onClick={logout}
-            className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 hover:text-slate-950 text-xs font-bold transition-all cursor-pointer shadow-xs min-h-[44px] active:scale-95"
             title="Oturumu Kapat"
           >
             <LogOut className="w-4 h-4" />
@@ -481,20 +481,20 @@ export function TeacherView({
       {/* 2. Sınıf Başarı & Tamamlama Donut Modülü + Stat Kartları */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Sınıf Başarı Donut Kartı (5 Kolon) */}
-        <div className="lg:col-span-5 p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="lg:col-span-5 p-5 sm:p-6 rounded-2xl bg-white border border-slate-300 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
             <div className="flex items-center gap-2">
               <PieChart className="w-4 h-4 text-blue-600" />
-              <h3 className="font-heading font-bold text-sm text-slate-800">
+              <h3 className="font-heading font-extrabold text-base text-slate-950">
                 Sınıf Başarı & Teslim Analitiği
               </h3>
             </div>
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="px-2.5 py-0.5 rounded text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
               Canlı Takip
             </span>
           </div>
 
-          <div className="flex items-center justify-around gap-4 py-1">
+          <div className="flex flex-col sm:flex-row items-center justify-around gap-4 py-1">
             {/* SVG Donut */}
             <div className="relative w-28 h-28 shrink-0 flex items-center justify-center">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
@@ -521,99 +521,105 @@ export function TeacherView({
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="font-heading font-extrabold text-xl text-slate-800 leading-none">
+                <span className="font-heading font-extrabold text-2xl text-slate-950 leading-none">
                   %{gradebookMetrics.completionPercent}
                 </span>
-                <span className="text-[9px] text-slate-500 font-medium mt-0.5">Teslimat</span>
+                <span className="text-[10px] text-slate-700 font-bold mt-0.5">Teslimat</span>
               </div>
             </div>
 
             {/* Donut Legend & Stats */}
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
-                <span className="text-slate-500">İncelenen / Notlanan:</span>
-                <span className="font-bold text-slate-800">{gradebookMetrics.totalReviewed}</span>
+            <div className="space-y-2 text-xs w-full sm:w-auto">
+              <div className="flex items-center justify-between sm:justify-start gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
+                  <span className="text-slate-700 font-medium">İncelenen / Notlanan:</span>
+                </div>
+                <span className="font-extrabold text-slate-950">{gradebookMetrics.totalReviewed}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
-                <span className="text-slate-500">Onay Bekleyen:</span>
-                <span className="font-bold text-amber-600">{gradebookMetrics.totalPendingReview}</span>
+              <div className="flex items-center justify-between sm:justify-start gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                  <span className="text-slate-700 font-medium">Onay Bekleyen:</span>
+                </div>
+                <span className="font-extrabold text-amber-700">{gradebookMetrics.totalPendingReview}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-200 shrink-0" />
-                <span className="text-slate-500">Beklenen Toplam:</span>
-                <span className="font-semibold text-slate-700">{gradebookMetrics.totalExpectedSubmissions}</span>
+              <div className="flex items-center justify-between sm:justify-start gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0" />
+                  <span className="text-slate-700 font-medium">Beklenen Toplam:</span>
+                </div>
+                <span className="font-bold text-slate-900">{gradebookMetrics.totalExpectedSubmissions}</span>
               </div>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-xs text-slate-700 font-medium">
             <span>Sınıf Başarı Ortalaması:</span>
-            <span className="font-bold text-blue-600">
+            <span className="font-extrabold text-blue-700 text-sm">
               {gradebookMetrics.overallAverage !== null ? `%${gradebookMetrics.overallAverage}` : '—'}
             </span>
           </div>
         </div>
 
         {/* 4 Stat Kartı Grid (7 Kolon) */}
-        <div className="lg:col-span-7 grid grid-cols-2 gap-4">
+        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
           {/* Metric 1: Students */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-blue-300 hover:shadow-md transition-all shadow-sm">
+          <div className="p-5 rounded-2xl bg-white border border-slate-300 flex items-center justify-between hover:border-blue-400 hover:shadow-md transition-all shadow-sm">
             <div className="space-y-1">
-              <div className="text-xs font-medium text-slate-500">Kayıtlı Öğrenciler</div>
-              <div className="font-heading font-bold text-2xl text-slate-800">
+              <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">Kayıtlı Öğrenciler</div>
+              <div className="font-heading font-extrabold text-3xl text-slate-950">
                 {state.students.length}
               </div>
-              <div className="text-[11px] text-blue-600 font-medium">{gradebookMetrics.activeStudents} Aktif Öğrenci</div>
+              <div className="text-xs text-blue-700 font-bold">{gradebookMetrics.activeStudents} Aktif Öğrenci</div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
               <Users className="w-5 h-5" />
             </div>
           </div>
 
           {/* Metric 2: Assignments & Materials */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-indigo-300 hover:shadow-md transition-all shadow-sm">
+          <div className="p-5 rounded-2xl bg-white border border-slate-300 flex items-center justify-between hover:border-indigo-400 hover:shadow-md transition-all shadow-sm">
             <div className="space-y-1">
-              <div className="text-xs font-medium text-slate-500">Yayındaki Materyaller</div>
-              <div className="font-heading font-bold text-2xl text-slate-800">
+              <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">Yayındaki Materyaller</div>
+              <div className="font-heading font-extrabold text-3xl text-slate-950">
                 {state.assignments.length}
               </div>
-              <div className="text-[11px] text-indigo-600 font-medium">
+              <div className="text-xs text-indigo-700 font-bold">
                 {uploadedMaterialsList.length} Ders Notu / PDF
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
               <Layers className="w-5 h-5" />
             </div>
           </div>
 
           {/* Metric 3: Submissions */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-emerald-300 hover:shadow-md transition-all shadow-sm">
+          <div className="p-5 rounded-2xl bg-white border border-slate-300 flex items-center justify-between hover:border-emerald-400 hover:shadow-md transition-all shadow-sm">
             <div className="space-y-1">
-              <div className="text-xs font-medium text-slate-500">Ödev Teslimleri</div>
-              <div className="font-heading font-bold text-2xl text-slate-800">
+              <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">Ödev Teslimleri</div>
+              <div className="font-heading font-extrabold text-3xl text-slate-950">
                 {totalSubmissions}
               </div>
-              <div className="text-[11px] text-emerald-600 font-medium">Tamamlanan Teslimat</div>
+              <div className="text-xs text-emerald-700 font-bold">Tamamlanan Teslimat</div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <FileCheck className="w-5 h-5" />
             </div>
           </div>
 
           {/* Metric 4: Class Average */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 flex items-center justify-between hover:border-amber-300 hover:shadow-md transition-all shadow-sm">
+          <div className="p-5 rounded-2xl bg-white border border-slate-300 flex items-center justify-between hover:border-amber-400 hover:shadow-md transition-all shadow-sm">
             <div className="space-y-1">
-              <div className="text-xs font-medium text-slate-500">En Yüksek Başarı Skoru</div>
-              <div className="font-heading font-bold text-2xl text-slate-800">
+              <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">En Yüksek Skor</div>
+              <div className="font-heading font-extrabold text-3xl text-slate-950">
                 {gradebookMetrics.highestScore !== null ? `%${gradebookMetrics.highestScore}` : '—'}
               </div>
-              <div className="text-[11px] text-amber-600 font-medium">
+              <div className="text-xs text-amber-700 font-bold">
                 {gradebookMetrics.overallAverage !== null ? `Ortalama: %${gradebookMetrics.overallAverage}` : 'Henüz notlanmadı'}
               </div>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
               <TrendingUp className="w-5 h-5" />
             </div>
           </div>
@@ -621,15 +627,15 @@ export function TeacherView({
       </section>
 
       {/* 3. Main LMS Navigation Tabs (Clean EdTech Light Style) */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-1.5 rounded-2xl bg-white border border-slate-300 shadow-sm">
         <button
           type="button"
           onClick={() => setActiveTab('assignments')}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
+            'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer min-h-[44px] active:scale-95',
             activeTab === 'assignments'
-              ? 'bg-blue-600 text-white shadow-xs font-bold'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              ? 'bg-blue-600 text-white shadow-xs font-extrabold'
+              : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100 font-bold'
           )}
         >
           <Layers className="w-4 h-4" />
@@ -640,24 +646,24 @@ export function TeacherView({
           type="button"
           onClick={() => setActiveTab('gradebook')}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
+            'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer min-h-[44px] active:scale-95',
             activeTab === 'gradebook'
-              ? 'bg-blue-600 text-white shadow-xs font-bold'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              ? 'bg-blue-600 text-white shadow-xs font-extrabold'
+              : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100 font-bold'
           )}
         >
           <BarChart3 className="w-4 h-4" />
-          <span>Öğrenci Not Takip Tablosu (Gradebook)</span>
+          <span>Öğrenci Not Çizelgesi</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('students')}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer',
+            'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm transition-all cursor-pointer min-h-[44px] active:scale-95',
             activeTab === 'students'
-              ? 'bg-blue-600 text-white shadow-xs font-bold'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              ? 'bg-blue-600 text-white shadow-xs font-extrabold'
+              : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100 font-bold'
           )}
         >
           <School className="w-4 h-4" />
@@ -671,15 +677,15 @@ export function TeacherView({
       {activeTab === 'assignments' && (
         <div className="space-y-6 animate-fade">
           {/* A. Materyal & PDF Yükleme Alanı (Direct Upload & Sharing Zone) */}
-          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-300 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <UploadCloud className="w-5 h-5 text-blue-600" />
                 <div>
-                  <h3 className="font-heading font-semibold text-base text-slate-800">
-                    Ders Materyali & PDF Paylaşım Alanı
+                  <h3 className="font-heading font-extrabold text-base sm:text-lg text-slate-950">
+                    Ders Materyali & PDF Paylaşım Masası
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs sm:text-sm text-slate-700 font-medium">
                     Öğrencileriniz için PDF çalışma kâğıtları, ders notları veya formül özetlerini doğrudan paylaşın.
                   </p>
                 </div>
@@ -689,7 +695,7 @@ export function TeacherView({
             <form onSubmit={handleUploadMaterialSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
                     Materyal Başlığı
                   </label>
                   <input
@@ -697,12 +703,12 @@ export function TeacherView({
                     value={materialTitle}
                     onChange={(e) => setMaterialTitle(e.target.value)}
                     placeholder="Örn: 10. Sınıf Biyoloji Özet PDF"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none transition-all"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
                     Klasör / Ünite
                   </label>
                   <input
@@ -710,18 +716,18 @@ export function TeacherView({
                     value={materialFolder}
                     onChange={(e) => setMaterialFolder(e.target.value)}
                     placeholder="Örn: Hücre Bölünmeleri"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none transition-all"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
                     Hedef Sınıf
                   </label>
                   <select
                     value={materialClassId}
                     onChange={(e) => setMaterialClassId(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs focus:outline-none transition-all"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium focus:outline-none transition-all"
                   >
                     <option value="">🌐 Tüm Sınıflar & Öğrenciler</option>
                     {state.classrooms.map((c) => (
@@ -734,7 +740,7 @@ export function TeacherView({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
                   Açıklama / Öğretmen Notu
                 </label>
                 <textarea
@@ -742,27 +748,27 @@ export function TeacherView({
                   value={materialDesc}
                   onChange={(e) => setMaterialDesc(e.target.value)}
                   placeholder="Materyalle ilgili dikkat edilmesi gereken noktaları veya yönergeleri yazabilirsiniz..."
-                  className="w-full p-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none transition-all resize-none"
+                  className="w-full p-3.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none transition-all resize-none"
                 />
               </div>
 
               {/* Drag & Drop File Select Zone */}
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="p-5 rounded-xl border-2 border-dashed border-slate-200 hover:border-blue-400 bg-slate-50/60 hover:bg-blue-50/30 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-2"
+                className="p-5 rounded-xl border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/80 hover:bg-blue-50/40 transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-2"
               >
                 <FileUp className="w-7 h-7 text-blue-600" />
                 <div className="space-y-0.5">
-                  <p className="text-xs font-semibold text-slate-800">
+                  <p className="text-sm font-bold text-slate-900">
                     {selectedFile ? (
-                      <span className="text-blue-600 font-bold">✓ Seçilen Dosya: {selectedFile.name}</span>
+                      <span className="text-blue-700 font-extrabold">✓ Seçilen Dosya: {selectedFile.name}</span>
                     ) : (
                       <>
                         PDF veya Belge Seçmek İçin <span className="text-blue-600 underline">Tıklayın</span>
                       </>
                     )}
                   </p>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-xs text-slate-700 font-medium">
                     PDF, DOCX, PNG veya JPG formatları (Maks 10MB)
                   </p>
                 </div>
@@ -779,7 +785,7 @@ export function TeacherView({
                 <button
                   type="submit"
                   disabled={isUploadingMaterial || !materialTitle.trim()}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm shadow-sm shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <FileUp className="w-4 h-4" />
                   <span>Materyali Yayınla</span>
@@ -791,17 +797,17 @@ export function TeacherView({
           {/* B. Yayınlanmış Materyal ve Ödevler Listesi */}
           <div className="space-y-4">
             {/* Toolbar Filter Row */}
-            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-white border border-slate-300 shadow-sm">
               {/* Type Filter Pills */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setTypeFilter('all')}
                   className={cn(
-                    'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                    'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer',
                     typeFilter === 'all'
                       ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
                   )}
                 >
                   Tüm İçerikler ({state.assignments.length})
@@ -811,10 +817,10 @@ export function TeacherView({
                   type="button"
                   onClick={() => setTypeFilter('note')}
                   className={cn(
-                    'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                    'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer',
                     typeFilter === 'note'
                       ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
                   )}
                 >
                   Ders Notları & PDF ({state.assignments.filter((a) => a.type === 'note').length})
@@ -824,10 +830,10 @@ export function TeacherView({
                   type="button"
                   onClick={() => setTypeFilter('test')}
                   className={cn(
-                    'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                    'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer',
                     typeFilter === 'test'
                       ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
                   )}
                 >
                   İnteraktif Testler ({state.assignments.filter((a) => a.type === 'test').length})
@@ -837,10 +843,10 @@ export function TeacherView({
                   type="button"
                   onClick={() => setTypeFilter('book')}
                   className={cn(
-                    'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
+                    'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer',
                     typeFilter === 'book'
                       ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      : 'text-slate-700 hover:text-slate-950 hover:bg-slate-100'
                   )}
                 >
                   Yazılı Ödevler ({state.assignments.filter((a) => a.type === 'book').length})
@@ -850,23 +856,23 @@ export function TeacherView({
               {/* Target & Search */}
               <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                 <div className="relative flex-1 sm:w-56">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Ödev veya ünite ara..."
-                    className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-xs font-medium placeholder:text-slate-500 focus:outline-none"
                   />
                 </div>
 
                 {state.students.length > 0 && (
                   <div className="flex items-center gap-1.5">
-                    <Filter className="w-3.5 h-3.5 text-slate-400" />
+                    <Filter className="w-4 h-4 text-slate-500" />
                     <select
                       value={studentFilter}
                       onChange={(e) => setStudentFilter(e.target.value)}
-                      className="px-3 py-1.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs focus:outline-none"
+                      className="px-3 py-2 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-xs font-bold focus:outline-none"
                     >
                       <option value="all">Tüm Hedefler</option>
                       {state.students.map((s) => (
@@ -880,15 +886,15 @@ export function TeacherView({
               </div>
             </div>
 
-            {/* Assignments Grid (Clean EdTech Light Cards) */}
+            {/* Assignments Grid (Deskio High Contrast Cards) */}
             {filteredAssignments.length === 0 ? (
-              <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 shadow-sm space-y-3">
-                <FileText className="w-8 h-8 mx-auto text-slate-400" />
+              <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-300 shadow-sm space-y-3">
+                <FileText className="w-8 h-8 mx-auto text-slate-500" />
                 <div className="space-y-1 max-w-md mx-auto">
-                  <h3 className="font-heading font-semibold text-base text-slate-800">
+                  <h3 className="font-heading font-bold text-base sm:text-lg text-slate-950">
                     Yayınlanmış ödev veya materyal bulunamadı
                   </h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
+                  <p className="text-sm text-slate-700 leading-relaxed font-medium">
                     Öğrencileriniz için ders notları yükleyebilir, süreli testler veya yazılı ödev teslimleri oluşturabilirsiniz.
                   </p>
                 </div>
@@ -898,7 +904,7 @@ export function TeacherView({
                     setCreateModalPrefill(null);
                     setIsCreateModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all cursor-pointer shadow-xs"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm transition-all cursor-pointer shadow-xs"
                 >
                   <PlusCircle className="w-4 h-4" />
                   <span>Yeni Ödev Tanımla</span>
@@ -926,45 +932,45 @@ export function TeacherView({
                   return (
                     <div
                       key={a.id}
-                      className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all flex flex-col justify-between gap-4 group shadow-sm"
+                      className="p-5 rounded-2xl bg-white border border-slate-300 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between gap-4 group shadow-sm"
                     >
                       <div className="space-y-3">
                         {/* Top Badges */}
                         <div className="flex items-center justify-between gap-2">
                           <span
                             className={cn(
-                              'px-2.5 py-0.5 rounded-md text-[11px] font-semibold',
+                              'px-2.5 py-0.5 rounded-md text-xs font-bold',
                               isNote
-                                ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                                ? 'bg-sky-50 text-sky-800 border border-sky-300'
                                 : isTest
-                                ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                ? 'bg-purple-50 text-purple-800 border border-purple-300'
+                                : 'bg-emerald-50 text-emerald-800 border border-emerald-300'
                             )}
                           >
                             {isNote ? 'Ders Notu / PDF' : isTest ? 'İnteraktif Test' : 'Yazılı Ödev'}
                           </span>
 
-                          <span className="text-slate-400 text-xs">{timeAgo(a.createdAt)}</span>
+                          <span className="text-slate-600 font-semibold text-xs">{timeAgo(a.createdAt)}</span>
                         </div>
 
                         {/* Title & Unit */}
                         <div>
-                          <h3 className="font-heading font-semibold text-base text-slate-800 group-hover:text-blue-600 transition-colors line-clamp-1">
+                          <h3 className="font-heading font-extrabold text-lg text-slate-950 group-hover:text-blue-700 transition-colors line-clamp-1">
                             {a.title}
                           </h3>
-                          <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                          <div className="text-xs text-slate-700 font-semibold flex items-center gap-1 mt-0.5">
                             <span>Ünite:</span>
-                            <span className="text-slate-700 font-medium">{a.folder}</span>
+                            <span className="text-slate-950 font-bold">{a.folder}</span>
                             {a.classroomName && (
-                              <span className="ml-1 text-blue-600 font-medium">• {a.classroomName}</span>
+                              <span className="ml-1 text-blue-700 font-bold">• {a.classroomName}</span>
                             )}
                           </div>
                         </div>
 
                         {/* File Attachment Pill */}
                         {a.fileName && (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-700">
-                            <FileText className="w-3 h-3 text-blue-600" />
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-300 text-xs font-bold text-slate-900">
+                            <FileText className="w-3.5 h-3.5 text-blue-600" />
                             <span className="truncate max-w-[180px]">{a.fileName}</span>
                           </div>
                         )}
@@ -976,14 +982,14 @@ export function TeacherView({
                           const daysLeft = Math.ceil((a.deadline - now) / (1000 * 60 * 60 * 24));
                           return (
                             <div className={cn(
-                              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border',
+                              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border',
                               isOverdue
-                                ? 'bg-red-50 text-red-700 border-red-200'
+                                ? 'bg-red-50 text-red-800 border-red-300'
                                 : daysLeft <= 2
-                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                : 'bg-slate-50 text-slate-700 border-slate-200'
+                                ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                : 'bg-slate-50 text-slate-800 border-slate-300'
                             )}>
-                              <Clock className="w-3 h-3" />
+                              <Clock className="w-3.5 h-3.5" />
                               <span>
                                 {isOverdue
                                   ? 'Son tarih geçti'
@@ -999,23 +1005,23 @@ export function TeacherView({
 
                         {/* Description */}
                         {a.desc && (
-                          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                          <p className="text-xs sm:text-[13px] text-slate-800 font-medium line-clamp-2 leading-relaxed">
                             {a.desc}
                           </p>
                         )}
 
                         {/* Completion Progress Bar */}
                         {!isNote && (
-                          <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                            <div className="flex items-center justify-between text-xs text-slate-500">
+                          <div className="space-y-1.5 pt-2 border-t border-slate-200">
+                            <div className="flex items-center justify-between text-xs text-slate-700 font-bold">
                               <span>Teslimat:</span>
-                              <span className="font-semibold text-emerald-600">
+                              <span className="font-extrabold text-emerald-700">
                                 {completedCount} / {targetStudents.length || 1} Öğrenci
                               </span>
                             </div>
-                            <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                               <div
-                                className="h-full bg-emerald-500 rounded-full transition-all"
+                                className="h-full bg-emerald-600 rounded-full transition-all"
                                 style={{
                                   width: `${Math.min(
                                     100,
@@ -1033,13 +1039,13 @@ export function TeacherView({
                       </div>
 
                       {/* Card Action Buttons */}
-                      <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                      <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {isNote && (
                             <button
                               type="button"
                               onClick={() => setViewingNote(a)}
-                              className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1 transition-all cursor-pointer"
+                              className="px-3.5 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-300 text-slate-900 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                             >
                               <Eye className="w-3.5 h-3.5 text-blue-600" />
                               <span>Notu Oku</span>
@@ -1051,10 +1057,10 @@ export function TeacherView({
                               type="button"
                               onClick={() => setReviewAssignment(a)}
                               className={cn(
-                                'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border',
+                                'px-3.5 py-2 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer border',
                                 completedCount > 0
-                                  ? 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700'
-                                  : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+                                  ? 'bg-blue-50 hover:bg-blue-100 border-blue-300 text-blue-800'
+                                  : 'bg-slate-50 hover:bg-slate-100 border-slate-300 text-slate-800'
                               )}
                             >
                               <FileCheck className="w-3.5 h-3.5 text-blue-600" />
@@ -1066,10 +1072,10 @@ export function TeacherView({
                         <button
                           type="button"
                           onClick={() => handleDeleteAssignment(a.id, a.title)}
-                          className="p-1.5 rounded-lg bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-slate-400 hover:text-red-600 transition-all cursor-pointer"
+                          className="p-2 rounded-lg bg-slate-50 hover:bg-red-50 border border-slate-300 hover:border-red-300 text-slate-500 hover:text-red-700 transition-all cursor-pointer"
                           title="Ödevi Sil"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -1087,44 +1093,44 @@ export function TeacherView({
       {activeTab === 'gradebook' && (
         <div className="space-y-6 animate-fade">
           {/* Gradebook Header with Search */}
-          <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="p-5 rounded-2xl bg-white border border-slate-300 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <h3 className="font-heading font-bold text-base text-slate-800 flex items-center gap-2">
+              <h3 className="font-heading font-extrabold text-base sm:text-lg text-slate-950 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-blue-600" />
-                <span>Öğrenci Not Çizelgesi & Gelişim Takip Tablosu</span>
+                <span>Öğrenci Not Çizelgesi & Gelişim Takip Masası</span>
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs sm:text-sm text-slate-700 font-medium">
                 Tüm öğrencilerin test sonuçları, ödev tamamlama oranları ve genel başarı istatistikleri.
               </p>
             </div>
 
             <div className="relative sm:w-64">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={gradebookSearch}
                 onChange={(e) => setGradebookSearch(e.target.value)}
                 placeholder="Öğrenci adı ile ara..."
-                className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-xs font-bold placeholder:text-slate-500 focus:outline-none"
               />
             </div>
           </div>
 
           {/* Gradebook Table View (Clean EdTech Light Table) */}
           {gradebookData.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-200 shadow-sm space-y-2">
-              <Users className="w-8 h-8 mx-auto text-slate-400" />
-              <h4 className="font-semibold text-slate-800 text-sm">Kayıtlı öğrenci bulunamadı</h4>
-              <p className="text-xs text-slate-500">
+            <div className="p-12 text-center rounded-2xl bg-white border border-dashed border-slate-300 shadow-sm space-y-2">
+              <Users className="w-8 h-8 mx-auto text-slate-500" />
+              <h4 className="font-bold text-slate-950 text-sm sm:text-base">Kayıtlı öğrenci bulunamadı</h4>
+              <p className="text-xs sm:text-sm text-slate-700 font-medium">
                 Öğrenci ekleyerek veya sınıf katılım kodunu paylaşarak sınıf mevcudunu oluşturun.
               </p>
             </div>
           ) : (
-            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden space-y-3">
+            <div className="p-4 rounded-2xl bg-white border border-slate-300 shadow-sm overflow-hidden space-y-3">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="w-full text-left text-xs sm:text-sm border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-200 text-slate-600 font-semibold bg-slate-50">
+                    <tr className="border-b border-slate-300 text-slate-800 font-extrabold bg-slate-100">
                       <th className="p-3.5 rounded-l-xl">Öğrenci</th>
                       <th className="p-3.5">Kullanıcı Adı</th>
                       <th className="p-3.5">Ödev Teslimleri</th>
@@ -1134,39 +1140,39 @@ export function TeacherView({
                       <th className="p-3.5 text-right rounded-r-xl">İşlem & Karne</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-800">
+                  <tbody className="divide-y divide-slate-200 text-slate-950 font-medium">
                     {gradebookData.map(({ student, totalAssigned, completedAssignmentsCount, averageScore, completionRate, lastActivityDate }) => {
                       return (
-                        <tr key={student.id} className="hover:bg-slate-50/80 transition-colors">
+                        <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                           <td className="p-3.5">
                             <div className="flex items-center gap-3">
                               <div
-                                className="w-8 h-8 rounded-lg flex items-center justify-center font-heading font-bold text-xs text-white shadow-xs shrink-0"
+                                className="w-9 h-9 rounded-lg flex items-center justify-center font-heading font-extrabold text-xs text-white shadow-xs shrink-0"
                                 style={{ backgroundColor: student.color || '#2563eb' }}
                               >
                                 {initials(student.name)}
                               </div>
-                              <div className="font-semibold text-slate-800">{student.name}</div>
+                              <div className="font-bold text-slate-950 text-sm">{student.name}</div>
                             </div>
                           </td>
 
-                          <td className="p-3.5 font-mono text-slate-500">
+                          <td className="p-3.5 font-mono text-slate-700 font-semibold">
                             {student.username}
                           </td>
 
                           <td className="p-3.5">
-                            <span className="font-semibold text-slate-800">
+                            <span className="font-extrabold text-slate-950">
                               {completedAssignmentsCount}
                             </span>
-                            <span className="text-slate-400 font-normal"> / {totalAssigned}</span>
+                            <span className="text-slate-600 font-bold"> / {totalAssigned}</span>
                           </td>
 
                           <td className="p-3.5">
                             <div className="space-y-1 min-w-[90px]">
-                              <div className="text-[11px] font-semibold text-slate-700">
+                              <div className="text-xs font-bold text-slate-800">
                                 %{completionRate}
                               </div>
-                              <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                                 <div
                                   className="h-full bg-blue-600 rounded-full"
                                   style={{ width: `${completionRate}%` }}
@@ -1179,24 +1185,24 @@ export function TeacherView({
                             {averageScore !== null ? (
                               <span
                                 className={cn(
-                                  'px-2.5 py-1 rounded-md text-xs font-mono font-bold',
+                                  'px-3 py-1 rounded-md text-xs font-mono font-extrabold',
                                   averageScore >= 85
-                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
                                     : averageScore >= 70
-                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                    ? 'bg-blue-50 text-blue-800 border border-blue-300'
                                     : averageScore >= 50
-                                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                    : 'bg-red-50 text-red-700 border border-red-200'
+                                    ? 'bg-amber-50 text-amber-800 border border-amber-300'
+                                    : 'bg-red-50 text-red-800 border border-red-300'
                                 )}
                               >
                                 %{averageScore}
                               </span>
                             ) : (
-                              <span className="text-slate-400 text-xs font-mono">—</span>
+                              <span className="text-slate-500 text-xs font-mono font-bold">—</span>
                             )}
                           </td>
 
-                          <td className="p-3.5 text-slate-500 text-[11px]">
+                          <td className="p-3.5 text-slate-700 text-xs font-semibold">
                             {lastActivityDate ? timeAgo(lastActivityDate) : 'Henüz işlem yok'}
                           </td>
 
@@ -1204,7 +1210,7 @@ export function TeacherView({
                             <button
                               type="button"
                               onClick={() => setReportStudent(student)}
-                              className="px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-700 hover:text-blue-700 text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer"
+                              className="px-3.5 py-1.5 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-300 hover:border-blue-300 text-slate-900 hover:text-blue-700 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer"
                             >
                               <Award className="w-3.5 h-3.5 text-amber-500" />
                               <span>Gelişim Raporu</span>
@@ -1227,15 +1233,15 @@ export function TeacherView({
       {activeTab === 'students' && (
         <div className="space-y-6 animate-fade">
           {/* Classrooms Grid & Management */}
-          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-300 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <School className="w-5 h-5 text-blue-600" />
                 <div>
-                  <h3 className="font-heading font-semibold text-base text-slate-800">
+                  <h3 className="font-heading font-extrabold text-base sm:text-lg text-slate-950">
                     Sınıf Şubeleri ({state.classrooms.length})
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs sm:text-sm text-slate-700 font-medium">
                     Öğrencileriniz 6 haneli katılım kodu ile doğrudan ilgili sınıfa üye olabilir.
                   </p>
                 </div>
@@ -1244,18 +1250,18 @@ export function TeacherView({
               <button
                 type="button"
                 onClick={() => setIsCreateClassModalOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all cursor-pointer shadow-xs shadow-blue-600/20"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-xs shadow-blue-600/20"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4" />
                 <span>Yeni Sınıf Aç</span>
               </button>
             </div>
 
             {state.classrooms.length === 0 ? (
-              <div className="p-8 text-center rounded-xl bg-slate-50 border border-dashed border-slate-200 space-y-2">
-                <School className="w-7 h-7 mx-auto text-slate-400" />
-                <h4 className="font-medium text-slate-800 text-xs">Henüz oluşturulmuş bir sınıf yok</h4>
-                <p className="text-[11px] text-slate-500">
+              <div className="p-8 text-center rounded-xl bg-slate-50 border border-dashed border-slate-300 space-y-2">
+                <School className="w-7 h-7 mx-auto text-slate-500" />
+                <h4 className="font-bold text-slate-950 text-xs sm:text-sm">Henüz oluşturulmuş bir sınıf yok</h4>
+                <p className="text-xs text-slate-700 font-medium">
                   Yeni bir sınıf şubesi açarak öğrencilerinize katılım kodunu iletebilirsiniz.
                 </p>
               </div>
@@ -1264,18 +1270,18 @@ export function TeacherView({
                 {state.classrooms.map((c) => (
                   <div
                     key={c.id}
-                    className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3"
+                    className="p-4 rounded-xl bg-slate-50 border border-slate-300 flex items-center justify-between gap-3 shadow-2xs"
                   >
                     <div className="min-w-0 space-y-1">
-                      <h4 className="font-semibold text-xs text-slate-800 truncate">{c.name}</h4>
-                      {c.subject && <div className="text-[10px] text-slate-500">{c.subject}</div>}
+                      <h4 className="font-bold text-sm text-slate-950 truncate">{c.name}</h4>
+                      {c.subject && <div className="text-xs text-slate-700 font-semibold">{c.subject}</div>}
                       <div className="flex items-center gap-2 pt-1">
                         <button
                           type="button"
                           onClick={() => handleCopyCode(c.joinCode, c.id)}
-                          className="px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-200 text-[10px] font-mono text-emerald-700 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                          className="px-2.5 py-1 rounded bg-white hover:bg-slate-100 border border-slate-300 text-xs font-mono text-emerald-800 font-extrabold flex items-center gap-1 cursor-pointer transition-colors"
                         >
-                          {copiedCodeId === c.id ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-slate-400" />}
+                          {copiedCodeId === c.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
                           <span>{c.joinCode}</span>
                         </button>
                       </div>
@@ -1284,7 +1290,7 @@ export function TeacherView({
                     <button
                       type="button"
                       onClick={() => handleDeleteClass(c.id, c.name)}
-                      className="text-slate-400 hover:text-red-600 text-xs transition-colors p-1 cursor-pointer"
+                      className="text-slate-500 hover:text-red-700 text-xs transition-colors p-1.5 cursor-pointer"
                       title="Sınıfı Sil"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1296,15 +1302,15 @@ export function TeacherView({
           </section>
 
           {/* Student Roster Management */}
-          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <section className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-300 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-blue-600" />
                 <div>
-                  <h3 className="font-heading font-semibold text-base text-slate-800">
+                  <h3 className="font-heading font-extrabold text-base sm:text-lg text-slate-950">
                     Öğrenci Yönetim Listesi ({state.students.length})
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs sm:text-sm text-slate-700 font-medium">
                     Öğrencileri doğrudan sisteme ekleyebilir veya giriş şifrelerini görüntüleyebilirsiniz.
                   </p>
                 </div>
@@ -1312,14 +1318,14 @@ export function TeacherView({
             </div>
 
             {/* Add Student Form */}
-            <form onSubmit={handleAddStudent} className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <form onSubmit={handleAddStudent} className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 rounded-xl bg-slate-50 border border-slate-300">
               <div className="sm:col-span-5">
                 <input
                   type="text"
                   value={newStudentName}
                   onChange={(e) => setNewStudentName(e.target.value)}
                   placeholder="Öğrenci Adı Soyadı (örn: Zeynep Çelik)"
-                  className="w-full px-3.5 py-2 bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 focus:border-blue-500 rounded-xl text-slate-950 text-xs sm:text-sm font-medium placeholder:text-slate-500 focus:outline-none"
                 />
               </div>
 
@@ -1329,7 +1335,7 @@ export function TeacherView({
                   value={newStudentPass}
                   onChange={(e) => setNewStudentPass(e.target.value)}
                   placeholder="Erişim Şifresi (örn: 1234)"
-                  className="w-full px-3.5 py-2 bg-white border border-slate-200 focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 focus:border-blue-500 rounded-xl text-slate-950 text-xs sm:text-sm font-medium placeholder:text-slate-500 focus:outline-none"
                 />
               </div>
 
@@ -1337,9 +1343,9 @@ export function TeacherView({
                 <button
                   type="submit"
                   disabled={isAddingStudent || !newStudentName.trim() || !newStudentPass.trim()}
-                  className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
+                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-xs"
                 >
-                  <UserPlus className="w-3.5 h-3.5" />
+                  <UserPlus className="w-4 h-4" />
                   <span>Öğrenci Ekle</span>
                 </button>
               </div>
@@ -1350,20 +1356,20 @@ export function TeacherView({
               {filteredStudents.map((s) => (
                 <div
                   key={s.id}
-                  className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3"
+                  className="p-3.5 rounded-xl bg-slate-50 border border-slate-300 flex items-center justify-between gap-3 shadow-2xs"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center font-heading font-bold text-xs text-white shadow-xs shrink-0"
+                      className="w-9 h-9 rounded-lg flex items-center justify-center font-heading font-extrabold text-xs text-white shadow-xs shrink-0"
                       style={{ backgroundColor: s.color || '#2563eb' }}
                     >
                       {initials(s.name)}
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-semibold text-xs text-slate-800 truncate">{s.name}</h4>
-                      <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
-                        <span>Kullanıcı: <b className="font-mono text-slate-700">{s.username}</b></span>
-                        {s.password && <span>• Şifre: <b className="font-mono text-slate-700">{s.password}</b></span>}
+                      <h4 className="font-bold text-sm text-slate-950 truncate">{s.name}</h4>
+                      <div className="text-xs text-slate-700 font-semibold flex items-center gap-2 mt-0.5">
+                        <span>Kullanıcı: <b className="font-mono text-slate-950 font-bold">{s.username}</b></span>
+                        {s.password && <span>• Şifre: <b className="font-mono text-slate-950 font-bold">{s.password}</b></span>}
                       </div>
                     </div>
                   </div>
@@ -1371,7 +1377,7 @@ export function TeacherView({
                   <button
                     type="button"
                     onClick={() => handleDeleteStudent(s)}
-                    className="text-slate-400 hover:text-red-600 text-xs transition-colors p-1 cursor-pointer"
+                    className="text-slate-500 hover:text-red-700 text-xs transition-colors p-1.5 cursor-pointer"
                     title="Öğrenciyi Sil"
                   >
                     <Trash2 className="w-4 h-4" />

@@ -86,7 +86,7 @@ export async function verifyServerAuth(req: NextRequest): Promise<AuthVerificati
 
     return {
       authenticated: false,
-      error: 'Yetkisiz erişim: Bu API endpointini kullanmak için aktif ve geçerli bir EduFlow oturumu gereklidir.',
+      error: 'Yetkisiz erişim: Bu API endpointini kullanmak için aktif ve geçerli bir Deskio oturumu gereklidir.',
     };
   } catch (err: any) {
     return {

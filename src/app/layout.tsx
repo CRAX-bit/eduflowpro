@@ -11,19 +11,19 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'EduFlow Pro — Özel Ders & Sınıf Yönetim Platformu',
+  title: 'Deskio | Akıllı Ödev ve Sınıf Masası',
   description:
-    'Özel ders ve sınıf takibinde kaosu bitirin. Ders notları, interaktif süreli testler, fotoğraflı ödev teslimi ve yapay zeka gücüyle öğrenci başarısını katlayın.',
+    'Öğretmenler ve öğrenciler için yeni nesil akıllı ödev, ders notu ve sınıf çalışma masası. Yapay zeka destekli rubrik analizi ve başarı takibi.',
   keywords: [
+    'Deskio',
+    'Sınıf Masası',
+    'Ödev Masası',
     'Özel Ders',
-    'EduFlow Pro',
-    'Ders Takip',
     'Ödev Takip',
-    'Gemini AI',
+    'Yapay Zeka Notlama',
     'İnteraktif Test',
-    'Gelişim Karnesi',
   ],
-  authors: [{ name: 'EduFlow Pro Team' }],
+  authors: [{ name: 'Deskio Team' }],
 };
 
 export default function RootLayout({
@@ -33,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr" className="bg-[#f8fafc]">
-      <body className="antialiased bg-[#f8fafc] text-slate-800 selection:bg-blue-600 selection:text-white min-h-screen">
+      <body className="antialiased bg-[#f8fafc] text-slate-950 selection:bg-blue-600 selection:text-white min-h-screen">
         <EduFlowProvider>
           {children}
           <AuthModal />

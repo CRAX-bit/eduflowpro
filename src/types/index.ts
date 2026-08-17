@@ -17,6 +17,7 @@ export interface Question {
   question?: string;
   correctAnswer?: string;
   options?: string[]; // Optional multiple choice or hints
+  o?: string[]; // Alias for options
   explanation?: string;
 }
 
@@ -36,6 +37,12 @@ export interface Submission {
   fileName?: string;
   fileType?: string;
   fileSize?: number;
+  fileAttachment?: {
+    fileUrl: string;
+    fileName: string;
+    fileType?: string;
+    fileSize?: number;
+  };
   feedback?: string;
   finalScore?: number;
   aiScore?: number;

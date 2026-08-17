@@ -1,426 +1,408 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Question } from '@/types';
 import {
   X,
-  Sparkles,
-  CheckCircle2,
-  XCircle,
-  ArrowRight,
-  RotateCcw,
   Clock,
   Award,
-  Check,
-  HelpCircle,
-  BrainCircuit,
-  Zap,
-  ChevronRight,
+  CheckCircle2,
+  AlertCircle,
   TrendingUp,
+  Sparkles,
+  ChevronRight,
+  ChevronLeft,
+  RotateCcw,
+  BookOpen,
+  HelpCircle,
+  Zap,
+  Volume2,
 } from 'lucide-react';
-import { fmtTime, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 
-export interface QuizStudyModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title?: string;
-  folder?: string;
-  questions?: Question[];
-  timeLimit?: number; // in seconds
-  quiz?: {
+interface QuizStudyModalProps {
+  quiz: {
     id?: string;
     title: string;
     folder?: string;
     questions: Question[];
     timeLimit?: number;
   } | null;
-  onComplete: (answers: string[], scorePercent: number) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onComplete?: (answers: string[], scorePercent: number) => void;
 }
 
 export function QuizStudyModal({
+  quiz,
   isOpen,
   onClose,
-  title: propTitle,
-  folder: propFolder,
-  questions: propQuestions,
-  timeLimit: propTimeLimit,
-  quiz,
   onComplete,
 }: QuizStudyModalProps) {
-  const activeTitle = quiz?.title || propTitle || 'İnteraktif Soru Çözümü';
-  const activeFolder = quiz?.folder || propFolder || '';
-  const activeQuestions = quiz?.questions || propQuestions || [];
-  const activeTimeLimit = quiz?.timeLimit || propTimeLimit || 0;
-
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
-  const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [remainingTime, setRemainingTime] = useState<number>(activeTimeLimit);
-  const [startTime] = useState<number>(Date.now());
-  const [totalElapsedSeconds, setTotalElapsedSeconds] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<string[]>([]);
+  const [isFinished, setIsFinished] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [showExplanation, setShowExplanation] = useState(false);
 
+  const questions = quiz?.questions || [];
+  const totalQuestions = questions.length;
+  const currentQ = questions[currentIndex];
+
+  // Initialize state
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && quiz) {
       setCurrentIndex(0);
-      setSelectedAnswers({});
-      setIsAnswerRevealed(false);
-      setIsCompleted(false);
-      setRemainingTime(activeTimeLimit);
+      setUserAnswers(new Array(quiz.questions.length).fill(''));
+      setIsFinished(false);
+      setShowExplanation(false);
+      setTimeLeft(quiz.timeLimit || quiz.questions.length * 60);
     }
-  }, [isOpen, activeQuestions, activeTimeLimit]);
+  }, [isOpen, quiz]);
 
+  // Timer countdown
   useEffect(() => {
-    if (!isOpen || isCompleted || !activeTimeLimit || activeTimeLimit <= 0) return;
-
+    if (!isOpen || isFinished || timeLeft <= 0) return;
     const timer = setInterval(() => {
-      setRemainingTime((prev) => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleFinishQuiz();
+          handleFinish();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(timer);
-  }, [isOpen, isCompleted, activeTimeLimit]);
+  }, [isOpen, isFinished, timeLeft]);
 
-  const currentQ = activeQuestions[currentIndex];
-  const totalQuestions = activeQuestions.length;
-  const progressPercent = totalQuestions > 0 ? Math.round(((currentIndex + (isAnswerRevealed ? 1 : 0)) / totalQuestions) * 100) : 0;
-
-  const questionOptions = useMemo(() => {
-    if (!currentQ) return [];
-    if (currentQ.options && Array.isArray(currentQ.options) && currentQ.options.length >= 2) {
-      return currentQ.options;
-    }
-
-    const correct = (currentQ.a || currentQ.correctAnswer || '').trim();
-    if (!isNaN(Number(correct)) && correct !== '') {
-      const num = Number(correct);
-      return [
-        String(num),
-        String(num + 2),
-        String(Math.max(1, num - 2)),
-        String(num * 2),
-      ].sort(() => 0.5 - Math.random());
-    }
-
-    return [correct, 'Doğrulanamaz', 'Belirsiz', 'Farklı Değer'];
-  }, [currentQ]);
-
-  if (!isOpen || !currentQ) return null;
-
-  const currentSelectedAnswer = selectedAnswers[currentIndex];
-  const isCurrentCorrect = currentSelectedAnswer
-    ? currentSelectedAnswer.trim().toLowerCase() === currentQ.a.trim().toLowerCase()
-    : false;
+  if (!isOpen || !quiz || totalQuestions === 0) return null;
 
   const handleSelectOption = (option: string) => {
-    if (isAnswerRevealed) return;
-
-    const isCorrect = option.trim().toLowerCase() === currentQ.a.trim().toLowerCase();
-    setSelectedAnswers((prev) => ({ ...prev, [currentIndex]: option }));
-    setIsAnswerRevealed(true);
-
-    if (isCorrect) {
-      confetti({
-        particleCount: 40,
-        spread: 60,
-        origin: { y: 0.8 },
-        colors: ['#2563eb', '#10b981', '#6366f1'],
-      });
-    }
+    if (isFinished) return;
+    const newAnswers = [...userAnswers];
+    newAnswers[currentIndex] = option;
+    setUserAnswers(newAnswers);
+    setShowExplanation(true);
   };
 
-  const handleNextQuestion = () => {
+  const handleNext = () => {
+    setShowExplanation(false);
     if (currentIndex < totalQuestions - 1) {
-      setCurrentIndex((prev) => prev + 1);
-      setIsAnswerRevealed(!!selectedAnswers[currentIndex + 1]);
+      setCurrentIndex(currentIndex + 1);
     } else {
-      handleFinishQuiz();
+      handleFinish();
     }
   };
 
-  const handleFinishQuiz = () => {
-    const elapsed = Math.round((Date.now() - startTime) / 1000);
-    setTotalElapsedSeconds(elapsed);
+  const handlePrev = () => {
+    setShowExplanation(false);
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
 
+  const handleFinish = () => {
+    setIsFinished(true);
     let correctCount = 0;
-    const answerList: string[] = [];
-
-    activeQuestions.forEach((q, idx) => {
-      const ans = selectedAnswers[idx] || '';
-      answerList.push(ans);
-      if (ans.trim().toLowerCase() === q.a.trim().toLowerCase()) {
+    questions.forEach((q, idx) => {
+      if (userAnswers[idx] === q.a) {
         correctCount += 1;
       }
     });
-
     const percent = Math.round((correctCount / totalQuestions) * 100);
-    setIsCompleted(true);
 
     if (percent >= 70) {
       confetti({
         particleCount: 100,
-        spread: 80,
+        spread: 70,
         origin: { y: 0.6 },
-        colors: ['#2563eb', '#10b981', '#3b82f6', '#f59e0b'],
       });
     }
 
-    onComplete(answerList, percent);
+    if (onComplete) {
+      onComplete(userAnswers, percent);
+    }
   };
 
-  const correctTotal = Object.entries(selectedAnswers).filter(([idx, ans]) => {
-    const q = activeQuestions[Number(idx)];
-    return q && ans.trim().toLowerCase() === q.a.trim().toLowerCase();
-  }).length;
-  const scorePercent = totalQuestions > 0 ? Math.round((correctTotal / totalQuestions) * 100) : 0;
+  // Calculate score
+  let correctCount = 0;
+  let wrongCount = 0;
+  let emptyCount = 0;
+  questions.forEach((q, idx) => {
+    const ans = userAnswers[idx];
+    if (!ans) {
+      emptyCount += 1;
+    } else if (ans === q.a) {
+      correctCount += 1;
+    } else {
+      wrongCount += 1;
+    }
+  });
+  const scorePercent = Math.round((correctCount / totalQuestions) * 100);
+
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/50 backdrop-blur-xs animate-fade">
-      <div className="relative w-full max-w-3xl bg-white border border-slate-200/90 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Header */}
-        <header className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-4 shrink-0">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-3 md:p-4 bg-slate-900/40 backdrop-blur-xs animate-fade">
+      <div className="bg-white border border-slate-300 rounded-t-3xl sm:rounded-3xl w-full max-w-3xl max-h-[94vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+        {/* Top Header */}
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0">
-              <Zap className="w-4 h-4" />
+            <div className="w-10 h-10 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs shrink-0">
+              <Zap className="w-5 h-5 fill-current" />
             </div>
             <div className="min-w-0">
-              <h3 className="font-heading font-bold text-sm text-slate-900 truncate">
-                {activeTitle}
-              </h3>
-              <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-                {activeFolder && <span>{activeFolder} ·</span>}
-                <span>Quiz Odak Çalışma Modu</span>
-              </div>
+              <span className="text-xs font-extrabold uppercase tracking-wider text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                Deskio Odak Testi
+              </span>
+              <h2 className="font-heading font-extrabold text-base sm:text-lg text-slate-950 truncate mt-0.5">
+                {quiz.title}
+              </h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {activeTimeLimit > 0 && !isCompleted && (
-              <div className="px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-700 font-mono text-xs font-semibold flex items-center gap-1.5">
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Countdown Badge */}
+            {!isFinished && (
+              <div className={cn(
+                'flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-mono font-extrabold border',
+                timeLeft < 60
+                  ? 'bg-rose-50 border-rose-300 text-rose-700 animate-pulse'
+                  : 'bg-white border-slate-300 text-slate-900'
+              )}>
                 <Clock className="w-3.5 h-3.5" />
-                <span>{fmtTime(remainingTime)}</span>
+                <span>{formatTimer(timeLeft)}</span>
               </div>
             )}
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-400 hover:text-slate-700 transition-all cursor-pointer shadow-2xs"
-              title="Çıkış Yap"
+              className="p-2.5 rounded-xl bg-slate-100 text-slate-700 hover:text-slate-950 hover:bg-slate-200 transition-all cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95"
+              title="Testi Kapat"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
-        </header>
+        </div>
 
         {/* Progress Bar */}
-        {!isCompleted && (
-          <div className="w-full bg-slate-100 h-1.5 overflow-hidden">
+        {!isFinished && (
+          <div className="w-full bg-slate-100 h-2 shrink-0 overflow-hidden">
             <div
-              className="h-full bg-blue-600 transition-all duration-300 ease-out"
-              style={{ width: `${progressPercent}%` }}
+              className="bg-blue-600 h-full transition-all duration-300 rounded-r-full"
+              style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }}
             />
           </div>
         )}
 
-        {/* Body Content */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col justify-center bg-slate-50/40">
-          {!isCompleted ? (
-            <div className="max-w-2xl mx-auto w-full space-y-6 animate-fade">
-              {/* Question Count */}
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 font-semibold shadow-2xs">
+        {/* Modal Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 touch-scroll">
+          {!isFinished ? (
+            /* Active Question Card */
+            <div className="space-y-6 animate-fade">
+              {/* Question Meta & Number */}
+              <div className="flex items-center justify-between text-xs text-slate-700 font-bold pb-2 border-b border-slate-100">
+                <span className="text-blue-700">
                   Soru {currentIndex + 1} / {totalQuestions}
                 </span>
-                <span className="text-slate-500 font-medium">
-                  %{progressPercent} Tamamlandı
-                </span>
+                <span>{quiz.folder || 'Kazanım Testi'}</span>
               </div>
 
-              {/* Question Box */}
-              <div className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200/90 shadow-sm space-y-3">
-                <h4 className="font-heading font-bold text-base sm:text-xl text-slate-900 leading-relaxed">
+              {/* High Contrast Question Text */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-300 space-y-2 shadow-2xs">
+                <div className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+                  SORU METNİ:
+                </div>
+                <p className="font-heading font-extrabold text-base sm:text-lg text-slate-950 leading-relaxed">
                   {currentQ.q}
-                </h4>
+                </p>
               </div>
 
-              {/* Multiple Choice Options */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {questionOptions.map((option, idx) => {
-                  const letter = String.fromCharCode(65 + idx);
-                  const isSelected = currentSelectedAnswer === option;
-                  const isCorrectAnswer = option.trim().toLowerCase() === currentQ.a.trim().toLowerCase();
+              {/* 4 Options Grid (Single col on mobile, 2 col on tablet+) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                {(currentQ.options || currentQ.o || []).map((opt, idx) => {
+                  const isSelected = userAnswers[currentIndex] === opt;
+                  const isCorrect = opt === currentQ.a;
+                  const letter = String.fromCharCode(65 + idx); // A, B, C, D
 
-                  let cardStyle = 'bg-white hover:bg-slate-50 border-slate-200 hover:border-blue-300 text-slate-800 shadow-2xs';
-
-                  if (isAnswerRevealed) {
-                    if (isCorrectAnswer) {
-                      cardStyle = 'bg-emerald-50 border-emerald-500 text-emerald-800 font-semibold shadow-xs';
-                    } else if (isSelected && !isCorrectAnswer) {
-                      cardStyle = 'bg-rose-50 border-rose-500 text-rose-800 shadow-xs';
-                    } else {
-                      cardStyle = 'bg-slate-50 border-slate-200 text-slate-400 opacity-60';
-                    }
+                  let buttonStyle = 'bg-slate-50 hover:bg-white border-slate-300 text-slate-950 hover:border-blue-400 font-semibold';
+                  if (isSelected) {
+                    buttonStyle = isCorrect
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold shadow-xs'
+                      : 'bg-rose-50 border-rose-500 text-rose-950 font-bold shadow-xs';
                   }
 
                   return (
                     <button
                       key={idx}
-                      disabled={isAnswerRevealed}
-                      onClick={() => handleSelectOption(option)}
+                      type="button"
+                      onClick={() => handleSelectOption(opt)}
                       className={cn(
-                        'p-4 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3.5 group',
-                        cardStyle
+                        'p-3.5 sm:p-4 rounded-2xl border-2 text-left transition-all cursor-pointer flex items-start gap-3 min-h-[52px] active:scale-[0.98]',
+                        buttonStyle
                       )}
                     >
-                      <div
+                      <span
                         className={cn(
-                          'w-7 h-7 rounded-lg flex items-center justify-center font-mono font-bold text-xs shrink-0 transition-colors',
-                          isAnswerRevealed
-                            ? isCorrectAnswer
-                              ? 'bg-emerald-600 text-white'
-                              : isSelected
-                              ? 'bg-rose-600 text-white'
-                              : 'bg-slate-200 text-slate-500'
-                            : 'bg-slate-100 group-hover:bg-blue-600 text-slate-600 group-hover:text-white'
+                          'w-7 h-7 rounded-xl flex items-center justify-center font-extrabold text-xs shrink-0 mt-0.5 border shadow-2xs',
+                          isSelected
+                            ? isCorrect
+                              ? 'bg-emerald-600 border-emerald-600 text-white'
+                              : 'bg-rose-600 border-rose-600 text-white'
+                            : 'bg-white border-slate-300 text-slate-800'
                         )}
                       >
                         {letter}
-                      </div>
-
-                      <span className="text-xs sm:text-sm leading-snug flex-1">
-                        {option}
                       </span>
-
-                      {isAnswerRevealed && isCorrectAnswer && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      )}
-                      {isAnswerRevealed && isSelected && !isCorrectAnswer && (
-                        <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                      )}
+                      <span className="text-sm sm:text-[15px] leading-relaxed pt-0.5 break-words font-medium">
+                        {opt}
+                      </span>
                     </button>
                   );
                 })}
               </div>
 
-              {/* Feedback Bubble */}
-              {isAnswerRevealed && (
-                <div
-                  className={cn(
-                    'p-4 rounded-2xl border text-xs sm:text-sm leading-relaxed space-y-1.5 animate-fade shadow-2xs',
-                    isCurrentCorrect
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                      : 'bg-slate-50 border-slate-200 text-slate-800'
-                  )}
-                >
+              {/* Explanation Hint if selected */}
+              {userAnswers[currentIndex] && (
+                <div className={cn(
+                  'p-4 rounded-2xl border text-xs sm:text-sm font-medium leading-relaxed animate-fade space-y-1',
+                  userAnswers[currentIndex] === currentQ.a
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                    : 'bg-rose-50 border-rose-300 text-rose-950'
+                )}>
                   <div className="font-bold flex items-center gap-1.5">
-                    {isCurrentCorrect ? (
+                    {userAnswers[currentIndex] === currentQ.a ? (
                       <>
-                        <Check className="w-4 h-4 text-emerald-600" />
-                        <span className="text-emerald-700">Harika Çözüm! Doğru Yanıt.</span>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Harika! Doğru Cevap: {currentQ.a}</span>
                       </>
                     ) : (
                       <>
-                        <BrainCircuit className="w-4 h-4 text-blue-600" />
-                        <span className="text-slate-900">
-                          Doğru Cevap: <b className="text-emerald-600">{currentQ.a}</b>
-                        </span>
+                        <AlertCircle className="w-4 h-4 text-rose-600" />
+                        <span>Yanlış! Doğru Cevap: {currentQ.a}</span>
                       </>
                     )}
                   </div>
-
-                  <p className="text-xs text-slate-600">
-                    {currentQ.explanation
-                      ? currentQ.explanation
-                      : `Bu soru tipinde temel kavram tanımı ve konu mantığı gereği doğru yanıt "${currentQ.a}" olarak kabul edilir.`}
-                  </p>
-                </div>
-              )}
-
-              {/* Next Question Navigation */}
-              {isAnswerRevealed && (
-                <div className="pt-2 flex justify-end">
-                  <button
-                    onClick={handleNextQuestion}
-                    className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md shadow-blue-600/25 transition-all cursor-pointer"
-                  >
-                    <span>
-                      {currentIndex < totalQuestions - 1 ? 'Sonraki Soruya Geç' : 'Testi Tamamla'}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
                 </div>
               )}
             </div>
           ) : (
-            /* Completion Summary Card */
-            <div className="max-w-md mx-auto w-full text-center space-y-6 animate-fade">
-              <div className="space-y-2">
-                <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
-                  <Award className="w-8 h-8" />
-                </div>
-                <h3 className="font-heading font-extrabold text-2xl text-slate-900">
-                  {scorePercent >= 80 ? 'Harika Performans! 🌟' : scorePercent >= 50 ? 'Güzel Gayret! 👏' : 'Pratik Tamamlandı! 📚'}
+            /* Results Screen */
+            <div className="p-4 sm:p-6 text-center space-y-6 animate-fade">
+              <div className="w-16 h-16 rounded-3xl bg-blue-100 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto shadow-sm">
+                <Award className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-1">
+                <h3 className="font-heading font-extrabold text-2xl text-slate-950">
+                  Test Tamamlandı!
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-500">
-                  {activeTitle} çalışmasını başarıyla tamamladınız.
+                <p className="text-xs sm:text-sm text-slate-700 font-medium">
+                  Performans ve başarı analiziniz aşağıda özetlenmiştir.
                 </p>
               </div>
 
-              {/* Metric Highlights Grid */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1 shadow-2xs">
-                  <div className="text-[11px] text-slate-500">Başarı Oranı</div>
-                  <div className="font-heading font-extrabold text-xl text-blue-600">
+              {/* Score Metric Card */}
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-300 grid grid-cols-3 gap-2 text-center">
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-slate-700">DOĞRU</div>
+                  <div className="font-heading font-extrabold text-2xl text-emerald-700">
+                    {correctCount}
+                  </div>
+                </div>
+                <div className="space-y-1 border-x border-slate-200">
+                  <div className="text-xs font-bold text-slate-700">YANLIŞ</div>
+                  <div className="font-heading font-extrabold text-2xl text-rose-700">
+                    {wrongCount}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-slate-700">BAŞARI</div>
+                  <div className="font-heading font-extrabold text-2xl text-blue-700">
                     %{scorePercent}
                   </div>
                 </div>
-
-                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1 shadow-2xs">
-                  <div className="text-[11px] text-slate-500">Doğru / Toplam</div>
-                  <div className="font-heading font-extrabold text-xl text-slate-900">
-                    {correctTotal} / {totalQuestions}
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1 shadow-2xs">
-                  <div className="text-[11px] text-slate-500">Süre</div>
-                  <div className="font-heading font-extrabold text-xl text-indigo-600">
-                    {totalElapsedSeconds > 0 ? `${totalElapsedSeconds}s` : '—'}
-                  </div>
-                </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                <button
-                  onClick={() => {
-                    setCurrentIndex(0);
-                    setSelectedAnswers({});
-                    setIsAnswerRevealed(false);
-                    setIsCompleted(false);
-                  }}
-                  className="flex-1 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Tekrar Çöz (Pratik)</span>
-                </button>
-
-                <button
-                  onClick={onClose}
-                  className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/25 transition-all cursor-pointer"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Ödevlerime Dön</span>
-                </button>
+              {/* Detailed Breakdown */}
+              <div className="space-y-2 text-left pt-2">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider block">
+                  Soru Detayları:
+                </span>
+                <div className="space-y-2">
+                  {questions.map((q, idx) => {
+                    const ans = userAnswers[idx];
+                    const isRight = ans === q.a;
+                    return (
+                      <div
+                        key={idx}
+                        className={cn(
+                          'p-3.5 rounded-xl border text-xs sm:text-sm space-y-1',
+                          isRight
+                            ? 'bg-emerald-50/60 border-emerald-300 text-slate-950'
+                            : 'bg-rose-50/60 border-rose-300 text-slate-950'
+                        )}
+                      >
+                        <div className="flex items-center justify-between font-bold">
+                          <span>Soru {idx + 1}: {q.q}</span>
+                          <span className={isRight ? 'text-emerald-700 font-extrabold' : 'text-rose-700 font-extrabold'}>
+                            {isRight ? '✓ Doğru' : '✗ Yanlış'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-700">
+                          <span>Cevabınız: <b className="text-slate-950">{ans || '(Boş)'}</b></span>
+                          {!isRight && <span className="ml-3 text-emerald-800 font-bold">Doğru: {q.a}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Modal Footer Controls */}
+        <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+          {!isFinished ? (
+            <>
+              <button
+                type="button"
+                onClick={handlePrev}
+                disabled={currentIndex === 0}
+                className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 min-h-[44px] active:scale-95"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span>Önceki</span>
+              </button>
+
+              <div className="text-xs font-mono font-bold text-slate-700">
+                {currentIndex + 1} / {totalQuestions}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-extrabold flex items-center gap-1.5 shadow-sm shadow-blue-600/25 transition-all cursor-pointer min-h-[44px] active:scale-95"
+              >
+                <span>{currentIndex === totalQuestions - 1 ? 'Testi Bitir' : 'Sonraki Soru'}</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm transition-all cursor-pointer shadow-md min-h-[44px] active:scale-95"
+            >
+              Tamamla ve Kapat
+            </button>
           )}
         </div>
       </div>

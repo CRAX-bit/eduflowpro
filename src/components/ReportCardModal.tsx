@@ -57,31 +57,32 @@ export function ReportCardModal({ student, onClose }: ReportCardModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade overflow-y-auto print:p-0 print:bg-white">
-      <div className="w-full max-w-3xl bg-white border border-slate-200/90 rounded-3xl overflow-hidden relative shadow-2xl my-8 print:border-none print:shadow-none print:bg-white print:text-slate-900 print:my-0">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-fade overflow-y-auto print:p-0 print:bg-white">
+      <div className="w-full max-w-3xl bg-white border border-slate-300 rounded-t-3xl sm:rounded-3xl overflow-hidden relative shadow-2xl my-0 sm:my-8 max-h-[95vh] overflow-y-auto print:border-none print:shadow-none print:bg-white print:text-slate-950 print:my-0 touch-scroll">
         {/* Header Bar */}
-        <div className="p-6 bg-slate-50 border-b border-slate-200 flex items-center justify-between print:border-b-2 print:border-slate-200">
+        <div className="p-4 sm:p-6 bg-slate-50 border-b border-slate-200 flex items-center justify-between print:border-b-2 print:border-slate-200 shrink-0">
           <div>
-            <div className="text-xs uppercase font-bold tracking-widest text-blue-600">
-              Öğrenci Performans Raporu
+            <div className="text-xs uppercase font-extrabold tracking-widest text-blue-700">
+              Deskio Öğrenci Performans Raporu
             </div>
-            <h2 className="font-heading font-extrabold text-2xl text-slate-900">
+            <h2 className="font-heading font-extrabold text-xl sm:text-3xl text-slate-950">
               Gelişim Karnesi
             </h2>
           </div>
-          <div className="flex items-center gap-2 print:hidden">
+          <div className="flex items-center gap-2 print:hidden shrink-0">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer min-h-[44px] active:scale-95"
             >
               <Printer className="w-4 h-4" />
-              <span>Yazdır / PDF</span>
+              <span className="hidden sm:inline">Yazdır / PDF</span>
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
+              className="p-2.5 rounded-xl bg-slate-50 text-slate-700 hover:text-slate-950 hover:bg-slate-100 transition-all cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95"
+              title="Kapat"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -89,16 +90,16 @@ export function ReportCardModal({ student, onClose }: ReportCardModalProps) {
         {/* Student Info Card */}
         <div className="p-6 border-b border-slate-100 flex items-center gap-4 bg-white">
           <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center font-heading font-bold text-2xl text-white shadow-xs shrink-0"
+            className="w-16 h-16 rounded-2xl flex items-center justify-center font-heading font-extrabold text-2xl text-white shadow-xs shrink-0"
             style={{ backgroundColor: student.color || '#2563eb' }}
           >
             {initials(student.name)}
           </div>
           <div>
-            <h3 className="font-heading font-bold text-xl text-slate-900">
+            <h3 className="font-heading font-extrabold text-xl sm:text-2xl text-slate-950">
               {student.name}
             </h3>
-            <div className="text-xs text-slate-500 mt-0.5">
+            <div className="text-xs sm:text-sm text-slate-700 font-semibold mt-0.5">
               Rapor Tarihi:{' '}
               {new Date().toLocaleDateString('tr-TR', {
                 day: 'numeric',
@@ -111,68 +112,68 @@ export function ReportCardModal({ student, onClose }: ReportCardModalProps) {
 
         {/* KPI Metrics */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-6 border-b border-slate-100 bg-slate-50/50">
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/80 text-center shadow-2xs">
-            <div className="font-heading font-bold text-2xl" style={{ color: gradeColor }}>
+          <div className="p-4 rounded-2xl bg-white border border-slate-300 text-center shadow-2xs">
+            <div className="font-heading font-extrabold text-2xl sm:text-3xl" style={{ color: gradeColor }}>
               %{avgAccuracy}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">Ortalama Başarı</div>
+            <div className="text-xs text-slate-700 font-bold mt-1">Ortalama Başarı</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/80 text-center shadow-2xs">
-            <div className="font-heading font-bold text-2xl text-blue-600">
+          <div className="p-4 rounded-2xl bg-white border border-slate-300 text-center shadow-2xs">
+            <div className="font-heading font-extrabold text-2xl sm:text-3xl text-blue-700">
               {doneTests.length} / {tests.length}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">Çözülen Test</div>
+            <div className="text-xs text-slate-700 font-bold mt-1">Çözülen Test</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/80 text-center shadow-2xs">
-            <div className="font-heading font-bold text-2xl text-emerald-600">
+          <div className="p-4 rounded-2xl bg-white border border-slate-300 text-center shadow-2xs">
+            <div className="font-heading font-extrabold text-2xl sm:text-3xl text-emerald-700">
               {doneBooks.length} / {books.length}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">Ödev Teslimi</div>
+            <div className="text-xs text-slate-700 font-bold mt-1">Ödev Teslimi</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white border border-slate-200/80 text-center shadow-2xs">
-            <div className="font-heading font-bold text-2xl text-purple-600">
+          <div className="p-4 rounded-2xl bg-white border border-slate-300 text-center shadow-2xs">
+            <div className="font-heading font-extrabold text-2xl sm:text-3xl text-purple-700">
               {notes.length}
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">Ders Notu</div>
+            <div className="text-xs text-slate-700 font-bold mt-1">Ders Notu</div>
           </div>
         </div>
 
         {/* Overall Grade Banner */}
-        <div className="mx-6 my-5 p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-slate-700 font-medium">
+        <div className="mx-6 my-5 p-4 rounded-2xl bg-slate-50 border border-slate-300 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-slate-800 font-bold">
             <Award className="w-5 h-5" style={{ color: gradeColor }} />
             <span>Genel Başarı Değerlendirmesi:</span>
           </div>
-          <div className="font-heading font-bold text-lg" style={{ color: gradeColor }}>
+          <div className="font-heading font-extrabold text-lg sm:text-xl" style={{ color: gradeColor }}>
             {gradeLabel}
           </div>
         </div>
 
         {/* Test Breakdown Table */}
         <div className="p-6 space-y-3">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-slate-700 flex items-center gap-2">
+          <h4 className="text-xs uppercase font-bold tracking-wider text-slate-800 flex items-center gap-2">
             <FileText className="w-4 h-4 text-blue-600" />
             <span>Test Sonuçları Dökümü</span>
           </h4>
 
-          <div className="overflow-x-auto rounded-2xl border border-slate-200">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+          <div className="overflow-x-auto rounded-2xl border border-slate-300">
+            <table className="w-full text-left text-xs sm:text-sm">
+              <thead className="bg-slate-100 border-b border-slate-300 text-slate-800 font-extrabold">
                 <tr>
-                  <th className="p-3">Test Başlığı</th>
-                  <th className="p-3">Ünite / Konu</th>
-                  <th className="p-3">Başarı</th>
-                  <th className="p-3">Doğru / Toplam</th>
-                  <th className="p-3">Öğretmen Notu</th>
+                  <th className="p-3.5">Test Başlığı</th>
+                  <th className="p-3.5">Ünite / Konu</th>
+                  <th className="p-3.5">Başarı</th>
+                  <th className="p-3.5">Doğru / Toplam</th>
+                  <th className="p-3.5">Öğretmen Notu</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-800">
+              <tbody className="divide-y divide-slate-200 text-slate-950 font-medium">
                 {tests.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-4 text-center text-slate-400">
+                    <td colSpan={5} className="p-4 text-center text-slate-500 font-semibold">
                       Atanmış test bulunmuyor.
                     </td>
                   </tr>
@@ -182,30 +183,30 @@ export function ReportCardModal({ student, onClose }: ReportCardModalProps) {
                     if (!sub) {
                       return (
                         <tr key={t.id}>
-                          <td className="p-3 font-medium text-slate-900">{t.title}</td>
-                          <td className="p-3 text-slate-500">{t.folder}</td>
-                          <td className="p-3 text-slate-400">Çözülmedi</td>
-                          <td className="p-3 text-slate-400">—</td>
-                          <td className="p-3 text-slate-400">—</td>
+                          <td className="p-3.5 font-bold text-slate-950">{t.title}</td>
+                          <td className="p-3.5 text-slate-700 font-semibold">{t.folder}</td>
+                          <td className="p-3.5 text-slate-500 font-bold">Çözülmedi</td>
+                          <td className="p-3.5 text-slate-500">—</td>
+                          <td className="p-3.5 text-slate-500">—</td>
                         </tr>
                       );
                     }
                     const scoreColor =
                       sub.percent! >= 70
-                        ? 'text-emerald-600 font-bold'
+                        ? 'text-emerald-700 font-extrabold'
                         : sub.percent! >= 40
-                        ? 'text-amber-600 font-bold'
-                        : 'text-rose-600 font-bold';
+                        ? 'text-amber-700 font-extrabold'
+                        : 'text-rose-700 font-extrabold';
 
                     return (
                       <tr key={t.id}>
-                        <td className="p-3 font-medium text-slate-900">{t.title}</td>
-                        <td className="p-3 text-slate-600">{t.folder}</td>
-                        <td className={`p-3 ${scoreColor}`}>%{sub.percent}</td>
-                        <td className="p-3 text-slate-700">
+                        <td className="p-3.5 font-bold text-slate-950">{t.title}</td>
+                        <td className="p-3.5 text-slate-700 font-semibold">{t.folder}</td>
+                        <td className={`p-3.5 ${scoreColor}`}>%{sub.percent}</td>
+                        <td className="p-3.5 text-slate-800 font-bold">
                           {sub.correct} / {sub.total} {sub.timedOut && '⏱️'}
                         </td>
-                        <td className="p-3 italic text-blue-700">
+                        <td className="p-3.5 italic text-blue-800 font-semibold">
                           {sub.feedback || '—'}
                         </td>
                       </tr>
@@ -219,7 +220,7 @@ export function ReportCardModal({ student, onClose }: ReportCardModalProps) {
 
         {/* Working Units Tags */}
         <div className="px-6 pb-6 space-y-2">
-          <h4 className="text-xs uppercase font-bold tracking-wider text-slate-700 flex items-center gap-2">
+          <h4 className="text-xs uppercase font-bold tracking-wider text-slate-800 flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-blue-600" />
             <span>Çalışılan Konular</span>
           </h4>
@@ -227,7 +228,7 @@ export function ReportCardModal({ student, onClose }: ReportCardModalProps) {
             {uniqueFolders.map((f) => (
               <span
                 key={f}
-                className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 border border-blue-200 text-blue-700"
+                className="px-3.5 py-1 rounded-full text-xs font-bold bg-blue-50 border border-blue-200 text-blue-800"
               >
                 {f}
               </span>
@@ -236,8 +237,8 @@ export function ReportCardModal({ student, onClose }: ReportCardModalProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 text-center text-[11px] text-slate-500">
-          Bu karne EduFlow Pro sistemi tarafından otomatik oluşturulmuştur · {new Date().getFullYear()}
+        <div className="p-4 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-700 font-semibold">
+          Bu karne Deskio sistemi tarafından otomatik oluşturulmuştur · {new Date().getFullYear()}
         </div>
       </div>
     </div>

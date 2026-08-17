@@ -127,7 +127,7 @@ export function TeacherAiDrawer({
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
     {
       role: 'assistant',
-      text: 'Merhaba Hocam! Ben EduFlow Öğretmen Copilot asistanınızım. MEB müfredat kazanımları, ders planlama, çoktan seçmeli veya açık uçlu soru hazırlama ve pedagojik analizler için hazırım. Size nasıl yardımcı olabilirim? ✨',
+      text: 'Merhaba Hocam! Ben Deskio Öğretmen Copilot asistanınızım. MEB müfredat kazanımları, ders planlama, çoktan seçmeli veya açık uçlu soru hazırlama ve pedagojik analizler için hazırım. Size nasıl yardımcı olabilirim? ✨',
     },
   ]);
   const [chatInput, setChatInput] = useState('');
@@ -138,12 +138,12 @@ export function TeacherAiDrawer({
 
   // Auto scroll chat
   useEffect(() => {
-    if (activeTab === 'chat') {
+    if (activeTab === 'chat' && isOpen) {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [chatMessages, activeTab]);
+  }, [chatMessages, isChatLoading, activeTab, isOpen]);
 
-  // Handle ESC key to close
+  // ESC to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -154,30 +154,30 @@ export function TeacherAiDrawer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const currentLevelConfig = LEVEL_CONFIGS[quizGrade] || LEVEL_CONFIGS['Ortaokul / LGS (5-8. Sınıf)'];
+  const currentLevelConfig =
+    LEVEL_CONFIGS[quizGrade] || LEVEL_CONFIGS['Ortaokul / LGS (5-8. Sınıf)'];
 
-  // --- Chat Handler ---
-  const handleSendMessage = async (customText?: string) => {
+  // --- Handlers ---
+  const handleSendChat = async (e?: React.FormEvent, customText?: string) => {
+    if (e) e.preventDefault();
     const textToSend = (customText || chatInput).trim();
     if (!textToSend || isChatLoading) return;
 
-    setChatMessages((prev) => [...prev, { role: 'user', text: textToSend }]);
-    if (!customText) setChatInput('');
+    const userMsg = { role: 'user' as const, text: textToSend };
+    const updated = [...chatMessages, userMsg];
+    setChatMessages(updated);
+    setChatInput('');
     setIsChatLoading(true);
 
     try {
-      const headers = await getAuthHeaders(state.session);
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers,
         body: JSON.stringify({
           action: 'chat_assistant',
           message: textToSend,
-          role: 'teacher',
-          history: chatMessages.slice(-6).map((m) => ({
-            role: m.role,
-            text: m.text,
-          })),
+          history: updated.slice(-6),
         }),
       });
 
@@ -187,37 +187,44 @@ export function TeacherAiDrawer({
       } else {
         setChatMessages((prev) => [
           ...prev,
-          { role: 'assistant', text: data.error || 'Yanıt üretilirken bir sorun oluştu. Lütfen tekrar deneyiniz.' },
+          {
+            role: 'assistant',
+            text: '⚠️ ' + (data.error || 'Yanıt üretilirken bir sorun oluştu. Lütfen tekrar deneyiniz.'),
+          },
         ]);
       }
     } catch (err) {
       setChatMessages((prev) => [
         ...prev,
-        { role: 'assistant', text: 'Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol ediniz.' },
+        {
+          role: 'assistant',
+          text: '⚠️ Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol ediniz.',
+        },
       ]);
     } finally {
       setIsChatLoading(false);
     }
   };
 
-  // --- Quiz Generator Handler ---
-  const handleGenerateQuiz = async () => {
-    if (!quizTopic.trim()) {
-      showToast('Lütfen soru konusu veya kazanım başlığı giriniz.', 'warn');
+  const handleGenerateQuiz = async (topicToUse?: string) => {
+    const topic = (topicToUse || quizTopic).trim();
+    if (!topic) {
+      showToast('Lütfen bir konu başlığı giriniz veya önerilenlerden seçiniz.', 'warn');
       return;
     }
+    setQuizTopic(topic);
     setIsQuizLoading(true);
     setGeneratedQuiz(null);
 
     try {
-      const headers = await getAuthHeaders(state.session);
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers,
         body: JSON.stringify({
           action: 'generate_quiz',
-          topic: quizTopic.trim(),
-          count: quizCount,
+          topic,
+          count: Number(quizCount),
           grade: quizGrade,
         }),
       });
@@ -227,7 +234,7 @@ export function TeacherAiDrawer({
         setGeneratedQuiz(data.data);
         showToast(`${quizCount} soruluk test başarıyla oluşturuldu!`, 'success');
       } else {
-        showToast(data.error || 'Soru oluşturulamadı. Lütfen tekrar deneyiniz.', 'error');
+        showToast(data.error || 'Test oluşturulamadı. Lütfen tekrar deneyiniz.', 'error');
       }
     } catch (err) {
       showToast('Bağlantı hatası oluştu.', 'error');
@@ -236,17 +243,18 @@ export function TeacherAiDrawer({
     }
   };
 
-  // --- Note Generator Handler ---
-  const handleGenerateNote = async () => {
-    if (!noteTopic.trim()) {
+  const handleGenerateNote = async (topicToUse?: string) => {
+    const topic = (topicToUse || noteTopic).trim();
+    if (!topic) {
       showToast('Lütfen ders notu konusu giriniz.', 'warn');
       return;
     }
+    setNoteTopic(topic);
     setIsNoteLoading(true);
     setGeneratedNote(null);
 
     try {
-      const headers = await getAuthHeaders(state.session);
+      const headers = await getAuthHeaders();
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers,
@@ -281,19 +289,19 @@ export function TeacherAiDrawer({
   return (
     <>
       {/* 1. Fixed Floating Trigger Button (Bottom-Right) */}
-      <div className="fixed bottom-6 right-6 z-40 print:hidden">
+      <div className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40 print:hidden">
         <button
           type="button"
           onClick={onToggle || (() => {})}
-          className="group relative flex items-center gap-2.5 px-5 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xl shadow-blue-600/30 hover:shadow-blue-600/40 border border-blue-400/30 transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xl"
-          title="EduFlow AI Araçlarını Aç"
+          className="group relative flex items-center gap-2.5 px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-blue-600/30 hover:shadow-blue-600/40 border border-blue-400/30 transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xl min-h-[48px]"
+          title="Deskio AI Araçlarını Aç"
         >
           <div className="relative">
             <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-blue-200 transition-transform group-hover:rotate-12" />
             <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400" />
           </div>
-          <span className="font-heading tracking-wide">✨ EduFlow AI Araçları</span>
+          <span className="font-heading tracking-wide">✨ Deskio AI Araçları</span>
         </button>
       </div>
 
@@ -305,29 +313,29 @@ export function TeacherAiDrawer({
         />
       )}
 
-      {/* 3. Slide-Over Drawer Container (Clean EdTech Light Theme) */}
+      {/* 3. Slide-Over Drawer Container (Full-screen on Mobile, Sheet on Desktop) */}
       <div
         className={cn(
-          'fixed inset-y-0 right-0 z-50 w-full sm:w-[540px] md:w-[580px] bg-white border-l border-slate-200/90 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out print:hidden',
+          'fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 z-50 w-full sm:w-[540px] md:w-[580px] bg-white sm:border-l border-slate-300 shadow-2xl flex flex-col transform transition-transform duration-300 ease-in-out print:hidden',
           isOpen ? 'translate-x-0' : 'translate-x-full'
         )}
       >
         {/* Drawer Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs">
+        <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center text-blue-600 shadow-xs shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="font-heading font-bold text-base text-slate-900">
-                  EduFlow AI Copilot
+                <h2 className="font-heading font-extrabold text-base sm:text-lg text-slate-950 truncate">
+                  Deskio Öğretmen AI Copilot
                 </h2>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 border border-blue-200 text-blue-700">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-50 border border-blue-200 text-blue-700 shrink-0">
                   Öğretmen
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-xs text-slate-700 font-medium truncate">
                 Gemini 2.5 Pro • Müfredat, Soru & Planlama Asistanı
               </p>
             </div>
@@ -336,201 +344,168 @@ export function TeacherAiDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-900 transition-all cursor-pointer shadow-xs"
+            className="p-2.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 hover:text-slate-950 transition-all cursor-pointer shadow-xs min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95 shrink-0"
             title="Çekmeceyi Kapat"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Tab Navigation Switcher */}
-        <div className="p-3 border-b border-slate-200 bg-white">
-          <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200/80">
+        {/* Tab Switcher (Chat vs Generator) */}
+        <div className="p-3 border-b border-slate-200 bg-white shrink-0">
+          <div className="flex gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-xl">
             <button
               type="button"
               onClick={() => setActiveTab('chat')}
               className={cn(
-                'flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer min-h-[44px] active:scale-95',
                 activeTab === 'chat'
-                  ? 'bg-blue-600 text-white shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                  ? 'bg-blue-600 text-white font-extrabold shadow-xs'
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/50'
               )}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Chat Asistanı</span>
+              <MessageSquare className="w-4 h-4" />
+              <span>Copilot Sohbet</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTab('generator')}
               className={cn(
-                'flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+                'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer min-h-[44px] active:scale-95',
                 activeTab === 'generator'
-                  ? 'bg-blue-600 text-white shadow-xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                  ? 'bg-blue-600 text-white font-extrabold shadow-xs'
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/50'
               )}
             >
-              <Sliders className="w-3.5 h-3.5" />
-              <span>Sınav & İçerik Üretici</span>
+              <FileQuestion className="w-4 h-4" />
+              <span>Sınav & Soru Üretici</span>
             </button>
           </div>
         </div>
 
-        {/* Drawer Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-          {/* ============================================================ */}
-          {/* TAB 1: CHAT ASİSTANI                                         */}
-          {/* ============================================================ */}
+        {/* Drawer Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 touch-scroll">
+          {/* TAB 1: COPILOT CHAT */}
           {activeTab === 'chat' && (
-            <div className="flex flex-col h-full space-y-4">
-              {/* Prompt Suggestions */}
-              <div className="space-y-1.5">
-                <span className="text-[11px] font-semibold text-slate-500">
-                  Hızlı Öneri İstekleri:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {TEACHER_PROMPTS.map((prompt, idx) => (
+            <div className="space-y-4 flex flex-col h-full justify-between">
+              {/* Messages Feed */}
+              <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+                {chatMessages.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      'p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed max-w-[90%] space-y-1.5 shadow-2xs animate-fade',
+                      m.role === 'user'
+                        ? 'ml-auto bg-blue-600 text-white font-medium'
+                        : 'bg-slate-50 border border-slate-300 text-slate-950 font-medium'
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200/40 pb-1 text-[11px] font-bold opacity-80">
+                      <span>{m.role === 'user' ? 'Siz' : 'Deskio Copilot'}</span>
+                      {m.role === 'assistant' && (
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(m.text, `chat-${idx}`)}
+                          className="hover:text-blue-600 transition-colors cursor-pointer p-1"
+                          title="Kopyala"
+                        >
+                          {copiedId === `chat-${idx}` ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5 text-slate-500" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <div className="whitespace-pre-wrap font-sans leading-relaxed">{m.text}</div>
+                  </div>
+                ))}
+
+                {isChatLoading && (
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-300 text-slate-800 text-xs sm:text-sm flex items-center gap-2 font-medium w-fit animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span>Deskio Copilot yanıt hazırlıyor...</span>
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Fast Prompt Suggestions */}
+              <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                <span className="text-[11px] font-bold text-slate-700">Hızlı Sorular:</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {TEACHER_PROMPTS.map((p, i) => (
                     <button
-                      key={idx}
+                      key={i}
                       type="button"
-                      onClick={() => handleSendMessage(prompt)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-[11px] font-medium transition-all text-left cursor-pointer"
+                      onClick={() => handleSendChat(undefined, p)}
+                      className="p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-300 hover:border-blue-300 text-left text-xs font-semibold text-slate-800 hover:text-blue-800 transition-all cursor-pointer line-clamp-1 min-h-[40px] flex items-center active:scale-[0.98]"
                     >
-                      {prompt}
+                      {p}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Chat Message Stream */}
-              <div className="flex-1 space-y-3 min-h-[260px] max-h-[460px] overflow-y-auto pr-1">
-                {chatMessages.map((m, idx) => (
-                  <div
-                    key={idx}
-                    className={cn(
-                      'p-3.5 rounded-2xl text-xs leading-relaxed max-w-[90%] space-y-1.5 shadow-xs',
-                      m.role === 'user'
-                        ? 'ml-auto bg-blue-600 text-white font-medium'
-                        : 'bg-slate-50 border border-slate-200 text-slate-800'
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-200/40 pb-1 text-[10px] opacity-75">
-                      <span>{m.role === 'user' ? 'Siz' : 'EduFlow AI Öğretmen Asistanı'}</span>
-                      {m.role === 'assistant' && (
-                        <button
-                          type="button"
-                          onClick={() => copyToClipboard(m.text, `chat-${idx}`)}
-                          className="hover:text-blue-600 transition-colors cursor-pointer"
-                          title="Yanıtı Kopyala"
-                        >
-                          {copiedId === `chat-${idx}` ? (
-                            <Check className="w-3 h-3 text-emerald-600" />
-                          ) : (
-                            <Copy className="w-3 h-3 text-slate-400" />
-                          )}
-                        </button>
-                      )}
-                    </div>
-                    <div className="whitespace-pre-wrap">{m.text}</div>
-                  </div>
-                ))}
-
-                {isChatLoading && (
-                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex items-center gap-2 w-fit shadow-xs">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
-                    <span>Öğretmen asistanı yanıt hazırlıyor...</span>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
               {/* Chat Input Bar */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendMessage();
-                }}
-                className="pt-2 flex items-center gap-2"
-              >
+              <form onSubmit={(e) => handleSendChat(e)} className="flex gap-2 pt-2">
                 <input
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Sorunuzu veya talebinizi yazın (örn: 8. sınıf fotosentez için 3 soru hazırla)..."
-                  className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
+                  placeholder="Müfredat, soru veya ders planı hakkında sor..."
+                  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-xs sm:text-sm font-medium placeholder:text-slate-500 focus:outline-none min-h-[44px]"
                 />
                 <button
                   type="submit"
-                  disabled={!chatInput.trim() || isChatLoading}
-                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-xs shadow-blue-600/20"
+                  disabled={isChatLoading || !chatInput.trim()}
+                  className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shadow-md shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50 min-h-[44px] active:scale-95 shrink-0"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Gönder</span>
+                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline">Gönder</span>
                 </button>
               </form>
             </div>
           )}
 
-          {/* ============================================================ */}
-          {/* TAB 2: SINAV & İÇERİK YAPILANDIRICI                          */}
-          {/* ============================================================ */}
+          {/* TAB 2: EXAM & QUESTION GENERATOR */}
           {activeTab === 'generator' && (
             <div className="space-y-5 animate-fade">
-              {/* Generator SubMode Switch */}
-              <div className="flex items-center gap-2 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs">
+              {/* Sub Mode Pill (Quiz vs Note) */}
+              <div className="flex gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setGeneratorMode('quiz')}
                   className={cn(
-                    'flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5',
+                    'flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer min-h-[40px] active:scale-95',
                     generatorMode === 'quiz'
-                      ? 'bg-white text-blue-600 shadow-xs font-bold border border-slate-200/80'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-blue-600 text-white font-extrabold shadow-xs'
+                      : 'text-slate-700 hover:text-slate-950'
                   )}
                 >
-                  <FileQuestion className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Soru & Test Üretici</span>
+                  📝 Çoktan Seçmeli Test
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setGeneratorMode('note')}
                   className={cn(
-                    'flex-1 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5',
+                    'flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer min-h-[40px] active:scale-95',
                     generatorMode === 'note'
-                      ? 'bg-white text-blue-600 shadow-xs font-bold border border-slate-200/80'
-                      : 'text-slate-600 hover:text-slate-900'
+                      ? 'bg-blue-600 text-white font-extrabold shadow-xs'
+                      : 'text-slate-700 hover:text-slate-950'
                   )}
                 >
-                  <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Ders Özeti & Not Üretici</span>
+                  📖 Ders Notu & Özeti
                 </button>
               </div>
 
-              {/* MODE 1: QUIZ GENERATOR */}
+              {/* Form 1: Quiz Generator */}
               {generatorMode === 'quiz' && (
                 <div className="space-y-4">
-                  {/* Grade Level Selector */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Hedef Eğitim Seviyesi
-                    </label>
-                    <select
-                      value={quizGrade}
-                      onChange={(e) => setQuizGrade(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs focus:outline-none"
-                    >
-                      {Object.keys(LEVEL_CONFIGS).map((lvl) => (
-                        <option key={lvl} value={lvl}>
-                          {lvl}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Topic Input */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
                       Kazanım / Konu Başlığı
                     </label>
                     <input
@@ -538,82 +513,90 @@ export function TeacherAiDrawer({
                       value={quizTopic}
                       onChange={(e) => setQuizTopic(e.target.value)}
                       placeholder={currentLevelConfig.placeholder}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none min-h-[44px]"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                        Eğitim Seviyesi
+                      </label>
+                      <select
+                        value={quizGrade}
+                        onChange={(e) => setQuizGrade(e.target.value)}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-xs sm:text-sm font-bold focus:outline-none min-h-[44px]"
+                      >
+                        {Object.keys(LEVEL_CONFIGS).map((lvl) => (
+                          <option key={lvl} value={lvl}>
+                            {lvl}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+                        Soru Adedi
+                      </label>
+                      <select
+                        value={quizCount}
+                        onChange={(e) => setQuizCount(Number(e.target.value))}
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-xs sm:text-sm font-bold focus:outline-none min-h-[44px]"
+                      >
+                        <option value={3}>3 Soru (Hızlı Tarama)</option>
+                        <option value={5}>5 Soru (Standart Test)</option>
+                        <option value={8}>8 Soru (Pekiştirme)</option>
+                        <option value={10}>10 Soru (Deneme)</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Suggestions Chips */}
                   <div className="space-y-1.5">
-                    <span className="text-[11px] font-semibold text-slate-500">
-                      Önerilen Konu Başlıkları:
-                    </span>
+                    <span className="text-xs font-bold text-slate-800">Önerilen Konu Başlıkları:</span>
                     <div className="flex flex-wrap gap-1.5">
-                      {currentLevelConfig.suggestions.map((sug, idx) => (
+                      {currentLevelConfig.suggestions.map((s, idx) => (
                         <button
                           key={idx}
                           type="button"
-                          onClick={() => setQuizTopic(sug)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-slate-700 hover:text-blue-700 text-[11px] transition-all cursor-pointer text-left"
+                          onClick={() => setQuizTopic(s)}
+                          className="px-3 py-2 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-300 hover:border-blue-400 text-slate-800 hover:text-blue-800 text-xs font-semibold transition-all cursor-pointer min-h-[38px] active:scale-95"
                         >
-                          {sug}
+                          {s}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* Soru Sayısı */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                      Soru Sayısı: <b className="text-blue-600 font-mono">{quizCount} Soru</b>
-                    </label>
-                    <div className="flex items-center gap-2">
-                      {[3, 5, 8, 10].map((cnt) => (
-                        <button
-                          key={cnt}
-                          type="button"
-                          onClick={() => setQuizCount(cnt)}
-                          className={cn(
-                            'flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer',
-                            quizCount === cnt
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
-                          )}
-                        >
-                          {cnt} Soru
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Generate Button */}
                   <button
                     type="button"
-                    onClick={handleGenerateQuiz}
+                    onClick={() => handleGenerateQuiz()}
                     disabled={isQuizLoading || !quizTopic.trim()}
-                    className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50 min-h-[48px] active:scale-95"
                   >
                     {isQuizLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>MEB Müfredatına Uygun Soru Üretiliyor...</span>
+                        <span>Sorular Hazırlanıyor...</span>
                       </>
                     ) : (
                       <>
                         <Sparkles className="w-4 h-4" />
-                        <span>Yapay Zeka ile Soruları Hazırla</span>
+                        <span>Deskio AI ile Soruları Hazırla</span>
                       </>
                     )}
                   </button>
 
-                  {/* Generated Quiz Result Area */}
+                  {/* Generated Quiz Result */}
                   {generatedQuiz && (
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-blue-200 space-y-3.5 animate-fade shadow-xs">
-                      <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-blue-200 space-y-4 shadow-xs">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-200 gap-2">
                         <div>
-                          <h4 className="font-heading font-bold text-sm text-slate-900">
+                          <h4 className="font-heading font-extrabold text-sm sm:text-base text-slate-950">
                             {generatedQuiz.title || quizTopic}
                           </h4>
-                          <span className="text-[11px] text-blue-600 font-semibold">
+                          <span className="text-xs text-blue-800 font-bold">
                             {generatedQuiz.questions?.length || 0} Soru Hazırlandı
                           </span>
                         </div>
@@ -626,29 +609,28 @@ export function TeacherAiDrawer({
                               type: 'test',
                               title: generatedQuiz.title || quizTopic,
                               folder: generatedQuiz.folder || quizTopic,
-                              desc: generatedQuiz.desc || `${quizTopic} konusu için AI tarafından oluşturulan test.`,
+                              desc: generatedQuiz.desc || '',
                               timeLimit: (generatedQuiz.questions?.length || 3) * 60,
                               questions: generatedQuiz.questions,
                             });
                           }}
-                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer min-h-[40px] active:scale-95 shrink-0"
                         >
                           <PlusCircle className="w-3.5 h-3.5" />
                           <span>Ödev Olarak Yayınla</span>
                         </button>
                       </div>
 
-                      {/* Question Preview List */}
-                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                      <div className="space-y-2.5">
                         {generatedQuiz.questions?.map((q: Question, i: number) => (
                           <div
                             key={i}
-                            className="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1 shadow-2xs"
+                            className="p-3.5 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm space-y-1.5 shadow-2xs font-medium"
                           >
-                            <div className="font-semibold text-slate-900">
+                            <div className="font-bold text-slate-950">
                               Soru {i + 1}: {q.q}
                             </div>
-                            <div className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded w-fit">
+                            <div className="text-xs text-emerald-800 font-extrabold bg-emerald-50 px-2.5 py-1 rounded w-fit border border-emerald-200">
                               Doğru Cevap: {q.a}
                             </div>
                           </div>
@@ -659,27 +641,27 @@ export function TeacherAiDrawer({
                 </div>
               )}
 
-              {/* MODE 2: NOTE GENERATOR */}
+              {/* Form 2: Note Generator */}
               {generatorMode === 'note' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
                       Ders / Konu Başlığı
                     </label>
                     <input
                       type="text"
                       value={noteTopic}
                       onChange={(e) => setNoteTopic(e.target.value)}
-                      placeholder="Örn: 9. Sınıf Fotosentez ve Solunum Özeti"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-slate-900 text-xs placeholder:text-slate-400 focus:outline-none"
+                      placeholder="Örn: 9. Sınıf Fotosentez ve Hücresel Solunum Özeti"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none min-h-[44px]"
                     />
                   </div>
 
                   <button
                     type="button"
-                    onClick={handleGenerateNote}
+                    onClick={() => handleGenerateNote()}
                     disabled={isNoteLoading || !noteTopic.trim()}
-                    className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/25 transition-all cursor-pointer disabled:opacity-50 min-h-[48px] active:scale-95"
                   >
                     {isNoteLoading ? (
                       <>
@@ -689,15 +671,15 @@ export function TeacherAiDrawer({
                     ) : (
                       <>
                         <BookOpen className="w-4 h-4" />
-                        <span>Ders Notu ve Özeti Oluştur</span>
+                        <span>Deskio AI ile Ders Notu ve Özeti Oluştur</span>
                       </>
                     )}
                   </button>
 
                   {generatedNote && (
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-blue-200 space-y-3 animate-fade shadow-xs">
-                      <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                        <h4 className="font-heading font-bold text-sm text-slate-900 truncate max-w-[240px]">
+                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-blue-200 space-y-4 shadow-xs">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-200 gap-2">
+                        <h4 className="font-heading font-extrabold text-sm sm:text-base text-slate-950">
                           {generatedNote.title || noteTopic}
                         </h4>
 
@@ -712,14 +694,14 @@ export function TeacherAiDrawer({
                               desc: generatedNote.content || '',
                             });
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                          className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer min-h-[40px] active:scale-95 shrink-0"
                         >
                           <PlusCircle className="w-3.5 h-3.5" />
-                          <span>Materyal Olarak Yayınla</span>
+                          <span>Ders Notu Olarak Yayınla</span>
                         </button>
                       </div>
 
-                      <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed max-h-56 overflow-y-auto whitespace-pre-wrap">
+                      <div className="p-4 rounded-xl bg-white border border-slate-300 text-xs sm:text-sm text-slate-950 font-medium leading-relaxed whitespace-pre-wrap max-h-72 overflow-y-auto shadow-2xs">
                         {generatedNote.content}
                       </div>
                     </div>
