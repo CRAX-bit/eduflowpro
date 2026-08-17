@@ -983,6 +983,7 @@ export function TeacherView({
           onClose={() => {
             setIsCreateModalOpen(false);
             setCreateModalPrefill(null);
+            setActiveTab('assignments');
           }}
           prefillData={createModalPrefill}
         />

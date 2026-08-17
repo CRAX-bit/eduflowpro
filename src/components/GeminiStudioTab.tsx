@@ -28,6 +28,62 @@ interface GeminiStudioTabProps {
   onOpenCreateAssignmentModal: (prefill: any) => void;
 }
 
+// Seviyeye Göre Konu ve Placeholder Eşleme Haritası
+const LEVEL_CONFIGS: Record<
+  string,
+  {
+    placeholder: string;
+    suggestions: string[];
+  }
+> = {
+  'İlkokul (1-4. Sınıf)': {
+    placeholder: 'Örn: Doğal Sayılarla Toplama, Eş Anlamlı Kelimeler, Hayat Bilgisi...',
+    suggestions: [
+      'Matematik: Çarpım Tablosu ve Bölme',
+      'Türkçe: Eş ve Zıt Anlamlı Sözcükler',
+      'Fen: Canlılar Dünyasını Tanıyalım',
+      'Hayat Bilgisi: Sağlıklı Yaşam',
+    ],
+  },
+  'Ortaokul / LGS (5-8. Sınıf)': {
+    placeholder: 'Örn: Çarpanlar ve Katlar, Fiilimsiler, Fotosentez...',
+    suggestions: [
+      'Matematik: Çarpanlar ve Katlar (EBOB-EKOK)',
+      'Türkçe: Fiilimsiler (Eylemsiler)',
+      'Fen: DNA ve Genetik Kod',
+      'İngilizce: Teen Life & Preferences',
+      'İnkılap: Milli Mücadele Hazırlık',
+    ],
+  },
+  'Lise / TYT-AYT (9-12. Sınıf)': {
+    placeholder: 'Örn: Türev ve İntegral, Hücre Bölünmeleri, Paragrafta Ana Fikir...',
+    suggestions: [
+      'Matematik: Fonksiyonlar ve Parabol',
+      'Fizik: Newton\'ın Hareket Yasaları',
+      'Kimya: Kimyasal Türler Arası Etkileşimler',
+      'Biyoloji: Kalıtım ve Genetik',
+      'Edebiyat: Divan Edebiyatı Nazım Şekilleri',
+    ],
+  },
+  'Lisans / KPSS - ALES': {
+    placeholder: 'Örn: Sözel Mantık, Türkiye Coğrafyası, Anayasa Hukuku...',
+    suggestions: [
+      'Genel Yetenek: Sayısal & Sözel Mantık',
+      'Tarih: Osmanlı Dağılma Dönemi',
+      'Coğrafya: Türkiye\'nin İklimi ve Yer Şekilleri',
+      'Vatandaşlık: Temel Hukuk ve Anayasa',
+    ],
+  },
+  'Genel / Konu Kavrama': {
+    placeholder: 'Örn: Temel İngilizce Zamanlar, Hızlı Okuma, Mantık Yürütme...',
+    suggestions: [
+      'İngilizce: Present Continuous vs Simple Present',
+      'Mantık: Önermeler ve Kümeler',
+      'Genel Kültür: Dünya Başkentleri ve Coğrafya',
+    ],
+  },
+};
+
 export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTabProps) {
   const { showToast, state } = useEduFlow();
 
@@ -56,15 +112,7 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const quizSuggestions = [
-    'Matematik Çarpanlar ve Katlar (EBOB-EKOK)',
-    'Fen Bilgisi Fotosentez ve Solunum',
-    'İngilizce Present Perfect Tense',
-    'Türkçe Fiilimsiler (Eylemsiler)',
-    'Fizik Kuvvet ve Hareket Yasaları',
-    'Kimya Asitler, Bazlar ve pH Değerleri',
-    'Tarih Milli Mücadele ve Kurtuluş Savaşı',
-  ];
+  const currentLevelConfig = LEVEL_CONFIGS[quizGrade] || LEVEL_CONFIGS['Ortaokul / LGS (5-8. Sınıf)'];
 
   const noteSuggestions = [
     'Mitoz ve Mayoz Bölünme Karşılaştırması',
@@ -261,6 +309,28 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
             </div>
 
             <div className="space-y-3.5">
+              {/* Eğitim Seviyesi (Grade Level) */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  Eğitim Seviyesi
+                </label>
+                <select
+                  value={quizGrade}
+                  onChange={(e) => {
+                    const newGrade = e.target.value;
+                    setQuizGrade(newGrade);
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs font-medium focus:outline-none transition-colors"
+                >
+                  <option value="İlkokul (1-4. Sınıf)">İlkokul (1-4. Sınıf)</option>
+                  <option value="Ortaokul / LGS (5-8. Sınıf)">Ortaokul / LGS (5-8. Sınıf)</option>
+                  <option value="Lise / TYT-AYT (9-12. Sınıf)">Lise / TYT-AYT (9-12. Sınıf)</option>
+                  <option value="Lisans / KPSS - ALES">Lisans / KPSS - ALES</option>
+                  <option value="Genel / Konu Kavrama">Genel / Konu Kavrama</option>
+                </select>
+              </div>
+
+              {/* Konu / Ünite Başlığı Input (Dynamic Placeholder) */}
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
                   Konu / Ünite Başlığı
@@ -269,23 +339,28 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                   type="text"
                   value={quizTopic}
                   onChange={(e) => setQuizTopic(e.target.value)}
-                  placeholder="Örn: Çarpanlar ve Katlar, Fotosentez, Fiilimsiler..."
-                  className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-zinc-500 focus:outline-none"
+                  placeholder={currentLevelConfig.placeholder}
+                  className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-zinc-500 focus:outline-none transition-all"
                 />
               </div>
 
-              {/* Suggestions */}
+              {/* Dynamic Suggestions per Selected Grade */}
               <div>
                 <span className="text-[11px] font-medium text-zinc-400 block mb-1.5">
-                  Örnek Konular:
+                  Örnek Konular ({quizGrade.split(' ')[0]}):
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {quizSuggestions.map((s, idx) => (
+                  {currentLevelConfig.suggestions.map((s, idx) => (
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => handleGenerateQuiz(s)}
-                      className="px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 hover:border-zinc-700 text-[11px] text-zinc-300 hover:text-white transition-all cursor-pointer"
+                      onClick={() => setQuizTopic(s)}
+                      className={cn(
+                        'px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-all cursor-pointer text-left',
+                        quizTopic === s
+                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-semibold'
+                          : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:text-white'
+                      )}
                     >
                       {s}
                     </button>
@@ -293,38 +368,20 @@ export function GeminiStudioTab({ onOpenCreateAssignmentModal }: GeminiStudioTab
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                    Soru Sayısı
-                  </label>
-                  <select
-                    value={quizCount}
-                    onChange={(e) => setQuizCount(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
-                  >
-                    <option value={3}>3 Soru (Hızlı Test)</option>
-                    <option value={5}>5 Soru (Standart)</option>
-                    <option value={10}>10 Soru (Kapsamlı Deneme)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                    Eğitim Seviyesi
-                  </label>
-                  <select
-                    value={quizGrade}
-                    onChange={(e) => setQuizGrade(e.target.value)}
-                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
-                  >
-                    <option value="İlkokul (1-4. Sınıf)">İlkokul (1-4. Sınıf)</option>
-                    <option value="Ortaokul / LGS (5-8. Sınıf)">Ortaokul / LGS (5-8. Sınıf)</option>
-                    <option value="Lise / TYT-AYT (9-12. Sınıf)">Lise / TYT-AYT (9-12. Sınıf)</option>
-                    <option value="Lisans / KPSS - ALES">Lisans / KPSS - ALES</option>
-                    <option value="Genel / Konu Kavrama">Genel / Konu Kavrama</option>
-                  </select>
-                </div>
+              {/* Soru Sayısı */}
+              <div className="pt-1">
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                  Soru Sayısı
+                </label>
+                <select
+                  value={quizCount}
+                  onChange={(e) => setQuizCount(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
+                >
+                  <option value={3}>3 Soru (Hızlı Test)</option>
+                  <option value={5}>5 Soru (Standart)</option>
+                  <option value={10}>10 Soru (Kapsamlı Deneme)</option>
+                </select>
               </div>
 
               <button

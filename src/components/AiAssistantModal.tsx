@@ -31,6 +31,29 @@ interface AiAssistantModalProps {
   onApplyGeneratedNote?: (noteData: { title: string; folder: string; content: string }) => void;
 }
 
+const MODAL_LEVEL_CONFIGS: Record<string, { placeholder: string; suggestions: string[] }> = {
+  'İlkokul (1-4. Sınıf)': {
+    placeholder: 'Örn: Doğal Sayılarla Toplama, Eş Anlamlı Kelimeler...',
+    suggestions: ['Matematik: Çarpım Tablosu', 'Türkçe: Eş Anlamlı Kelimeler', 'Fen: Canlılar Dünyası'],
+  },
+  'Ortaokul / LGS (5-8. Sınıf)': {
+    placeholder: 'Örn: Çarpanlar ve Katlar, Fiilimsiler, Fotosentez...',
+    suggestions: ['Matematik: Çarpanlar (EBOB-EKOK)', 'Türkçe: Fiilimsiler', 'Fen: DNA ve Genetik Kod'],
+  },
+  'Lise / TYT-AYT (9-12. Sınıf)': {
+    placeholder: 'Örn: Türev ve İntegral, Hücre Bölünmeleri...',
+    suggestions: ['Matematik: Fonksiyonlar', 'Fizik: Hareket Yasaları', 'Biyoloji: Kalıtım'],
+  },
+  'Lisans / KPSS - ALES': {
+    placeholder: 'Örn: Sözel Mantık, Türkiye Coğrafyası...',
+    suggestions: ['Sözel & Sayısal Mantık', 'Tarih: Osmanlı Dağılma', 'Vatandaşlık: Temel Hukuk'],
+  },
+  'Genel / Konu Kavrama': {
+    placeholder: 'Örn: Temel İngilizce Zamanlar, Hızlı Okuma...',
+    suggestions: ['İngilizce: Present Continuous', 'Mantık: Kümeler', 'Genel Kültür'],
+  },
+};
+
 export function AiAssistantModal({
   isOpen,
   onClose,
@@ -42,9 +65,9 @@ export function AiAssistantModal({
   const [activeMode, setActiveMode] = useState<'quiz' | 'note' | 'chat'>('quiz');
 
   // Quiz Gen State
-  const [quizTopic, setQuizTopic] = useState('İngilizce Present Perfect Tense');
+  const [quizTopic, setQuizTopic] = useState('');
   const [quizCount, setQuizCount] = useState(3);
-  const [quizGrade, setQuizGrade] = useState('Lise / Ortaokul');
+  const [quizGrade, setQuizGrade] = useState('Ortaokul / LGS (5-8. Sınıf)');
   const [isQuizLoading, setIsQuizLoading] = useState(false);
   const [generatedQuiz, setGeneratedQuiz] = useState<any>(null);
 
@@ -241,8 +264,8 @@ export function AiAssistantModal({
           {/* Mode 1: Quiz Generator */}
           {activeMode === 'quiz' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                <div className="sm:col-span-6">
                   <label className="block text-xs font-medium text-slate-300 mb-1">
                     Konu / Ünite Adı
                   </label>
@@ -250,12 +273,29 @@ export function AiAssistantModal({
                     type="text"
                     value={quizTopic}
                     onChange={(e) => setQuizTopic(e.target.value)}
-                    placeholder="Örn: 8. Sınıf Üslü İfadeler veya Past Continuous"
+                    placeholder={MODAL_LEVEL_CONFIGS[quizGrade]?.placeholder || 'Örn: Çarpanlar ve Katlar...'}
                     className="w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs focus:outline-none"
                   />
                 </div>
 
-                <div>
+                <div className="sm:col-span-3">
+                  <label className="block text-xs font-medium text-slate-300 mb-1">
+                    Eğitim Seviyesi
+                  </label>
+                  <select
+                    value={quizGrade}
+                    onChange={(e) => setQuizGrade(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-[#0a0f1d] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs focus:outline-none"
+                  >
+                    <option value="İlkokul (1-4. Sınıf)">İlkokul (1-4)</option>
+                    <option value="Ortaokul / LGS (5-8. Sınıf)">Ortaokul (5-8)</option>
+                    <option value="Lise / TYT-AYT (9-12. Sınıf)">Lise / TYT-AYT</option>
+                    <option value="Lisans / KPSS - ALES">Lisans / KPSS</option>
+                    <option value="Genel / Konu Kavrama">Genel</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-3">
                   <label className="block text-xs font-medium text-slate-300 mb-1">
                     Soru Sayısı
                   </label>
@@ -264,11 +304,30 @@ export function AiAssistantModal({
                     onChange={(e) => setQuizCount(Number(e.target.value))}
                     className="w-full px-3.5 py-2.5 bg-[#0a0f1d] border border-white/10 focus:border-cyan-400 rounded-xl text-white text-xs focus:outline-none"
                   >
-                    <option value={2}>2 Soru (Hızlı)</option>
-                    <option value={3}>3 Soru (Standart)</option>
-                    <option value={5}>5 Soru (Kapsamlı)</option>
+                    <option value={3}>3 Soru (Hızlı)</option>
+                    <option value={5}>5 Soru (Standart)</option>
+                    <option value={10}>10 Soru (Deneme)</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Suggestions */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {MODAL_LEVEL_CONFIGS[quizGrade]?.suggestions.map((s, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setQuizTopic(s)}
+                    className={cn(
+                      'px-2.5 py-1 rounded-lg border text-[11px] transition-all cursor-pointer',
+                      quizTopic === s
+                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 font-semibold'
+                        : 'bg-white/[0.03] border-white/10 text-slate-300 hover:text-white'
+                    )}
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
 
               <button

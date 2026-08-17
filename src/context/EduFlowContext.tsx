@@ -209,38 +209,48 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Fetch real assignments from Supabase
+  // Fetch real assignments from Supabase with non-destructive optimistic merge
   const loadSupabaseAssignments = useCallback(async (userRole: Role, userId: string) => {
     try {
       let query = supabase.from('assignments').select('*');
-      if (userRole === 'teacher') {
-        query = query.eq('teacher_id', userId);
+      if (userRole === 'teacher' && userId) {
+        query = query.or(`teacher_id.eq.${userId},teacher_id.is.null`);
       }
       const { data, error } = await query.order('created_at', { ascending: false });
 
+      if (error) {
+        console.warn('Supabase assignments fetch error:', error.message);
+        return;
+      }
+
       if (data && Array.isArray(data)) {
         const mapped: Assignment[] = data.map((row: any) => ({
-          id: row.id,
+          id: String(row.id),
           type: row.type as AssignmentType,
-          title: row.title,
+          title: row.title || 'Başlıksız Ödev',
           folder: row.folder || 'Genel',
           target: row.target || 'all',
-          classroomId: row.classroom_id || row.classroomId,
-          classroomName: row.classroom_name || row.classroomName,
+          classroomId: row.classroom_id || row.classroomId || undefined,
+          classroomName: row.classroom_name || row.classroomName || undefined,
           desc: row.desc || '',
           fileName: row.file_name || row.fileName || null,
           fileData: row.file_data || row.fileData || null,
           timeLimit: row.time_limit || row.timeLimit || 0,
-          questions: row.questions || [],
+          questions: Array.isArray(row.questions) ? row.questions : [],
           createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
-          submissions: row.submissions || {},
-          teacherId: row.teacher_id || row.teacherId,
+          submissions: row.submissions && typeof row.submissions === 'object' ? row.submissions : {},
+          teacherId: row.teacher_id || row.teacherId || undefined,
         }));
 
-        setState((prev) => ({
-          ...prev,
-          assignments: mapped,
-        }));
+        setState((prev) => {
+          const serverIds = new Set(mapped.map((a) => a.id));
+          // Preserve local assignments that might still be syncing or created locally
+          const localUnsynced = prev.assignments.filter((a) => !serverIds.has(a.id));
+          return {
+            ...prev,
+            assignments: [...mapped, ...localUnsynced],
+          };
+        });
       }
     } catch (e) {
       console.warn('Supabase assignments table sync notice:', e);
@@ -793,15 +803,19 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      const teacherId = state.session?.supabaseId;
+      const teacherId =
+        state.session?.supabaseId ||
+        (state.session?.role === 'teacher' ? state.session?.studentId : undefined) ||
+        undefined;
+
       const newAssignment: Assignment = {
         id: uid(),
         type: params.type,
         title: params.title.trim(),
         folder: params.folder.trim() || 'Genel',
         target: params.target || 'all',
-        classroomId: params.classroomId,
-        classroomName: params.classroomName,
+        classroomId: params.classroomId || undefined,
+        classroomName: params.classroomName || undefined,
         desc: params.desc?.trim() || '',
         fileName: params.fileName || null,
         fileData: params.fileData || null,
@@ -816,34 +830,42 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         newAssignment.desc = 'Belirtilen sayfayı çözüp fotoğrafını yükleyin.';
       }
 
+      // 1. Immediate optimistic update to local state
       setState((prev) => ({
         ...prev,
-        assignments: [newAssignment, ...prev.assignments],
+        assignments: [newAssignment, ...prev.assignments.filter((a) => a.id !== newAssignment.id)],
       }));
 
+      // 2. Persist to Supabase Database
+      const payload: any = {
+        id: newAssignment.id,
+        type: newAssignment.type,
+        title: newAssignment.title,
+        folder: newAssignment.folder,
+        target: newAssignment.target,
+        classroom_id: newAssignment.classroomId || null,
+        classroom_name: newAssignment.classroomName || null,
+        desc: newAssignment.desc,
+        file_name: newAssignment.fileName,
+        file_data: newAssignment.fileData,
+        time_limit: newAssignment.timeLimit,
+        questions: newAssignment.questions,
+        submissions: {},
+      };
+
       if (teacherId) {
-        supabase
-          .from('assignments')
-          .insert({
-            id: newAssignment.id,
-            type: newAssignment.type,
-            title: newAssignment.title,
-            folder: newAssignment.folder,
-            target: newAssignment.target,
-            classroom_id: newAssignment.classroomId,
-            classroom_name: newAssignment.classroomName,
-            desc: newAssignment.desc,
-            file_name: newAssignment.fileName,
-            file_data: newAssignment.fileData,
-            time_limit: newAssignment.timeLimit,
-            questions: newAssignment.questions,
-            submissions: {},
-            teacher_id: teacherId,
-          })
-          .then(({ error }) => {
-            if (error) console.warn('Supabase assignments insert note:', error.message);
-          });
+        payload.teacher_id = teacherId;
       }
+
+      supabase
+        .from('assignments')
+        .insert(payload)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Supabase assignments insert error:', error);
+            showToast(`Bulut senkronizasyon uyarısı: ${error.message}`, 'warn');
+          }
+        });
 
       showToast('İçerik başarıyla yayınlandı! 🎉', 'success');
       return true;
