@@ -44,7 +44,14 @@ interface EduFlowContextType {
   authModalInitialRole: 'teacher' | 'student';
   openAuthModal: (role?: 'teacher' | 'student') => void;
   closeAuthModal: () => void;
-  loginSupabaseUser: (params: { role: Role; name: string; email: string; supabaseId?: string }) => void;
+  loginSupabaseUser: (params: {
+    role: Role;
+    name: string;
+    email: string;
+    supabaseId?: string;
+    gradeLevel?: string;
+    branch?: string;
+  }) => void;
   logout: () => void;
   addStudent: (name: string, password: string) => boolean;
   deleteStudent: (id: string) => void;
@@ -97,11 +104,11 @@ function getInitialState(): EduFlowState {
 }
 
 // Helper to fetch user profile from Supabase profiles table with fallback
-async function getUserProfile(userId: string, userMeta: any, userEmail?: string): Promise<{ name: string; role: Role }> {
+async function getUserProfile(userId: string, userMeta: any, userEmail?: string): Promise<{ name: string; role: Role; gradeLevel?: string; branch?: string }> {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('full_name, role')
+      .select('full_name, role, grade_level, branch')
       .eq('id', userId)
       .single();
 
@@ -109,6 +116,8 @@ async function getUserProfile(userId: string, userMeta: any, userEmail?: string)
       return {
         name: data.full_name,
         role: (data.role as Role) || (userMeta?.role as Role) || 'student',
+        gradeLevel: data.grade_level || userMeta?.grade_level || undefined,
+        branch: data.branch || userMeta?.branch || undefined,
       };
     }
   } catch (e) {
@@ -118,6 +127,8 @@ async function getUserProfile(userId: string, userMeta: any, userEmail?: string)
   return {
     name: userMeta?.full_name || userEmail?.split('@')[0] || 'Kullanıcı',
     role: (userMeta?.role as Role) || 'student',
+    gradeLevel: userMeta?.grade_level || undefined,
+    branch: userMeta?.branch || undefined,
   };
 }
 
@@ -412,6 +423,8 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
           const role = profile.role;
           const name = profile.name;
           const email = session.user.email || '';
+          const gradeLevel = profile.gradeLevel;
+          const branch = profile.branch;
 
           setState((prev) => {
             let studentId: string | undefined = undefined;
@@ -428,8 +441,11 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
                   name,
                   username,
                   color: AVATAR_COLORS[nextStudents.length % AVATAR_COLORS.length],
+                  gradeLevel: gradeLevel,
                 };
                 nextStudents.push(foundStudent);
+              } else if (gradeLevel) {
+                foundStudent.gradeLevel = gradeLevel;
               }
               studentId = foundStudent.id;
             }
@@ -443,6 +459,8 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
                 email,
                 name,
                 supabaseId: session.user.id,
+                gradeLevel,
+                branch,
               },
               currentStudentId: role === 'student' ? (studentId || null) : null,
             };
@@ -490,11 +508,15 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       name,
       email,
       supabaseId,
+      gradeLevel,
+      branch,
     }: {
       role: Role;
       name: string;
       email: string;
       supabaseId?: string;
+      gradeLevel?: string;
+      branch?: string;
     }) => {
       let studentId: string | undefined = undefined;
 
@@ -517,8 +539,11 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
               name: name.trim(),
               username,
               color,
+              gradeLevel,
             };
             nextStudents.push(foundStudent);
+          } else if (gradeLevel) {
+            foundStudent.gradeLevel = gradeLevel;
           }
           studentId = foundStudent.id;
         }
@@ -532,6 +557,8 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
             email,
             name,
             supabaseId,
+            gradeLevel,
+            branch,
           },
           currentStudentId: role === 'student' ? (studentId || null) : null,
         };

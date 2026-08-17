@@ -53,7 +53,75 @@ import { JoinClassroomModal } from './JoinClassroomModal';
 import { AssignmentSubmitModal } from './AssignmentSubmitModal';
 import { QuizStudyModal } from './QuizStudyModal';
 
-type AssignmentFilterTab = 'pending' | 'evaluating' | 'completed' | 'all';
+type AssignmentFilterTab = 'all' | 'pending' | 'evaluating' | 'completed';
+
+function getCurriculumTopics(grade?: string): string[] {
+  const g = (grade || '').toLowerCase();
+  if (g.includes('ortaokul') || g.includes('lgs')) {
+    return [
+      'Matematik: Çarpanlar ve Katlar (EBOB-EKOK)',
+      'Türkçe: Fiilimsiler (Eylemsiler)',
+      'Fen: DNA ve Genetik Kod',
+      'İngilizce: Teen Life & Preferences',
+      'İnkılap: Milli Mücadele Hazırlık',
+    ];
+  }
+  if (g.includes('sayısal')) {
+    return [
+      'Matematik: Fonksiyonlar ve Türev',
+      'Fizik: Newton Hareket Yasaları',
+      'Kimya: Kimyasal Denge',
+      'Biyoloji: Hücresel Solunum ve ATP',
+      'Geometri: Üçgende Benzerlik',
+    ];
+  }
+  if (g.includes('eşit') || g.includes('sözel')) {
+    return [
+      'Edebiyat: Divan Edebiyatı Nazım Şekilleri',
+      'Tarih: İlk Türk İslam Devletleri',
+      'Coğrafya: Türkiye İklimi',
+      'Matematik: Parabol ve Fonksiyonlar',
+      'Türkçe: Paragrafta Anlam ve Yapı',
+    ];
+  }
+  if (g.includes('lise') || g.includes('yks')) {
+    return [
+      'Matematik: Fonksiyonlar ve Kümeler',
+      'Türkçe: Paragraf ve Ana Düşünce',
+      'Fizik: Kuvvet ve Hareket',
+      'Kimya: Asitler ve Bazlar',
+      'Biyoloji: Kalıtım Esasları',
+    ];
+  }
+  if (g.includes('kpss') || g.includes('ales') || g.includes('lisans')) {
+    return [
+      'Genel Yetenek: Sayısal & Sözel Mantık',
+      'Tarih: Osmanlı Dağılma Dönemi',
+      'Coğrafya: Türkiye\'nin Yer Şekilleri',
+      'Vatandaşlık: Temel Hukuk ve Anayasa',
+    ];
+  }
+  return [
+    'İngilizce: Present Continuous vs Simple Present',
+    'Mantık: Önermeler ve Kümeler',
+    'Genel Kültür: Dünya Coğrafyası',
+    'Türkçe: Sözcükte Anlam',
+  ];
+}
+
+function getCoachWelcomeMessage(grade?: string): string {
+  const g = (grade || '').toLowerCase();
+  if (g.includes('ortaokul') || g.includes('lgs')) {
+    return 'Merhaba! Ben senin LGS çalışma asistanınım. Anlamadığın yeni nesil soruları, formülleri ve ünite özetlerini bana dilediğin gibi sorabilirsin. Başarıya birlikte koşuyoruz! 🚀';
+  }
+  if (g.includes('lise') || g.includes('yks')) {
+    return 'Selam! Ben senin YKS koçunum. TYT-AYT sınav taktikleri, formül ispatları ve ÖSYM mantığı odaklı sorularını buraya iletebilirsin. Hangi konuyu derinleştirelim? 🎯';
+  }
+  if (g.includes('kpss') || g.includes('ales') || g.includes('lisans')) {
+    return 'Merhaba! KPSS & ALES hazırlığında sözel/sayısal mantık, mevzuat ve pratik soru çözüm teknikleriyle yanındayım. Ne üzerine çalışıyoruz? 📚';
+  }
+  return 'Merhaba! Derslerin, dil pratiğin ve merak ettiğin tüm akademik konular için kişisel çalışma asistanın hazır! 🎓';
+}
 
 export function StudentView() {
   const {
@@ -91,21 +159,37 @@ export function StudentView() {
     studentName?: string;
   } | null>(null);
 
+  const studentGradeLevel = state.session?.gradeLevel || currentStudent?.gradeLevel;
+  const practiceChips = useMemo(() => getCurriculumTopics(studentGradeLevel), [studentGradeLevel]);
+
   // --- Kişisel Çalışma Asistanı (Coach Chat) State ---
   const [coachMessages, setCoachMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
     {
       role: 'assistant',
-      text: 'Merhaba! Ben senin kişisel çalışma asistanınım. Anlamadığın formülleri, çözemediğin soruları veya konu özetlerini bana dilediğin gibi sorabilirsin.',
+      text: getCoachWelcomeMessage(studentGradeLevel),
     },
   ]);
   const [coachInput, setCoachInput] = useState('');
   const [isCoachLoading, setIsCoachLoading] = useState(false);
 
+  // Update coach welcome message when grade level is loaded/changed
+  useEffect(() => {
+    const welcome = getCoachWelcomeMessage(studentGradeLevel);
+    setCoachMessages([{ role: 'assistant', text: welcome }]);
+  }, [studentGradeLevel]);
+
   // --- Konu Alıştırması (Quick Practice) State ---
   const [isPracticeModalOpen, setIsPracticeModalOpen] = useState(false);
-  const [practiceTopic, setPracticeTopic] = useState('Matematik Üslü ve Köklü Sayılar');
+  const [practiceTopic, setPracticeTopic] = useState('');
   const [practiceCount, setPracticeCount] = useState<number>(5);
   const [isPracticeLoading, setIsPracticeLoading] = useState(false);
+
+  // Initialize practice topic from dynamic chips
+  useEffect(() => {
+    if (practiceChips.length > 0 && !practiceTopic) {
+      setPracticeTopic(practiceChips[0]);
+    }
+  }, [practiceChips, practiceTopic]);
 
   if (!state.session && !state.currentStudentId) {
     return (
@@ -222,7 +306,9 @@ export function StudentView() {
         headers,
         body: JSON.stringify({
           action: 'chat_assistant',
-          message: `Öğrenci sorusu: ${userText}`,
+          message: userText,
+          role: 'student',
+          gradeLevel: studentGradeLevel,
         }),
       });
       const data = await res.json();
@@ -260,7 +346,7 @@ export function StudentView() {
           action: 'generate_quiz',
           topic,
           count: practiceCount,
-          grade: 'Ortaokul / Lise',
+          grade: studentGradeLevel || 'Ortaokul / LGS (5-8. Sınıf)',
         }),
       });
       const data = await res.json();
@@ -270,7 +356,7 @@ export function StudentView() {
           title: data.data.title || `${topic} — Pratik Test`,
           folder: topic,
           questions: data.data.questions,
-          timeLimit: (data.data.questions.length || 5) * 45,
+          timeLimit: (data.data.questions.length || 5) * 60,
         });
         showToast(`${topic} için ${data.data.questions.length} soruluk odak çalışma modu başlatıldı!`, 'success');
       } else {
@@ -282,15 +368,6 @@ export function StudentView() {
       setIsPracticeLoading(false);
     }
   };
-
-  const practiceChips = [
-    'Matematik Üslü ve Köklü Sayılar',
-    'İngilizce Present Perfect Tense',
-    'Fen Bilgisi Hücre Bölünmeleri',
-    'Türkçe Paragraf ve Ana Fikir',
-    'Fizik Kuvvet ve Hareket Yasaları',
-    'Kimya Asitler ve Bazlar',
-  ];
 
   return (
     <div className="space-y-8 animate-fade pb-16">
@@ -304,9 +381,16 @@ export function StudentView() {
             {initials(studentDisplayName)}
           </div>
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-              <Sparkles className="w-3 h-3" />
-              <span>Öğrenci Başarı & Pratik Portalı</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                <Sparkles className="w-3 h-3" />
+                <span>Öğrenci Portalı</span>
+              </div>
+              {studentGradeLevel && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-medium">
+                  <span>🎯 {studentGradeLevel}</span>
+                </div>
+              )}
             </div>
             <h1 className="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">
               Hoş Geldin, {studentDisplayName}
@@ -494,11 +578,12 @@ export function StudentView() {
               {practiceChips.map((chip, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleGeneratePracticeQuiz(chip)}
+                  type="button"
+                  onClick={() => setPracticeTopic(chip)}
                   className={cn(
-                    'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer',
+                    'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer text-left',
                     practiceTopic === chip
-                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-semibold'
+                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-semibold shadow-sm'
                       : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
                   )}
                 >

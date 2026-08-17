@@ -85,40 +85,22 @@ export function QuizStudyModal({
   // Generate 4 multiple choice options if not pre-configured in Question object
   const questionOptions = useMemo(() => {
     if (!currentQ) return [];
-    if (currentQ.options && currentQ.options.length >= 2) {
+    if (currentQ.options && Array.isArray(currentQ.options) && currentQ.options.length >= 2) {
       return currentQ.options;
     }
 
-    const correct = currentQ.a.trim();
-    // Default smart distractors based on question content
-    const lower = (currentQ.q + ' ' + correct).toLowerCase();
-    let distractors: string[] = [];
-
-    if (lower.includes('hücre') || lower.includes('fotosentez') || lower.includes('mitokondri')) {
-      distractors = ['Ribozom', 'Sitoplazma', 'Golgi Cihazı', 'Lizozom', 'Endoplazmik Retikulum'];
-    } else if (lower.includes('tarih') || lower.includes('antlaşma') || lower.includes('savaş')) {
-      distractors = ['Lozan Antlaşması', 'Mondros Mütarekesi', 'Sevr Antlaşması', 'Mudanya Ateşkesi'];
-    } else if (!isNaN(Number(correct))) {
+    const correct = (currentQ.a || currentQ.correctAnswer || '').trim();
+    if (!isNaN(Number(correct)) && correct !== '') {
       const num = Number(correct);
-      distractors = [
+      return [
+        String(num),
         String(num + 2),
         String(Math.max(1, num - 2)),
         String(num * 2),
-        String(num + 5),
-      ];
-    } else {
-      distractors = [
-        'Seçenek A (Genel Yaklaşım)',
-        'Seçenek B (Alternatif Yöntem)',
-        'Seçenek C (İstisnai Durum)',
-      ];
+      ].sort(() => 0.5 - Math.random());
     }
 
-    const filteredDistractors = distractors.filter((d) => d.toLowerCase() !== correct.toLowerCase()).slice(0, 3);
-    const combined = [correct, ...filteredDistractors];
-
-    // Deterministic shuffle based on question text length
-    return combined.sort((a, b) => (a.length + currentQ.q.length) % 3 - (b.length + currentQ.q.length) % 3);
+    return [correct, 'Doğrulanamaz', 'Belirsiz', 'Farklı Değer'];
   }, [currentQ]);
 
   if (!isOpen || !currentQ) return null;

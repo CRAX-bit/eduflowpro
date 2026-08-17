@@ -74,6 +74,8 @@ export function AuthModal() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [gradeLevel, setGradeLevel] = useState('Ortaokul (5-8. Sınıf / LGS Hazırlık)');
+  const [teacherBranch, setTeacherBranch] = useState('Matematik');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -93,6 +95,8 @@ export function AuthModal() {
       setEmail('');
       setPassword('');
       setFullName('');
+      setGradeLevel('Ortaokul (5-8. Sınıf / LGS Hazırlık)');
+      setTeacherBranch('Matematik');
       setShowPassword(false);
       setAcceptedTerms(false);
       setErrorMessage(null);
@@ -232,6 +236,8 @@ export function AuthModal() {
             data: {
               full_name: cleanName,
               role: role,
+              grade_level: role === 'student' ? gradeLevel : undefined,
+              branch: role === 'teacher' ? teacherBranch : undefined,
             },
           },
         });
@@ -252,6 +258,8 @@ export function AuthModal() {
               full_name: cleanName,
               role: role,
               email: cleanEmail,
+              grade_level: role === 'student' ? gradeLevel : null,
+              branch: role === 'teacher' ? teacherBranch : null,
               updated_at: new Date().toISOString(),
             });
           } catch (e) {
@@ -265,6 +273,8 @@ export function AuthModal() {
             name: cleanName,
             email: cleanEmail,
             supabaseId: data.user.id,
+            gradeLevel: role === 'student' ? gradeLevel : undefined,
+            branch: role === 'teacher' ? teacherBranch : undefined,
           });
           return;
         }
@@ -293,12 +303,14 @@ export function AuthModal() {
           let actualRole: 'teacher' | 'student' =
             (data.user.user_metadata?.role as 'teacher' | 'student') || 'student';
           let userFullName: string = data.user.user_metadata?.full_name || '';
+          let userGradeLevel: string | undefined = data.user.user_metadata?.grade_level;
+          let userBranch: string | undefined = data.user.user_metadata?.branch;
 
           // Fetch verified role & full name from profiles table
           try {
             const { data: profile } = await supabase
               .from('profiles')
-              .select('role, full_name')
+              .select('role, full_name, grade_level, branch')
               .eq('id', data.user.id)
               .single();
 
@@ -307,6 +319,12 @@ export function AuthModal() {
             }
             if (profile?.full_name) {
               userFullName = profile.full_name;
+            }
+            if (profile?.grade_level) {
+              userGradeLevel = profile.grade_level;
+            }
+            if (profile?.branch) {
+              userBranch = profile.branch;
             }
           } catch (e) {
             // fallback to user_metadata
@@ -343,6 +361,8 @@ export function AuthModal() {
             name: userName,
             email: data.user.email || cleanEmail,
             supabaseId: data.user.id,
+            gradeLevel: userGradeLevel,
+            branch: userBranch,
           });
         }
       }
@@ -747,6 +767,77 @@ export function AuthModal() {
                   </button>
                 </div>
               </div>
+
+              {/* Education Level (Student) Dropdown */}
+              {mode === 'signup' && role === 'student' && (
+                <div className="space-y-1 animate-fade">
+                  <label
+                    htmlFor="auth-grade-level"
+                    className="block text-xs font-medium text-zinc-300"
+                  >
+                    Eğitim Seviyesi / Hedef Sınav <span className="text-emerald-400">*</span>
+                  </label>
+                  <select
+                    id="auth-grade-level"
+                    disabled={loading}
+                    value={gradeLevel}
+                    onChange={(e) => {
+                      setGradeLevel(e.target.value);
+                      if (errorMessage) setErrorMessage(null);
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-zinc-950/60 border border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-xl text-zinc-100 text-xs sm:text-sm focus:outline-none transition-all cursor-pointer"
+                  >
+                    <option value="Ortaokul (5-8. Sınıf / LGS Hazırlık)">
+                      Ortaokul (5-8. Sınıf / LGS Hazırlık)
+                    </option>
+                    <option value="Lise (9-12. Sınıf / YKS Hazırlık - Sayısal)">
+                      Lise (9-12. Sınıf / YKS Hazırlık - Sayısal)
+                    </option>
+                    <option value="Lise (9-12. Sınıf / YKS Hazırlık - Eşit Ağırlık / Sözel)">
+                      Lise (9-12. Sınıf / YKS Hazırlık - Eşit Ağırlık / Sözel)
+                    </option>
+                    <option value="Lisans & Mezun (KPSS / ALES Hazırlık)">
+                      Lisans & Mezun (KPSS / ALES Hazırlık)
+                    </option>
+                    <option value="Genel Gelişim / Dil Eğitimi">
+                      Genel Gelişim / Dil Eğitimi
+                    </option>
+                  </select>
+                  <p className="text-[11px] text-zinc-500">
+                    Yapay zeka asistanı test ve pratikleri bu seviyeye göre kişiselleştirir.
+                  </p>
+                </div>
+              )}
+
+              {/* Teacher Branch Dropdown */}
+              {mode === 'signup' && role === 'teacher' && (
+                <div className="space-y-1 animate-fade">
+                  <label
+                    htmlFor="auth-teacher-branch"
+                    className="block text-xs font-medium text-zinc-300"
+                  >
+                    Branş / Uzmanlık Alanı
+                  </label>
+                  <select
+                    id="auth-teacher-branch"
+                    disabled={loading}
+                    value={teacherBranch}
+                    onChange={(e) => {
+                      setTeacherBranch(e.target.value);
+                      if (errorMessage) setErrorMessage(null);
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-zinc-950/60 border border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-xl text-zinc-100 text-xs sm:text-sm focus:outline-none transition-all cursor-pointer"
+                  >
+                    <option value="Matematik">Matematik</option>
+                    <option value="Fen Bilimleri / Biyoloji">Fen Bilimleri / Biyoloji</option>
+                    <option value="Fizik / Kimya">Fizik / Kimya</option>
+                    <option value="Türkçe / Türk Dili ve Edebiyatı">Türkçe / Türk Dili ve Edebiyatı</option>
+                    <option value="İngilizce / Yabancı Dil">İngilizce / Yabancı Dil</option>
+                    <option value="Sosyal Bilgiler / Tarih / Coğrafya">Sosyal Bilgiler / Tarih / Coğrafya</option>
+                    <option value="Rehberlik / Özel Eğitim / Diğer">Rehberlik / Özel Eğitim / Diğer</option>
+                  </select>
+                </div>
+              )}
 
               {/* Remember Me Checkbox (Sign In only) */}
               {mode === 'signin' && (

@@ -6,6 +6,7 @@ export interface Student {
   color: string;
   username: string;
   password?: string;
+  gradeLevel?: string;
 }
 
 export type AssignmentType = 'note' | 'test' | 'book';
@@ -13,6 +14,8 @@ export type AssignmentType = 'note' | 'test' | 'book';
 export interface Question {
   q: string;
   a: string;
+  question?: string;
+  correctAnswer?: string;
   options?: string[]; // Optional multiple choice or hints
   explanation?: string;
 }
@@ -88,6 +91,8 @@ export interface UserSession {
   email?: string;
   name?: string;
   supabaseId?: string;
+  gradeLevel?: string;
+  branch?: string;
 }
 
 export interface UserProfile {
@@ -96,6 +101,8 @@ export interface UserProfile {
   role: Role;
   email?: string;
   avatar_url?: string;
+  grade_level?: string;
+  branch?: string;
   created_at?: string;
 }
 
@@ -121,4 +128,3 @@ export interface ActionResponse<T = any> {
   message?: string;
   code?: string;
 }
-

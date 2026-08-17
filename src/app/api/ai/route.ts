@@ -9,6 +9,8 @@ interface AiRequestBody {
   topic?: string;
   count?: number;
   grade?: string;
+  role?: 'teacher' | 'student';
+  gradeLevel?: string;
   studentName?: string;
   score?: number;
   total?: number;
@@ -49,42 +51,51 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
 
     // --------------------------------------------------------------------------
-    // ACTION 1: GENERATE QUIZ (Dinamik ve Pedagojik Soru Üretimi)
+    // ACTION 1: GENERATE QUIZ (Dinamik, 4 Şıklı Çoktan Seçmeli Katı JSON Soru Motoru)
     // --------------------------------------------------------------------------
     if (action === 'generate_quiz') {
       const rawTopic = body.topic || 'Genel Konu Tekrarı';
       const topic = escapePromptInjection(sanitizeInput(rawTopic, 200)) || 'Genel Konu Tekrarı';
       const count = clampInteger(body.count, 1, 10, 3);
-      const grade = escapePromptInjection(sanitizeInput(body.grade || 'Ortaokul / LGS (5-8. Sınıf)', 100));
+      const grade = escapePromptInjection(sanitizeInput(body.grade || body.gradeLevel || 'Ortaokul / LGS (5-8. Sınıf)', 100));
 
       if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
         try {
           const ai = new GoogleGenAI({ apiKey });
           const prompt = `${AI_SAFETY_DIRECTIVE}
 
-Sen uzman bir eğitimci ve sınav komisyonu başkanısın.
-Görev: Aşağıda belirtilen konu ve eğitim seviyesine %100 uyumlu, orijinal, açık, tek ve kesin cevabı olan ${count} adet interaktif kısa cevaplı soru hazırla.
+Sen Türkiye müfredatına ve sınav formatlarına (LGS, YKS, KPSS, ALES) hakim uzman bir soru yazarı ve eğitimcisin.
+GÖREV: Aşağıda belirtilen konu ve eğitim seviyesine %100 uyumlu, orijinal, açık, 4 seçenekli (A, B, C, D) ${count} adet çoktan seçmeli soru hazırla.
 
 Konu: "${topic}"
 Seviye: "${grade}"
 Soru Sayısı: ${count}
 
-Kurallar:
+KURALLAR:
 1. Sorular tamamen Türkçe olsun (eğer konu İngilizce değilse).
-2. Cevaplar tek kelime, formül sonucu veya kısa net bir ifade olsun (örn: "16", "Mitokondri", "Özne", "Newton", "since").
-3. Her soru için pedagojik ve öğretici kısa bir çözüm açıklaması (explanation) ekle.
-4. Yalnızca ve kesinlikle geçerli bir JSON nesnesi döndür (markdown kod bloğu veya ekstra açıklama yazma).
+2. Her sorunun "options" dizisinde 4 adet gerçekçi ve anlamlı şık olmalıdır. Asla "Seçenek A", "Genel Yaklaşım", "Alternatif Yöntem" gibi anlamsız yer tutucu ifadeler KULLANMA.
+3. "correctAnswer" değeri options dizisindeki doğru şık metniyle birebir aynı olmalıdır.
+4. "q" ve "question" alanlarına soru metnini, "a" ve "correctAnswer" alanlarına doğru cevabı, "options" alanına 4 şıkkı, "explanation" alanına ise adım adım pedagojik çözüm açıklamasını yaz.
+5. Yalnızca ve kesinlikle geçerli bir JSON nesnesi döndür (markdown kod bloğu veya ekstra metin ekleme).
 
 JSON Şablonu:
 {
-  "title": "${topic} — Değerlendirme Testi",
+  "title": "${topic} — Pratik Test",
   "folder": "${topic}",
-  "desc": "${grade} seviyesine uygun ${count} soruluk kazanım kavrama ve pratik testi.",
-  "timeLimit": ${count * 45},
+  "desc": "${grade} seviyesine uygun ${count} soruluk çoktan seçmeli kazanım testi.",
+  "timeLimit": ${count * 60},
   "questions": [
     {
-      "q": "${topic} konusu ile ilgili net soru metni?",
-      "a": "Kısa kesin doğru cevap",
+      "question": "${topic} ile ilgili açık soru metni?",
+      "q": "${topic} ile ilgili açık soru metni?",
+      "options": [
+        "A şıkkı gerçek metni",
+        "B şıkkı gerçek metni",
+        "C şıkkı gerçek metni",
+        "D şıkkı gerçek metni"
+      ],
+      "correctAnswer": "A şıkkı gerçek metni",
+      "a": "A şıkkı gerçek metni",
       "explanation": "Detaylı çözüm ve açıklama..."
     }
   ]
@@ -100,7 +111,23 @@ JSON Şablonu:
           if (jsonMatch) {
             const parsed = JSON.parse(jsonMatch[0]);
             if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
-              return NextResponse.json({ success: true, data: parsed, source: 'gemini' });
+              const formattedQuestions = parsed.questions.map((q: any) => ({
+                question: q.question || q.q || '',
+                q: q.q || q.question || '',
+                options: Array.isArray(q.options) && q.options.length >= 2 ? q.options : [q.a || q.correctAnswer || 'Doğru', 'Yanlış 1', 'Yanlış 2', 'Yanlış 3'],
+                correctAnswer: q.correctAnswer || q.a || '',
+                a: q.a || q.correctAnswer || '',
+                explanation: q.explanation || 'Doğru çözüm yöntemi uygulanmıştır.',
+              }));
+
+              return NextResponse.json({
+                success: true,
+                data: {
+                  ...parsed,
+                  questions: formattedQuestions,
+                },
+                source: 'gemini',
+              });
             }
           }
         } catch (geminiError: any) {
@@ -108,7 +135,7 @@ JSON Şablonu:
         }
       }
 
-      // Dynamic Contextual Question Generation (No Hardcoded English Templates)
+      // Dynamic Contextual Question Generation with authentic 4 choices
       const dynamicQuestions = generateIntelligentDynamicQuestions(topic, grade, count);
       return NextResponse.json({
         success: true,
@@ -116,7 +143,7 @@ JSON Şablonu:
           title: `${topic} — Kazanım Testi`,
           folder: topic,
           desc: `${grade} seviyesi için hazırlanmış ${count} soruluk konu kavrama testi.`,
-          timeLimit: count * 45,
+          timeLimit: count * 60,
           questions: dynamicQuestions,
         },
         source: 'dynamic_engine',
@@ -271,7 +298,7 @@ Lütfen öğrenciye samimi, net ve öğretici bir dille doğrusunun neden "${cor
     }
 
     // --------------------------------------------------------------------------
-    // ACTION 5: TEACHER CONSULTANT CHAT (Gerçek Gemini AI Bağlantısı & History)
+    // ACTION 5: ADAPTIVE AI CHAT (Öğrenci & Öğretmen Seviye Odaklı Dinamik Rol)
     // --------------------------------------------------------------------------
     if (action === 'chat_assistant') {
       const message = escapePromptInjection(sanitizeInput(body.message || '', 1000));
@@ -282,6 +309,9 @@ Lütfen öğrenciye samimi, net ve öğretici bir dille doğrusunun neden "${cor
         );
       }
 
+      const userRole = body.role || 'teacher';
+      const gradeLevel = body.gradeLevel || body.grade || '';
+
       const history = Array.isArray(body.history)
         ? body.history.slice(-8).map((h) => ({
             role: h.role === 'assistant' ? 'model' : 'user',
@@ -289,25 +319,41 @@ Lütfen öğrenciye samimi, net ve öğretici bir dille doğrusunun neden "${cor
           }))
         : [];
 
+      // Determine persona based on role and registered gradeLevel
+      let systemPersona = '';
+      if (userRole === 'student') {
+        const lowerGrade = gradeLevel.toLowerCase();
+        if (lowerGrade.includes('ortaokul') || lowerGrade.includes('lgs')) {
+          systemPersona = 'Sen 5-8. sınıf öğrencisine LGS hazırlıkta rehberlik eden samimi, motive edici bir özel ders öğretmenisin. Örnekleri günlük hayattan ve LGS yeni nesil soru mantığına uygun ver. Asla akademik pedagoji terimleri kullanma.';
+        } else if (lowerGrade.includes('lise') || lowerGrade.includes('yks')) {
+          systemPersona = 'Sen YKS koçusun. TYT-AYT sınav taktikleri, formül ispatları ve ÖSYM mantığı odaklı, net ve derinlemesine açıklamalar yap.';
+        } else if (lowerGrade.includes('kpss') || lowerGrade.includes('ales') || lowerGrade.includes('lisans')) {
+          systemPersona = 'Sen KPSS/ALES hazırlık uzmanısın. Mantık yürütme, mevzuat ve pratik soru çözüm teknikleri üzerinden yanıt ver.';
+        } else {
+          systemPersona = 'Sen öğrencine derslerinde ve kişisel gelişiminde samimi rehberlik eden modern bir eğitim koçusun. Örneklerle açık ve motive edici yanıtlar ver.';
+        }
+      } else {
+        systemPersona = "Sen EduFlow Pro'nun kıdemli pedagojik danışmanı ve öğretmen asistanısın. Öğretmenlerin müfredat kazanımları, ders planları, soru hazırlama teknikleri, sınav analizi, sınıf yönetimi ve pedagojik yöntemler hakkındaki tüm sorularına uzman seviyesinde, ayrıntılı, maddeli, yapıcı ve samimi Türkçe yanıtlar üretirsin.";
+      }
+
       if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
         try {
           const ai = new GoogleGenAI({ apiKey });
 
           const conversationContext = history
-            .map((h) => `${h.role === 'user' ? 'Öğretmen' : 'Eğitim Danışmanı'}: ${h.text}`)
+            .map((h) => `${h.role === 'user' ? (userRole === 'student' ? 'Öğrenci' : 'Öğretmen') : 'Eğitim Asistanı'}: ${h.text}`)
             .join('\n');
 
           const prompt = `${AI_SAFETY_DIRECTIVE}
 
-Sen EduFlow Pro'nun kıdemli pedagojik danışmanı ve öğretmen asistanısın.
-Öğretmenlerin müfredat kazanımları, ders planları, soru hazırlama teknikleri, sınav analizi, sınıf yönetimi ve pedagojik yöntemler hakkındaki tüm sorularına uzman seviyesinde, ayrıntılı, maddeli, yapıcı ve samimi Türkçe yanıtlar üretirsin.
+${systemPersona}
 
 Önceki Sohbet Geçmişi:
 ${conversationContext || '(Yeni görüşme başlatıldı)'}
 
-Öğretmenin Yeni Mesajı: "${message}"
+Kullanıcının Yeni Mesajı: "${message}"
 
-Lütfen öğretmenin sorusuna özel, somut öneriler, adımlar veya içerik taslağı sunarak yanıt ver.`;
+Lütfen samimi, net, maddeli ve ihtiyaca yönelik Türkçe bir yanıt ver.`;
 
           const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -326,8 +372,8 @@ Lütfen öğretmenin sorusuna özel, somut öneriler, adımlar veya içerik tasl
         }
       }
 
-      // Intelligent Contextual Response (Never static single sentence)
-      const dynamicReply = generateIntelligentChatReply(message);
+      // Intelligent Contextual Response Fallback
+      const dynamicReply = generateIntelligentChatReply(message, userRole, gradeLevel);
       return NextResponse.json({
         success: true,
         reply: dynamicReply,
@@ -345,7 +391,7 @@ Lütfen öğretmenin sorusuna özel, somut öneriler, adımlar veya içerik tasl
 }
 
 // -----------------------------------------------------------------------------
-// INTELLIGENT TOPIC-AWARE QUESTION GENERATOR (Turkish & Topic Contextual)
+// INTELLIGENT TOPIC-AWARE QUESTION GENERATOR (Turkish & Topic Contextual With 4 Choices)
 // -----------------------------------------------------------------------------
 function generateIntelligentDynamicQuestions(topic: string, grade: string, count: number) {
   const lower = topic.toLowerCase();
@@ -370,54 +416,60 @@ function generateIntelligentDynamicQuestions(topic: string, grade: string, count
   ) {
     const mathPool = [
       {
-        q: `${topic} konusunda: 36 ve 48 sayılarının En Büyük Ortak Böleni (EBOB) kaçtır?`,
+        question: `36 ve 48 sayılarının En Büyük Ortak Böleni (EBOB) kaçtır?`,
+        q: `36 ve 48 sayılarının En Büyük Ortak Böleni (EBOB) kaçtır?`,
+        options: ["12", "6", "18", "24"],
+        correctAnswer: "12",
         a: "12",
         explanation: "36 ve 48 sayılarının ortak asal çarpanları 2^2 * 3 = 12'dir."
       },
       {
+        question: `2 üzeri 5 (2^5) işleminin sonucu kaçtır?`,
         q: `2 üzeri 5 (2^5) işleminin sonucu kaçtır?`,
+        options: ["32", "16", "64", "25"],
+        correctAnswer: "32",
         a: "32",
         explanation: "2*2*2*2*2 = 32'dir."
       },
       {
+        question: `4x - 8 = 24 denkleminde x bilinmeyeninin değeri kaçtır?`,
         q: `4x - 8 = 24 denkleminde x bilinmeyeninin değeri kaçtır?`,
+        options: ["8", "6", "10", "4"],
+        correctAnswer: "8",
         a: "8",
         explanation: "4x = 32 => x = 8 bulunur."
       },
       {
+        question: `Dik kenarları 6 cm ve 8 cm olan dik üçgenin hipotenüs uzunluğu kaç cm'dir?`,
         q: `Dik kenarları 6 cm ve 8 cm olan dik üçgenin hipotenüs uzunluğu kaç cm'dir?`,
+        options: ["10", "12", "14", "9"],
+        correctAnswer: "10",
         a: "10",
         explanation: "6-8-10 özel dik üçgeni kuralından hipotenüs 10 cm'dir."
       },
       {
+        question: `120 sayısının %30'u kaçtır?`,
         q: `120 sayısının %30'u kaçtır?`,
+        options: ["36", "40", "30", "45"],
+        correctAnswer: "36",
         a: "36",
         explanation: "120 * (30/100) = 36."
       },
       {
-        q: `En küçük iki basamaklı asal sayı kaçtır?`,
-        a: "11",
-        explanation: "10'dan büyük ilk asal sayı 11'dir."
-      },
-      {
+        question: `Karekök 144 (√144) sayısının değeri kaçtır?`,
         q: `Karekök 144 (√144) sayısının değeri kaçtır?`,
+        options: ["12", "14", "16", "10"],
+        correctAnswer: "12",
         a: "12",
         explanation: "12 * 12 = 144 olduğundan √144 = 12'dir."
       },
       {
-        q: `Bir dış açısı 36° olan düzgün çokgenin kenar sayısı kaçtır?`,
-        a: "10",
-        explanation: "360° / 36° = 10 kenarlı bir ongendir."
-      },
-      {
+        question: `f(x) = 2x + 5 fonksiyonunda f(3) değeri kaçtır?`,
         q: `f(x) = 2x + 5 fonksiyonunda f(3) değeri kaçtır?`,
+        options: ["11", "10", "13", "8"],
+        correctAnswer: "11",
         a: "11",
         explanation: "f(3) = 2(3) + 5 = 6 + 5 = 11'dir."
-      },
-      {
-        q: `Bir sayının 3 katının 4 eksiği 20 ise bu sayı kaçtır?`,
-        a: "8",
-        explanation: "3x - 4 = 20 => 3x = 24 => x = 8."
       }
     ];
     return mathPool.slice(0, count);
@@ -443,40 +495,45 @@ function generateIntelligentDynamicQuestions(topic: string, grade: string, count
   ) {
     const sciPool = [
       {
-        q: `${topic} sürecinde hücrenin enerji (ATP) santrali olarak görev yapan organel hangisidir?`,
+        question: `Hücrede oksijenli solunumla hücresel enerji (ATP) üreten organel hangisidir?`,
+        q: `Hücrede oksijenli solunumla hücresel enerji (ATP) üreten organel hangisidir?`,
+        options: ["Mitokondri", "Ribozom", "Golgi Cihazı", "Lizozom"],
+        correctAnswer: "Mitokondri",
         a: "Mitokondri",
-        explanation: "Oksijenli solunumla hücresel ATP üreten organel mitokondridir."
+        explanation: "Hücrenin enerji santrali mitokondridir."
       },
       {
-        q: `Fotosentez olayında klorofil pigmentinin soğurduğu ve atmosfere verilen gaz hangisidir?`,
+        question: `Fotosentez reaksiyonları sonucunda atmosfere salınan gaz hangisidir?`,
+        q: `Fotosentez reaksiyonları sonucunda atmosfere salınan gaz hangisidir?`,
+        options: ["Oksijen", "Karbondioksit", "Azot", "Metan"],
+        correctAnswer: "Oksijen",
         a: "Oksijen",
-        explanation: "Işık reaksiyonlarında suyun fotolizi sonucu oksijen gazı açığa çıkar."
+        explanation: "Suyun fotolizi sonucu oksijen gazı açığa çıkar."
       },
       {
-        q: `Kuvvetin SI birim sistemindeki sembolü ve birimi nedir?`,
+        question: `Kuvvetin SI birim sistemindeki birimi nedir?`,
+        q: `Kuvvetin SI birim sistemindeki birimi nedir?`,
+        options: ["Newton", "Joule", "Pascal", "Watt"],
+        correctAnswer: "Newton",
         a: "Newton",
         explanation: "Kuvvet birimi Isaac Newton'a ithafen Newton (N)'dur."
       },
       {
-        q: `pH değeri 7'den küçük olan sulu çözeltilerin kimyasal türü nedir (Asit / Baz)?`,
-        a: "Asit",
-        explanation: "0-7 arası pH değerleri asidik ortamı ifade eder."
+        question: `pH değeri 7'den küçük olan sulu çözeltilerin kimyasal özelliği nedir?`,
+        q: `pH değeri 7'den küçük olan sulu çözeltilerin kimyasal özelliği nedir?`,
+        options: ["Asidik", "Bazik", "Nötr", "Tuzlu"],
+        correctAnswer: "Asidik",
+        a: "Asidik",
+        explanation: "0-7 arası pH değerleri asitleri gösterir."
       },
       {
-        q: `DNA'nın çift sarmal yapısında Adenin (A) bazının karşısına hangi organik baz gelir?`,
+        question: `DNA zincirinde Adenin (A) nükleotidinin karşısına hangi baz gelir?`,
+        q: `DNA zincirinde Adenin (A) nükleotidinin karşısına hangi baz gelir?`,
+        options: ["Timin", "Guanin", "Sitozin", "Urasil"],
+        correctAnswer: "Timin",
         a: "Timin",
-        explanation: "DNA zincirinde A=T ve G≡C eşleşmesi kuraldır."
-      },
-      {
-        q: `Kütlesi 5 kg olan bir cisme 20 N net kuvvet uygulandığında cismin ivmesi (m/s²) kaç olur?`,
-        a: "4",
-        explanation: "F = m*a => a = F/m = 20/5 = 4 m/s²."
-      },
-      {
-        q: `Periyodik sistemde aynı düşey sütunda bulunan element grubuna ne ad verilir?`,
-        a: "Grup",
-        explanation: "Düşey sütunlara grup, yatay sıralara periyot denir."
-      },
+        explanation: "DNA çift sarmalında A=T eşleşmesi kuraldır."
+      }
     ];
     return sciPool.slice(0, count);
   }
@@ -494,60 +551,66 @@ function generateIntelligentDynamicQuestions(topic: string, grade: string, count
   ) {
     const trPool = [
       {
-        q: `"${topic}" konusunda: Bir cümlede işi, hareketi veya oluşu bildiren temel ögeye ne ad verilir?`,
+        question: `Bir cümlede işi, hareketi veya durumu bildiren temel kurucu öge hangisidir?`,
+        q: `Bir cümlede işi, hareketi veya durumu bildiren temel kurucu öge hangisidir?`,
+        options: ["Yüklem", "Özne", "Nesne", "Tümleç"],
+        correctAnswer: "Yüklem",
         a: "Yüklem",
-        explanation: "Yüklem cümlenin yargı taşıyan kurucu temel ögesidir."
+        explanation: "Yüklem cümlenin en temel yargı ögesidir."
       },
       {
-        q: `"Koşan çocukları izledi" cümlesindeki "koşan" sözcüğü hangi tür fiilimsidir?`,
+        question: `"Koşan çocukları izledi" cümlesindeki "koşan" kelimesi hangi fiilimsi türüdür?`,
+        q: `"Koşan çocukları izledi" cümlesindeki "koşan" kelimesi hangi fiilimsi türüdür?`,
+        options: ["Sıfat-fiil", "İsim-fiil", "Zarf-fiil", "Çekimli fiil"],
+        correctAnswer: "Sıfat-fiil",
         a: "Sıfat-fiil",
         explanation: "-an eki almış sıfat-fiil (ortaç) görevindedir."
       },
       {
-        q: `Sıralı cümleleri birbirinden ayırmak için araya hangi noktalama işareti konur?`,
-        a: "Virgül",
-        explanation: "Aralarında anlam bağı olan sıralı cümleler virgülle ayrılır."
-      },
-      {
-        q: `"Kitap-ı" yerine "Kitabı" denmesi hangi ses olayına örnektir?`,
-        a: "Ünsüz yumuşaması",
-        explanation: "p, ç, t, k seslerinin b, c, d, g/ğ'ye dönüşmesine ünsüz yumuşaması denir."
-      },
-      {
-        q: `Bir paragrafta yazarın okuyucuya iletmek istediği asıl mesaja ne denir?`,
+        question: `Bir paragrafta yazarın okuyucuya iletmek istediği asıl düşünceye ne ad verilir?`,
+        q: `Bir paragrafta yazarın okuyucuya iletmek istediği asıl düşünceye ne ad verilir?`,
+        options: ["Ana fikir", "Konu", "Yardımcı fikir", "Başlık"],
+        correctAnswer: "Ana fikir",
         a: "Ana fikir",
         explanation: "Metnin yazılış amacını özetleyen temel yargı ana fikirdir."
       },
+      {
+        question: `"Kitap-ı" sözcüğünün "Kitabı" şeklinde söylenmesi hangi ses olayıdır?`,
+        q: `"Kitap-ı" sözcüğünün "Kitabı" şeklinde söylenmesi hangi ses olayıdır?`,
+        options: ["Ünsüz yumuşaması", "Ünsüz benzeşmesi", "Ünlü daralması", "Ünlü düşmesi"],
+        correctAnswer: "Ünsüz yumuşaması",
+        a: "Ünsüz yumuşaması",
+        explanation: "p sesinin b'ye dönüşmesi ünsüz yumuşamasıdır."
+      }
     ];
     return trPool.slice(0, count);
   }
 
-  // 4. Genel ve Konuya Özel Yapılandırılmış Dinamik Sorular
+  // 4. Genel
   const generalPool = [
     {
-      q: `"${topic}" konusunun temel amacı ve odaklandığı ana kavram nedir?`,
-      a: "Kavram Analizi",
-      explanation: `${topic} kazanımının doğru anlaşılması için temel kavram ve ilkeler incelenmelidir.`
+      question: `"${topic}" konusunda problem çözerken izlenmesi gereken ilk ve en kritik adım hangisidir?`,
+      q: `"${topic}" konusunda problem çözerken izlenmesi gereken ilk ve en kritik adım hangisidir?`,
+      options: ["Verilenleri ve isteneni netleştirmek", "Doğrudan işlem yapmak", "Şıklardan gitmek", "Soruyu atlamak"],
+      correctAnswer: "Verilenleri ve isteneni netleştirmek",
+      a: "Verilenleri ve isteneni netleştirmek",
+      explanation: "Analitik soru çözümünün temeli eldeki parametreleri ve isteneni belirlemektir."
     },
     {
-      q: `"${topic}" konusunda problem çözerken izlenmesi gereken ilk ve en kritik adım nedir?`,
-      a: "Verilenleri belirleme",
-      explanation: "Sorularda önce eldeki parametreleri ve isteneni netleştirmek gerekir."
+      question: `"${topic}" ünitesinin odaklandığı temel kavramsal kazanım nedir?`,
+      q: `"${topic}" ünitesinin odaklandığı temel kavramsal kazanım nedir?`,
+      options: ["Kavramlar arası sebep-sonuç bağı kurma", "Ezbere formül uygulama", "Sadece teorik tanım öğrenme", "Zaman kısıtını göz ardı etme"],
+      correctAnswer: "Kavramlar arası sebep-sonuç bağı kurma",
+      a: "Kavramlar arası sebep-sonuç bağı kurma",
+      explanation: "Kalıcı öğrenme için kavramların mantıksal ilişkisi kavranmalıdır."
     },
     {
-      q: `"${topic}" kapsamında karşılaşılan temel kuralların uygulama alanı neresidir?`,
-      a: "Uygulama ve Değerlendirme",
-      explanation: "Kazanımların pekişmesi için doğrudan örnek sorular üzerinde çalışılmalıdır."
-    },
-    {
-      q: `"${topic}" kazanımında en sık yapılan hata türü nedir?`,
-      a: "Kavram yanılgısı",
-      explanation: "İstisnalara ve temel formül tanımlarına dikkat edilmelidir."
-    },
-    {
-      q: `"${topic}" konusunu başarıyla tamamlayan bir öğrencinin sergileyeceği temel beceri nedir?`,
-      a: "Akıl yürütme",
-      explanation: "Kavramlar arası sebep-sonuç ilişkisini kurabilme becerisidir."
+      question: `"${topic}" kazanımında karşılaşılan çeldiricilere karşı en etkili strateji nedir?`,
+      q: `"${topic}" kazanımında karşılaşılan çeldiricilere karşı en etkili strateji nedir?`,
+      options: ["Soru kökünü dikkatle okuyup sağlamasını yapmak", "İlk akla gelen şıkkı işaretlemek", "Uzun seçenekleri doğrudan elemek", "Sadece formülü yazıp bırakmak"],
+      correctAnswer: "Soru kökünü dikkatle okuyup sağlamasını yapmak",
+      a: "Soru kökünü dikkatle okuyup sağlamasını yapmak",
+      explanation: "Soru kökünün altı çizili ifadelerini teyit etmek hata oranını sıfırlar."
     }
   ];
   return generalPool.slice(0, count);
@@ -573,34 +636,39 @@ function generateDynamicNotes(topic: string) {
 🎯 **Öğretmen Tavsiyesi:** Bu üniteden sonra en az 10-15 pekiştirme sorusu çözerek kazanımı kalıcı hale getirin.`;
 }
 
-function generateIntelligentChatReply(userMessage: string) {
+function generateIntelligentChatReply(userMessage: string, role: string, gradeLevel: string) {
   const lower = userMessage.toLowerCase();
 
-  if (lower.includes('plan') || lower.includes('ders planı') || lower.includes('kazanım')) {
-    return `Hocam, bu konu için hazırlayabileceğiniz 3 aşamalı etkili ders planı önerim:
+  if (role === 'student') {
+    const isLGS = gradeLevel.toLowerCase().includes('lgs') || gradeLevel.toLowerCase().includes('ortaokul');
+    const isYKS = gradeLevel.toLowerCase().includes('yks') || gradeLevel.toLowerCase().includes('lise');
 
-1. **Giriş & Merak Uyandırma (5-10 dk):** Konuyla ilgili günlük hayattan çarpıcı bir örnek veya soruyla derse başlayarak öğrencilerin dikkatini çekin.
-2. **Kavram İnşası & Etkileşimli Uygulama (20-25 dk):** Temel formülleri/kuralları tahtada adım adım çıkarın. Öğrencilerle birlikte 2-3 örnek soru çözün.
-3. **Pekiştirme & Hızlı Quiz (10-15 dk):** EduFlow üzerinden 3-5 soruluk kısa bir test açarak anında sınıfın anlama düzeyini ölçün.
+    if (lower.includes('taktik') || lower.includes('nasıl çalışmalı') || lower.includes('sınav')) {
+      if (isLGS) {
+        return `Harika bir soru! LGS'de yeni nesil soruları kaçırmamak için 3 altın kural:
 
-Dilerseniz bu plan doğrultusunda doğrudan test veya ders notu da oluşturabilirim.`;
+1. **Paragrafı / Şekli Anla:** Soru uzun görünse de korkma, önce verilen görsel veya hikayedeki matematiksel ilişkiyi bul.
+2. **Günde 20 Paragraf + 15 Matematik:** Bu ritim sınavda okuma hızını ikiye katlar.
+3. **Yanlışını Analiz Et:** Yanlış yaptığın sorunun çözümünü buradaki asistanına sor veya öğretmenine danış.
+
+Hangi konudan başlamak istersin? İstersen yukarıdaki pratik test butonundan hemen başlayalım! 🚀`;
+      }
+      if (isYKS) {
+        return `YKS maratonunda net artışı sağlamak için stratejik adımlar:
+
+1. **TYT Temeli & Hız:** Türkçe paragraf ve Problem rutinini asla aksatma.
+2. **AYT Derinliği:** Formülleri ezberlemek yerine ispat mantığını ve ÖSYM'nin geçmiş yıllarda sorduğu soru tiplerini incele.
+3. **Deneme Analizi:** Haftalık alan denemesi çözüp yanlışlarının defterini tut.
+
+İstediğin ders veya konu için hemen özet ve taktik çıkarabilirim. 🎯`;
+      }
+    }
+
+    return `Sorunu inceledim! Bu konuda pratik yaparken dikkat etmen gereken en önemli nokta, temel formülü adım adım uygulamak ve şıklardaki çeldiricilere dikkat etmektir. 
+
+Dilersen bu konudan hemen 3-5 soruluk bir alıştırma testi oluşturalım, ne dersin? ✨`;
   }
 
-  if (lower.includes('soru') || lower.includes('sınav') || lower.includes('test') || lower.includes('lgs') || lower.includes('yks')) {
-    return `Soru hazırlama konusunda dikkat edebileceğiniz pedagojik kriterler:
-
-- **Açık ve Net Soru Kökü:** Soru kökünde olumsuz ifadelerin ("değildir", "ulaşılamaz") altını çizin.
-- **Tek ve Kesin Doğru Cevap:** Çelişki yaratmayacak, net bir cevaba sahip sorular seçin.
-- **Kademeli Zorluk:** Testin ilk %30'luk kısmını temel kavrama, %50'sini standart uygulama, son %20'sini ise analiz/akıl yürütme düzeyinde tutun.
-
-Dilerseniz yukarıdaki "Test & Soru Hazırlama" sekmesinden istediğiniz konuyu yazarak saniyeler içinde yeni bir soru seti üretebilirsiniz!`;
-  }
-
-  return `Hocam, sorunuzu inceledim. Bu pedagojik konuda öğrencilerin derse katılımını ve anlama düzeyini artırmak için şu adımları izlemenizi öneririm:
-
-1. **Bireyselleştirilmiş Geri Bildirim:** Öğrencilerin ödev teslimlerindeki hatalarını tespit edip AI destekli rubrik notlarıyla yönlendirin.
-2. **Kısa Aralıklı Pratik:** Konu bittikten hemen sonra 3-5 soruluk mikro testlerle öğrenmeyi kalıcı kılın.
-3. **Görsel & Şematik Özetler:** Ders notu sekmesinden ünite özetini çıkararak öğrencilerinizle PDF/not olarak paylaşın.
-
-Belirli bir ders, ünite veya öğrenci grubu için özel bir çalışma hazırlamamı isterseniz lütfen detayları iletiniz!`;
+  // Teacher reply
+  return `Hocam, bu konuyla ilgili sınıfınız için MEB kazanımlarına tam uyumlu ders planı ve interaktif sınav soruları hazırlayabilirim. Dilerseniz "Test & Soru Hazırlama" sekmesinden saniyeler içinde yeni bir ünite testi oluşturabilirsiniz! 🎓`;
 }
