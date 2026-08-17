@@ -126,7 +126,8 @@ export function AiAssistantModal({
     if (!chatInput.trim() || isChatLoading) return;
 
     const userText = chatInput.trim();
-    setChatMessages((prev) => [...prev, { role: 'user', text: userText }]);
+    const updatedMessages = [...chatMessages, { role: 'user' as const, text: userText }];
+    setChatMessages(updatedMessages);
     setChatInput('');
     setIsChatLoading(true);
 
@@ -138,6 +139,7 @@ export function AiAssistantModal({
         body: JSON.stringify({
           action: 'chat_assistant',
           message: userText,
+          history: updatedMessages,
         }),
       });
       const data = await res.json();

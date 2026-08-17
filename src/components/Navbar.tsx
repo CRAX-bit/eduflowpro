@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEduFlow } from '@/context/EduFlowContext';
 import {
   GraduationCap,
@@ -21,6 +22,8 @@ interface NavbarProps {
 }
 
 export function Navbar({ onOpenAiAssistant }: NavbarProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const {
     state,
     activeTab,
@@ -49,10 +52,44 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
     };
   }, []);
 
-  const handleNavigateHome = () => {
+  const handleNavigateHome = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setActiveTab('home');
-    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-      window.location.href = '/';
+    if (pathname !== '/') {
+      router.push('/');
+    }
+  };
+
+  const handleNavigateTeacher = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (session?.role !== 'teacher') {
+      openAuthModal('teacher');
+      return;
+    }
+    setActiveTab('teacher');
+    if (pathname !== '/' && !pathname.includes('teacher-dashboard')) {
+      router.push('/');
+    }
+  };
+
+  const handleNavigateStudent = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (session?.role !== 'student') {
+      openAuthModal('student');
+      return;
+    }
+    setActiveTab('student');
+    if (pathname !== '/' && !pathname.includes('student-dashboard')) {
+      router.push('/');
     }
   };
 
@@ -60,19 +97,15 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
     setIsProfileMenuOpen(false);
     if (session?.role === 'teacher') {
       setActiveTab('teacher');
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('teacher-dashboard')) {
-        window.location.href = '/teacher-dashboard';
-      }
+      if (pathname !== '/') router.push('/');
     } else if (session?.role === 'student') {
       setActiveTab('student');
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('student-dashboard')) {
-        window.location.href = '/student-dashboard';
-      }
+      if (pathname !== '/') router.push('/');
     }
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#0B0F17]/95 backdrop-blur-xl border-b border-slate-800/80">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#090a0f]/95 backdrop-blur-xl border-b border-zinc-800/80">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-2 sm:gap-4">
         {/* Brand Logo */}
         <div
@@ -88,58 +121,47 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
           </div>
         </div>
 
-        {/* Navigation Tabs (Desktop) */}
-        <nav className="hidden md:flex items-center gap-1.5 p-1 bg-slate-900/80 border border-slate-800 rounded-2xl backdrop-blur-md">
+        {/* Navigation Tabs (Desktop - Instant & Fluid Switch) */}
+        <nav className="hidden md:flex items-center gap-1.5 p-1 bg-zinc-950/80 border border-zinc-800 rounded-2xl backdrop-blur-md">
           <button
+            type="button"
             onClick={handleNavigateHome}
             className={cn(
-              'flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer',
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer select-none',
               activeTab === 'home'
-                ? 'bg-indigo-600 text-white shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-zinc-800 text-white shadow-sm font-semibold border border-zinc-700/60'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
             )}
           >
             <Home className="w-4 h-4" />
             <span>Ana Sayfa</span>
           </button>
 
-          {session?.role === 'teacher' && (
-            <button
-              onClick={() => {
-                setActiveTab('teacher');
-                if (typeof window !== 'undefined' && !window.location.pathname.includes('teacher-dashboard')) {
-                  window.location.href = '/teacher-dashboard';
-                }
-              }}
-              className={cn(
-                'flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer',
-                activeTab === 'teacher'
-                  ? 'bg-emerald-600 text-white font-semibold shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              )}
-            >
-              <span>👨‍🏫 Öğretmen Paneli</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleNavigateTeacher}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer select-none',
+              activeTab === 'teacher'
+                ? 'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700/60'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+            )}
+          >
+            <span>👨‍🏫 Öğretmen Paneli</span>
+          </button>
 
-          {session?.role === 'student' && (
-            <button
-              onClick={() => {
-                setActiveTab('student');
-                if (typeof window !== 'undefined' && !window.location.pathname.includes('student-dashboard')) {
-                  window.location.href = '/student-dashboard';
-                }
-              }}
-              className={cn(
-                'flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer',
-                activeTab === 'student'
-                  ? 'bg-indigo-600 text-white font-semibold shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              )}
-            >
-              <span>🎓 Öğrenci Portalı</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleNavigateStudent}
+            className={cn(
+              'flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer select-none',
+              activeTab === 'student'
+                ? 'bg-zinc-800 text-white font-semibold shadow-sm border border-zinc-700/60'
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-900/60'
+            )}
+          >
+            <span>🎓 Öğrenci Portalı</span>
+          </button>
         </nav>
 
         {/* Right Session & Actions Area */}
@@ -155,8 +177,9 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
             /* Interactive Profile Dropdown */
             <div className="relative" ref={profileMenuRef}>
               <button
+                type="button"
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="flex items-center gap-2 p-1.5 sm:pr-3 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl transition-all cursor-pointer select-none"
+                className="flex items-center gap-2 p-1.5 sm:pr-3 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl transition-all cursor-pointer select-none"
                 aria-expanded={isProfileMenuOpen}
               >
                 <div
@@ -173,135 +196,96 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
                     : initials(session.name || currentStudent?.name || '?')}
                 </div>
                 <div className="hidden sm:flex flex-col text-left min-w-0">
-                  <span className="text-xs font-bold text-white truncate max-w-[110px]">
+                  <span className="text-xs font-bold text-white truncate max-w-[120px]">
                     {session.name || (session.role === 'teacher' ? 'Öğretmen' : currentStudent?.name || 'Öğrenci')}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-medium leading-none">
+                  <span className="text-[10px] text-zinc-400 font-medium leading-none">
                     {session.role === 'teacher' ? '👨‍🏫 Öğretmen' : '🎓 Öğrenci'}
                   </span>
                 </div>
-                <ChevronDown className={cn('w-3.5 h-3.5 text-slate-400 transition-transform ml-1', isProfileMenuOpen && 'rotate-180')} />
+                <ChevronDown className={cn('w-3.5 h-3.5 text-zinc-400 transition-transform ml-1', isProfileMenuOpen && 'rotate-180')} />
               </button>
 
               {/* Floating Dropdown Menu */}
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 p-2 bg-[#0F172A] border border-slate-800 rounded-2xl shadow-2xl space-y-1.5 z-50 animate-fade">
+                <div className="absolute right-0 mt-2 w-64 p-2 bg-[#0c0d12] border border-zinc-800 rounded-2xl shadow-2xl space-y-1.5 z-50 animate-fade backdrop-blur-2xl">
                   {/* User Info Header */}
-                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-1">
+                  <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-heading font-bold text-xs text-white truncate max-w-[140px]">
                         {session.name || 'Kullanıcı'}
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/15 border border-indigo-500/30 text-indigo-300">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-800 text-zinc-300 border border-zinc-700">
                         {session.role === 'teacher' ? 'Öğretmen' : 'Öğrenci'}
                       </span>
                     </div>
                     {session.email && (
-                      <p className="text-[11px] text-slate-400 font-mono truncate">{session.email}</p>
+                      <p className="text-[11px] text-zinc-400 font-mono truncate">{session.email}</p>
                     )}
                   </div>
 
                   {/* Actions */}
                   <div className="space-y-1 pt-1">
                     <button
+                      type="button"
                       onClick={handleNavigateDashboard}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-200 hover:text-white hover:bg-slate-800 transition-all cursor-pointer text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-zinc-200 hover:text-white hover:bg-zinc-900 transition-all cursor-pointer text-left"
                     >
-                      <LayoutDashboard className="w-4 h-4 text-indigo-400" />
+                      <LayoutDashboard className="w-4 h-4 text-emerald-400" />
                       <span>{session.role === 'teacher' ? 'Öğretmen Paneli' : 'Öğrenci Portalı'}</span>
                     </button>
 
                     <button
-                      onClick={handleNavigateHome}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-200 hover:text-white hover:bg-slate-800 transition-all cursor-pointer text-left"
+                      type="button"
+                      onClick={(e) => {
+                        setIsProfileMenuOpen(false);
+                        handleNavigateHome(e);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-zinc-200 hover:text-white hover:bg-zinc-900 transition-all cursor-pointer text-left"
                     >
-                      <Home className="w-4 h-4 text-slate-400" />
-                      <span>Ana Sayfaya Dön</span>
+                      <Home className="w-4 h-4 text-zinc-400" />
+                      <span>Ana Sayfa</span>
                     </button>
-                  </div>
 
-                  {/* Divider & Logout */}
-                  <div className="pt-1.5 border-t border-slate-800/80">
+                    <div className="my-1 border-t border-zinc-800" />
+
                     <button
+                      type="button"
                       onClick={() => {
                         setIsProfileMenuOpen(false);
                         logout();
                       }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-all cursor-pointer text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all cursor-pointer text-left font-medium"
                     >
                       <LogOut className="w-4 h-4" />
-                      <span>Oturumu Kapat (Çıkış Yap)</span>
+                      <span>Çıkış Yap</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
           ) : (
+            /* Guest Login Buttons */
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => openAuthModal('teacher')}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-sm transition-all cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
               >
-                <LogIn className="w-3.5 h-3.5" />
+                <LogIn className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Giriş Yap</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => openAuthModal('teacher')}
+                className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-950 text-xs font-bold shadow-sm transition-all cursor-pointer"
+              >
+                <span>Kayıt Ol</span>
               </button>
             </div>
           )}
         </div>
-      </div>
-
-      {/* Mobile Navigation Strip */}
-      <div className="flex md:hidden border-t border-slate-800/80 px-3 py-1.5 gap-2 bg-[#0B0F17]/95">
-        <button
-          onClick={handleNavigateHome}
-          className={cn(
-            'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all',
-            activeTab === 'home'
-              ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold'
-              : 'text-slate-400 hover:text-white'
-          )}
-        >
-          <Home className="w-3.5 h-3.5" />
-          <span>Ana Sayfa</span>
-        </button>
-
-        {session?.role === 'teacher' && (
-          <button
-            onClick={() => {
-              setActiveTab('teacher');
-              if (typeof window !== 'undefined' && !window.location.pathname.includes('teacher-dashboard')) {
-                window.location.href = '/teacher-dashboard';
-              }
-            }}
-            className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all',
-              activeTab === 'teacher'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
-                : 'text-slate-400 hover:text-white'
-            )}
-          >
-            <span>👨‍🏫 Öğretmen</span>
-          </button>
-        )}
-
-        {session?.role === 'student' && (
-          <button
-            onClick={() => {
-              setActiveTab('student');
-              if (typeof window !== 'undefined' && !window.location.pathname.includes('student-dashboard')) {
-                window.location.href = '/student-dashboard';
-              }
-            }}
-            className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-all',
-              activeTab === 'student'
-                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold'
-                : 'text-slate-400 hover:text-white'
-            )}
-          >
-            <span>🎓 Öğrenci</span>
-          </button>
-        )}
       </div>
     </header>
   );

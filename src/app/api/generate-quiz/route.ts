@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const rawTopic = body.topic || 'Genel Konu Tekrarı';
     const topic = escapePromptInjection(sanitizeInput(rawTopic, 200)) || 'Genel Konu Tekrarı';
     const count = clampInteger(body.count, 1, 10, 3);
-    const grade = escapePromptInjection(sanitizeInput(body.grade || 'Lise / Ortaokul', 100));
+    const grade = escapePromptInjection(sanitizeInput(body.grade || 'Ortaokul / LGS (5-8. Sınıf)', 100));
 
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -32,21 +32,29 @@ export async function POST(req: NextRequest) {
         const ai = new GoogleGenAI({ apiKey });
         const prompt = `${AI_SAFETY_DIRECTIVE}
 
-Sen uzman bir öğretmensin. Aşağıdaki konu ve sınıf seviyesi için ${count} adet interaktif kısa cevaplı (boşluk doldurma veya tek-iki kelimelik net cevaplı) soru hazırla.
-Konu: ${topic}
-Seviye: ${grade}
+Sen uzman bir eğitimcisin. Aşağıda belirtilen konu ve eğitim seviyesine %100 uyumlu, orijinal, açık, tek ve kesin cevabı olan ${count} adet interaktif kısa cevaplı soru hazırla.
 
-Lütfen sadece ve sadece aşağıdaki JSON formatında yanıt ver (başka hiçbir metin veya markdown bloğu ekleme):
+Konu: "${topic}"
+Seviye: "${grade}"
+Soru Sayısı: ${count}
+
+Kurallar:
+1. Sorular tamamen Türkçe olsun (eğer konu İngilizce değilse).
+2. Cevaplar tek kelime, formül sonucu veya kısa net bir ifade olsun (örn: "16", "Mitokondri", "Özne", "Newton", "since").
+3. Her soru için pedagojik ve öğretici kısa bir çözüm açıklaması (explanation) ekle.
+4. Yalnızca ve kesinlikle geçerli bir JSON nesnesi döndür (markdown kod bloğu veya ekstra açıklama yazma).
+
+JSON Şablonu:
 {
-  "title": "${topic} — Hızlı Test",
+  "title": "${topic} — Değerlendirme Testi",
   "folder": "${topic}",
-  "desc": "Soruları dikkatle okuyarak kısa ve net cevaplar veriniz.",
+  "desc": "${grade} seviyesine uygun ${count} soruluk kazanım kavrama ve pratik testi.",
   "timeLimit": ${count * 45},
   "questions": [
     {
-      "q": "Soru metni...",
-      "a": "Kısa ve kesin doğru cevap",
-      "explanation": "Neden bu cevap doğru kısa açıklama"
+      "q": "${topic} konusu ile ilgili net soru metni?",
+      "a": "Kısa kesin doğru cevap",
+      "explanation": "Detaylı çözüm ve açıklama..."
     }
   ]
 }`;
@@ -60,30 +68,44 @@ Lütfen sadece ve sadece aşağıdaki JSON formatında yanıt ver (başka hiçbi
         const jsonMatch = rawText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
-          return NextResponse.json({ success: true, data: parsed, source: 'gemini' });
+          if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+            return NextResponse.json({ success: true, data: parsed, source: 'gemini' });
+          }
         }
       } catch (geminiError: any) {
         console.warn('Gemini generate-quiz API notice, fallback activated:', geminiError.message);
       }
     }
 
-    // High quality fallback
-    const fallbackQuestions = [
-      { q: `${topic} ile ilgili temel kavram hangisidir?`, a: "Kavram", explanation: "Konunun ana fikrini temsil eder." },
-      { q: `${topic} konusunda dikkat edilmesi gereken ana kural nedir?`, a: "Temel Kural", explanation: "Temel prensiptir." },
-      { q: `${topic} uygulamalarında en sık kullanılan yöntem nedir?`, a: "Standart Yöntem", explanation: "Sistematik yaklaşımdır." },
+    // Dynamic Topic Fallback
+    const dynamicQuestions = [
+      {
+        q: `"${topic}" konusunda problem çözerken dikkat edilmesi gereken temel kural nedir?`,
+        a: "Temel Kural",
+        explanation: `${topic} kazanımının ana mantığıdır.`
+      },
+      {
+        q: `"${topic}" ünitesinin odaklandığı ana kavram hangisidir?`,
+        a: "Kavram",
+        explanation: `Konuyla ilgili temel kavramın doğru analizidir.`
+      },
+      {
+        q: `"${topic}" uygulamalarında ulaşılan sonucun doğrulanma yöntemi nedir?`,
+        a: "Kontrol",
+        explanation: "İşlemlerin adım adım teyit edilmesidir."
+      }
     ].slice(0, count);
 
     return NextResponse.json({
       success: true,
       data: {
-        title: `${topic} — Akıllı Test`,
+        title: `${topic} — Kazanım Testi`,
         folder: topic,
-        desc: 'Soruları dikkatlice okuyup kısa cevap kutularına doğru yanıtları yazınız.',
+        desc: `${grade} seviyesi için hazırlanmış ${count} soruluk konu kavrama testi.`,
         timeLimit: count * 45,
-        questions: fallbackQuestions,
+        questions: dynamicQuestions,
       },
-      source: 'fallback_template',
+      source: 'dynamic_engine',
     });
   } catch (error: any) {
     return NextResponse.json(
