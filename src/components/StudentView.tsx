@@ -4,8 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useEduFlow } from '@/context/EduFlowContext';
 import { Assignment, Question } from '@/types';
 import { initials, fmtTime, cn } from '@/lib/utils';
-import { getAuthHeaders } from '@/lib/api-client';
-import confetti from 'canvas-confetti';
 import {
   Folder,
   Timer,
@@ -46,82 +44,18 @@ import {
   Inbox,
   Hourglass,
   ArrowRight,
+  BarChart2,
+  BookMarked,
+  GraduationCap,
 } from 'lucide-react';
 import { NoteModal } from './NoteModal';
 import { PhotoModal } from './PhotoModal';
 import { JoinClassroomModal } from './JoinClassroomModal';
 import { AssignmentSubmitModal } from './AssignmentSubmitModal';
 import { QuizStudyModal } from './QuizStudyModal';
+import { StudentAiDrawer } from './StudentAiDrawer';
 
-type AssignmentFilterTab = 'all' | 'pending' | 'evaluating' | 'completed';
-
-function getCurriculumTopics(grade?: string): string[] {
-  const g = (grade || '').toLowerCase();
-  if (g.includes('ortaokul') || g.includes('lgs')) {
-    return [
-      'Matematik: Çarpanlar ve Katlar (EBOB-EKOK)',
-      'Türkçe: Fiilimsiler (Eylemsiler)',
-      'Fen: DNA ve Genetik Kod',
-      'İngilizce: Teen Life & Preferences',
-      'İnkılap: Milli Mücadele Hazırlık',
-    ];
-  }
-  if (g.includes('sayısal')) {
-    return [
-      'Matematik: Fonksiyonlar ve Türev',
-      'Fizik: Newton Hareket Yasaları',
-      'Kimya: Kimyasal Denge',
-      'Biyoloji: Hücresel Solunum ve ATP',
-      'Geometri: Üçgende Benzerlik',
-    ];
-  }
-  if (g.includes('eşit') || g.includes('sözel')) {
-    return [
-      'Edebiyat: Divan Edebiyatı Nazım Şekilleri',
-      'Tarih: İlk Türk İslam Devletleri',
-      'Coğrafya: Türkiye İklimi',
-      'Matematik: Parabol ve Fonksiyonlar',
-      'Türkçe: Paragrafta Anlam ve Yapı',
-    ];
-  }
-  if (g.includes('lise') || g.includes('yks')) {
-    return [
-      'Matematik: Fonksiyonlar ve Kümeler',
-      'Türkçe: Paragraf ve Ana Düşünce',
-      'Fizik: Kuvvet ve Hareket',
-      'Kimya: Asitler ve Bazlar',
-      'Biyoloji: Kalıtım Esasları',
-    ];
-  }
-  if (g.includes('kpss') || g.includes('ales') || g.includes('lisans')) {
-    return [
-      'Genel Yetenek: Sayısal & Sözel Mantık',
-      'Tarih: Osmanlı Dağılma Dönemi',
-      'Coğrafya: Türkiye\'nin Yer Şekilleri',
-      'Vatandaşlık: Temel Hukuk ve Anayasa',
-    ];
-  }
-  return [
-    'İngilizce: Present Continuous vs Simple Present',
-    'Mantık: Önermeler ve Kümeler',
-    'Genel Kültür: Dünya Coğrafyası',
-    'Türkçe: Sözcükte Anlam',
-  ];
-}
-
-function getCoachWelcomeMessage(grade?: string): string {
-  const g = (grade || '').toLowerCase();
-  if (g.includes('ortaokul') || g.includes('lgs')) {
-    return 'Merhaba! Ben senin LGS çalışma asistanınım. Anlamadığın yeni nesil soruları, formülleri ve ünite özetlerini bana dilediğin gibi sorabilirsin. Başarıya birlikte koşuyoruz! 🚀';
-  }
-  if (g.includes('lise') || g.includes('yks')) {
-    return 'Selam! Ben senin YKS koçunum. TYT-AYT sınav taktikleri, formül ispatları ve ÖSYM mantığı odaklı sorularını buraya iletebilirsin. Hangi konuyu derinleştirelim? 🎯';
-  }
-  if (g.includes('kpss') || g.includes('ales') || g.includes('lisans')) {
-    return 'Merhaba! KPSS & ALES hazırlığında sözel/sayısal mantık, mevzuat ve pratik soru çözüm teknikleriyle yanındayım. Ne üzerine çalışıyoruz? 📚';
-  }
-  return 'Merhaba! Derslerin, dil pratiğin ve merak ettiğin tüm akademik konular için kişisel çalışma asistanın hazır! 🎓';
-}
+type AssignmentFilterTab = 'pending' | 'evaluating' | 'completed' | 'all';
 
 const GRADE_LEVEL_OPTIONS = [
   'Ortaokul (5-8. Sınıf / LGS Hazırlık)',
@@ -137,7 +71,6 @@ export function StudentView() {
     getStudentById,
     getVisibleAssignments,
     submitTestAnswers,
-    retryTest,
     leaveClassroom,
     updateStudentGradeLevel,
     showToast,
@@ -150,6 +83,10 @@ export function StudentView() {
   const [assignmentFilterTab, setAssignmentFilterTab] = useState<AssignmentFilterTab>('pending');
   const [isJoinClassModalOpen, setIsJoinClassModalOpen] = useState(false);
   const [submitModalAssignment, setSubmitModalAssignment] = useState<Assignment | null>(null);
+
+  // Floating AI Drawer State
+  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
+  const [aiDrawerInitialTab, setAiDrawerInitialTab] = useState<'chat' | 'practice'>('chat');
 
   // Active Focus Quiz Study Modal State (Quizlet Study Engine)
   const [activeStudyQuiz, setActiveStudyQuiz] = useState<{
@@ -168,39 +105,10 @@ export function StudentView() {
     studentName?: string;
   } | null>(null);
 
-  const currentGradeLevel = state.session?.gradeLevel || currentStudent?.gradeLevel || 'Ortaokul (5-8. Sınıf / LGS Hazırlık)';
+  const currentGradeLevel =
+    state.session?.gradeLevel || currentStudent?.gradeLevel || 'Ortaokul (5-8. Sınıf / LGS Hazırlık)';
   const [isLevelDropdownOpen, setIsLevelDropdownOpen] = useState(false);
   const [isUpdatingLevel, setIsUpdatingLevel] = useState(false);
-  const practiceChips = useMemo(() => getCurriculumTopics(currentGradeLevel), [currentGradeLevel]);
-
-  // --- Kişisel Çalışma Asistanı (Coach Chat) State ---
-  const [coachMessages, setCoachMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
-    {
-      role: 'assistant',
-      text: getCoachWelcomeMessage(currentGradeLevel),
-    },
-  ]);
-  const [coachInput, setCoachInput] = useState('');
-  const [isCoachLoading, setIsCoachLoading] = useState(false);
-
-  // Update coach welcome message when grade level is loaded/changed
-  useEffect(() => {
-    const welcome = getCoachWelcomeMessage(currentGradeLevel);
-    setCoachMessages([{ role: 'assistant', text: welcome }]);
-  }, [currentGradeLevel]);
-
-  // --- Konu Alıştırması (Quick Practice) State ---
-  const [isPracticeModalOpen, setIsPracticeModalOpen] = useState(false);
-  const [practiceTopic, setPracticeTopic] = useState('');
-  const [practiceCount, setPracticeCount] = useState<number>(5);
-  const [isPracticeLoading, setIsPracticeLoading] = useState(false);
-
-  // Initialize and update practice topic from dynamic chips when level changes
-  useEffect(() => {
-    if (practiceChips.length > 0) {
-      setPracticeTopic(practiceChips[0]);
-    }
-  }, [practiceChips]);
 
   if (!state.session && !state.currentStudentId) {
     return (
@@ -220,6 +128,7 @@ export function StudentView() {
     let evaluatingCount = 0;
     let totalScoreSum = 0;
     let scoredItemsCount = 0;
+    const completedTestsList: Array<{ title: string; score: number; date: number }> = [];
 
     assignments.forEach((a) => {
       const sub = a.submissions?.[studentId];
@@ -239,27 +148,35 @@ export function StudentView() {
         completedCount += 1;
         totalScoreSum += sub.percent;
         scoredItemsCount += 1;
+        completedTestsList.push({
+          title: a.title,
+          score: sub.percent,
+          date: sub.at || a.createdAt,
+        });
       } else {
-        // Submitted, waiting for teacher review
         evaluatingCount += 1;
       }
     });
 
     const averageScore = scoredItemsCount > 0 ? Math.round(totalScoreSum / scoredItemsCount) : null;
     const streakDays = completedCount > 0 ? Math.min(completedCount, 7) : 0;
+    const totalCount = assignments.filter((a) => a.type !== 'note').length;
+    const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
     return {
       completedCount,
       pendingCount,
       evaluatingCount,
-      totalCount: assignments.length,
+      totalCount,
+      completionRate,
       averageScore,
       streakDays,
+      completedTestsList,
       hasActivity: completedCount > 0 || evaluatingCount > 0,
     };
   }, [assignments, studentId]);
 
-  // Filtered Assignments based on tab (Quizlet / Notion Clean 3 Tabs)
+  // Filtered Assignments based on tab
   const categorizedAssignments = useMemo(() => {
     return assignments.filter((a) => {
       const sub = a.submissions?.[studentId];
@@ -276,6 +193,11 @@ export function StudentView() {
       return true;
     });
   }, [assignments, studentId, assignmentFilterTab]);
+
+  // Study Notes & Materials Archive
+  const studyMaterialsList = useMemo(() => {
+    return assignments.filter((a) => a.type === 'note' || a.fileName);
+  }, [assignments]);
 
   // --- Handlers for Teacher Assigned Tests in Focus Mode ---
   const handleStartFocusTest = (a: Assignment) => {
@@ -300,90 +222,10 @@ export function StudentView() {
     }
   };
 
-  // --- Handlers for AI Study Coach Chat ---
-  const handleSendCoachMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!coachInput.trim() || isCoachLoading) return;
-
-    const userText = coachInput.trim();
-    setCoachMessages((prev) => [...prev, { role: 'user', text: userText }]);
-    setCoachInput('');
-    setIsCoachLoading(true);
-
-    try {
-      const headers = await getAuthHeaders(state.session);
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          action: 'chat_assistant',
-          message: userText,
-          role: 'student',
-          gradeLevel: currentGradeLevel,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.reply) {
-        setCoachMessages((prev) => [...prev, { role: 'assistant', text: data.reply }]);
-      } else {
-        setCoachMessages((prev) => [
-          ...prev,
-          { role: 'assistant', text: data.error || 'Yanıt üretilirken bir aksaklık oldu. Lütfen sorunuzu tekrar iletin.' },
-        ]);
-      }
-    } catch (e) {
-      setCoachMessages((prev) => [
-        ...prev,
-        { role: 'assistant', text: 'Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin.' },
-      ]);
-    } finally {
-      setIsCoachLoading(false);
-    }
-  };
-
-  // --- Handlers for Quick AI Practice Quiz (Direct to Focus Study Mode) ---
-  const handleGeneratePracticeQuiz = async (topicToUse?: string) => {
-    const topic = (topicToUse || practiceTopic).trim();
-    if (!topic) return;
-    setPracticeTopic(topic);
-    setIsPracticeLoading(true);
-
-    try {
-      const headers = await getAuthHeaders(state.session);
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          action: 'generate_quiz',
-          topic,
-          count: practiceCount,
-          grade: currentGradeLevel,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.data && data.data.questions?.length > 0) {
-        setIsPracticeModalOpen(false);
-        setActiveStudyQuiz({
-          title: data.data.title || `${topic} — Pratik Test`,
-          folder: topic,
-          questions: data.data.questions,
-          timeLimit: (data.data.questions.length || 5) * 60,
-        });
-        showToast(`${topic} için ${data.data.questions.length} soruluk odak çalışma modu başlatıldı!`, 'success');
-      } else {
-        showToast(data.error || 'Alıştırma testi oluşturulamadı. Lütfen tekrar deneyin.', 'error');
-      }
-    } catch (e) {
-      showToast('Bağlantı hatası oluştu.', 'error');
-    } finally {
-      setIsPracticeLoading(false);
-    }
-  };
-
   return (
-    <div className="space-y-8 animate-fade pb-16">
-      {/* 1. Header Card (Linear / Quizlet Minimalist Banner) */}
-      <header className="p-6 sm:p-7 rounded-2xl sm:rounded-3xl bg-[#090a0f] border border-zinc-800/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+    <div className="space-y-8 animate-fade pb-20">
+      {/* 1. Header Banner */}
+      <header className="p-6 sm:p-7 rounded-2xl bg-[#090a0f] border border-zinc-800/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         <div className="flex items-center gap-4">
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-extrabold text-base text-white shadow-md shrink-0 border border-white/10"
@@ -391,36 +233,40 @@ export function StudentView() {
           >
             {initials(studentDisplayName)}
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-                <Sparkles className="w-3 h-3" />
+                <GraduationCap className="w-3 h-3" />
                 <span>Öğrenci Portalı</span>
               </div>
 
-              {/* Interactive Level Selector Badge & Dropdown */}
+              {/* Interactive Target Level Selector */}
               <div className="relative">
                 <button
                   type="button"
                   disabled={isUpdatingLevel}
                   onClick={() => setIsLevelDropdownOpen(!isLevelDropdownOpen)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 hover:border-emerald-500/50 text-zinc-200 text-xs font-medium transition-all cursor-pointer shadow-sm group"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-emerald-500/50 text-zinc-200 text-xs font-medium transition-all cursor-pointer shadow-sm group"
                   title="Hedef sınav veya eğitim seviyenizi değiştirmek için tıklayın"
                 >
-                  <span className="text-emerald-400">🎯 Hedef:</span>
-                  <span className="font-semibold text-white max-w-[200px] sm:max-w-[280px] truncate">
+                  <span className="text-emerald-400 font-semibold">🎯 Hedef:</span>
+                  <span className="font-semibold text-white max-w-[180px] sm:max-w-[240px] truncate">
                     {currentGradeLevel}
                   </span>
                   {isUpdatingLevel ? (
                     <Loader2 className="w-3 h-3 text-emerald-400 animate-spin" />
                   ) : (
-                    <ChevronDown className={cn("w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-transform", isLevelDropdownOpen && "rotate-180")} />
+                    <ChevronDown
+                      className={cn(
+                        'w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-transform',
+                        isLevelDropdownOpen && 'rotate-180'
+                      )}
+                    />
                   )}
                 </button>
 
                 {isLevelDropdownOpen && (
                   <>
-                    {/* Backdrop for closing dropdown */}
                     <div
                       className="fixed inset-0 z-20"
                       onClick={() => setIsLevelDropdownOpen(false)}
@@ -461,17 +307,19 @@ export function StudentView() {
                 )}
               </div>
             </div>
+
             <h1 className="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">
               Hoş Geldin, {studentDisplayName}
             </h1>
             <p className="text-xs sm:text-sm text-zinc-400">
-              Ödevlerini teslim et, ders notlarını incele ve Quizlet odak modunda anında pratik yap.
+              Ödevlerini tamamla, ders notlarını incele ve Quizlet odak modunda interaktif testler çöz.
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
           <button
+            type="button"
             onClick={() => setIsJoinClassModalOpen(true)}
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs sm:text-sm font-semibold transition-all cursor-pointer"
           >
@@ -480,11 +328,15 @@ export function StudentView() {
           </button>
 
           <button
-            onClick={() => setIsPracticeModalOpen(!isPracticeModalOpen)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs sm:text-sm shadow-md shadow-emerald-500/10 hover:shadow-emerald-500/25 transition-all cursor-pointer"
+            type="button"
+            onClick={() => {
+              setAiDrawerInitialTab('practice');
+              setIsAiDrawerOpen(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs sm:text-sm shadow-md shadow-emerald-500/15 hover:shadow-emerald-500/30 transition-all cursor-pointer"
           >
             <Compass className="w-4 h-4" />
-            <span>Konu Alıştırması (AI Quiz)</span>
+            <span>Alıştırma Testi (AI)</span>
           </button>
         </div>
       </header>
@@ -556,171 +408,135 @@ export function StudentView() {
         </div>
       </section>
 
-      {/* 3. Classrooms Ribbon */}
-      <section className="p-5 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <School className="w-4 h-4 text-emerald-400" />
-            <div>
-              <h2 className="font-heading font-semibold text-sm text-white">
-                Kayıtlı Olduğum Sınıflar ({state.joinedClassrooms.length})
-              </h2>
+      {/* 3. Performance & Success Analytics Section */}
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Progress Breakdown Card */}
+        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart2 className="w-4 h-4 text-emerald-400" />
+              <h3 className="font-heading font-semibold text-sm text-white">
+                Ödev & Görev Tamamlama Durumu
+              </h3>
             </div>
+            <span className="text-xs font-mono font-bold text-emerald-400">
+              %{stats.completionRate} Tamamlandı
+            </span>
           </div>
 
-          <button
-            onClick={() => setIsJoinClassModalOpen(true)}
-            className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Yeni Sınıfa Katıl</span>
-          </button>
+          {/* Progress Multi-Bar */}
+          <div className="w-full h-3 rounded-full bg-zinc-950 overflow-hidden flex">
+            <div
+              className="h-full bg-emerald-500 transition-all"
+              style={{
+                width: `${stats.totalCount > 0 ? (stats.completedCount / stats.totalCount) * 100 : 0}%`,
+              }}
+              title={`Tamamlanan: ${stats.completedCount}`}
+            />
+            <div
+              className="h-full bg-indigo-500 transition-all"
+              style={{
+                width: `${stats.totalCount > 0 ? (stats.evaluatingCount / stats.totalCount) * 100 : 0}%`,
+              }}
+              title={`Değerlendirmede: ${stats.evaluatingCount}`}
+            />
+            <div
+              className="h-full bg-amber-500 transition-all"
+              style={{
+                width: `${stats.totalCount > 0 ? (stats.pendingCount / stats.totalCount) * 100 : 0}%`,
+              }}
+              title={`Bekleyen: ${stats.pendingCount}`}
+            />
+          </div>
+
+          {/* Legend Items */}
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-800/80 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+              <div>
+                <div className="font-bold text-white">{stats.completedCount}</div>
+                <div className="text-[10px] text-zinc-400">Tamamlanan</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
+              <div>
+                <div className="font-bold text-white">{stats.evaluatingCount}</div>
+                <div className="text-[10px] text-zinc-400">Değerlendirmede</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+              <div>
+                <div className="font-bold text-white">{stats.pendingCount}</div>
+                <div className="text-[10px] text-zinc-400">Bekleyen</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {state.joinedClassrooms.length === 0 ? (
-          <div className="p-6 text-center rounded-xl bg-zinc-950/40 border border-dashed border-zinc-800 space-y-2">
-            <KeyRound className="w-7 h-7 mx-auto text-zinc-600" />
-            <h4 className="font-medium text-white text-xs">Henüz bir sınıfa katılmadınız</h4>
-            <p className="text-[11px] text-zinc-400 max-w-sm mx-auto">
-              Öğretmeninizin paylaştığı 6 haneli kodu girerek sınıfınıza dahil olabilirsiniz.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {state.joinedClassrooms.map((c) => (
-              <div
-                key={c.id}
-                className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between gap-3"
-              >
-                <div className="min-w-0">
-                  <h4 className="font-semibold text-xs text-white truncate">{c.name}</h4>
-                  <div className="text-[10px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
-                    <span>Kod: <b className="font-mono text-emerald-400">{c.joinCode}</b></span>
-                    {c.subject && <span>• {c.subject}</span>}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    if (window.confirm(`"${c.name}" sınıfından ayrılmak istediğinize emin misiniz?`)) {
-                      leaveClassroom(c.id);
-                    }
-                  }}
-                  className="text-zinc-600 hover:text-red-400 text-xs transition-colors cursor-pointer"
-                  title="Sınıftan Ayrıl"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* 4. Quick Practice Modal / Module Trigger */}
-      {isPracticeModalOpen && (
-        <section className="p-5 sm:p-6 rounded-2xl bg-[#090a0f] border border-emerald-500/30 shadow-2xl space-y-4 animate-fade">
-          <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+        {/* Test Performance & Quiz History Card */}
+        <div className="lg:col-span-6 p-5 sm:p-6 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Compass className="w-5 h-5 text-emerald-400" />
-              <div>
-                <h2 className="font-heading font-semibold text-base text-white">
-                  Akıllı Konu Alıştırması & Test Modülü
-                </h2>
-                <p className="text-xs text-zinc-400">
-                  Dilediğin konuda anında Quizlet odak modlu pratik testi oluştur.
-                </p>
-              </div>
+              <Award className="w-4 h-4 text-cyan-400" />
+              <h3 className="font-heading font-semibold text-sm text-white">
+                Tamamlanan Testler & Başarı Analizi
+              </h3>
             </div>
-            <button
-              onClick={() => setIsPracticeModalOpen(false)}
-              className="text-xs text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 cursor-pointer"
-            >
-              Kapat ✕
-            </button>
+            <span className="text-xs text-zinc-400 font-mono">
+              {stats.completedTestsList.length} Çözülen Test
+            </span>
           </div>
 
-          {/* Quick Subject Chips */}
-          <div className="space-y-2">
-            <span className="text-xs font-semibold text-zinc-400">Örnek Çalışma Konuları:</span>
-            <div className="flex flex-wrap gap-2">
-              {practiceChips.map((chip, idx) => (
-                <button
+          {stats.completedTestsList.length === 0 ? (
+            <div className="p-4 text-center rounded-xl bg-zinc-950/60 border border-dashed border-zinc-800 text-xs text-zinc-400 space-y-1">
+              <div>Henüz tamamlanmış bir test bulunmuyor.</div>
+              <p className="text-[11px] text-zinc-500">
+                Alıştırma testlerini çözdükçe başarı analiziniz burada görüntülenecektir.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-28 overflow-y-auto pr-1">
+              {stats.completedTestsList.map((t, idx) => (
+                <div
                   key={idx}
-                  type="button"
-                  onClick={() => setPracticeTopic(chip)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer text-left',
-                    practiceTopic === chip
-                      ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-semibold shadow-sm'
-                      : 'bg-zinc-950 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700'
-                  )}
+                  className="p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between text-xs"
                 >
-                  {chip}
-                </button>
+                  <span className="font-medium text-white truncate max-w-[240px]">{t.title}</span>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 rounded text-[11px] font-mono font-bold',
+                      t.score >= 80
+                        ? 'bg-emerald-500/10 text-emerald-400'
+                        : t.score >= 60
+                        ? 'bg-cyan-500/10 text-cyan-400'
+                        : 'bg-amber-500/10 text-amber-400'
+                    )}
+                  >
+                    %{t.score}
+                  </span>
+                </div>
               ))}
             </div>
+          )}
+
+          <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
+            <span>Sınav Seviyeniz:</span>
+            <span className="font-semibold text-white truncate max-w-[200px]">{currentGradeLevel}</span>
           </div>
+        </div>
+      </section>
 
-          {/* Custom Topic Input & Soru Sayısı */}
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
-            <div className="sm:col-span-7">
-              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                Konu Başlığı
-              </label>
-              <input
-                type="text"
-                value={practiceTopic}
-                onChange={(e) => setPracticeTopic(e.target.value)}
-                placeholder="Örn: 10. Sınıf Fotosentez Işık Reaksiyonları..."
-                className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-zinc-500 focus:outline-none"
-              />
-            </div>
-
-            <div className="sm:col-span-3">
-              <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
-                Soru Sayısı
-              </label>
-              <select
-                value={practiceCount}
-                onChange={(e) => setPracticeCount(Number(e.target.value))}
-                className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs focus:outline-none"
-              >
-                <option value={3}>3 Soru (Hızlı Pratik)</option>
-                <option value={5}>5 Soru (Standart Test)</option>
-                <option value={10}>10 Soru (Kapsamlı Sınav)</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2 flex items-end">
-              <button
-                disabled={isPracticeLoading || !practiceTopic.trim()}
-                onClick={() => handleGeneratePracticeQuiz()}
-                className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
-              >
-                {isPracticeLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Hazırlanıyor...</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4" />
-                    <span>Başlat</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* 5. Categorized Assignments Section (Quizlet / Notion 3 Tabs Structure) */}
+      {/* 4. Categorized Assignments Section (Quizlet / Notion Clean Tabs) */}
       <section className="space-y-4">
         {/* Subtabs Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 p-2 rounded-2xl bg-[#0c0d12] border border-zinc-800/80">
           <div className="flex flex-wrap items-center gap-1.5">
             <button
+              type="button"
               onClick={() => setAssignmentFilterTab('pending')}
               className={cn(
                 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
@@ -737,6 +553,7 @@ export function StudentView() {
             </button>
 
             <button
+              type="button"
               onClick={() => setAssignmentFilterTab('evaluating')}
               className={cn(
                 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
@@ -753,6 +570,7 @@ export function StudentView() {
             </button>
 
             <button
+              type="button"
               onClick={() => setAssignmentFilterTab('completed')}
               className={cn(
                 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer',
@@ -769,6 +587,7 @@ export function StudentView() {
             </button>
 
             <button
+              type="button"
               onClick={() => setAssignmentFilterTab('all')}
               className={cn(
                 'flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer',
@@ -782,14 +601,14 @@ export function StudentView() {
           </div>
 
           <div className="text-xs text-zinc-400 font-mono hidden sm:block pr-2">
-            {categorizedAssignments.length} materyal
+            {categorizedAssignments.length} görev listeleniyor
           </div>
         </div>
 
         {/* Assignment Cards Grid */}
         {categorizedAssignments.length === 0 ? (
           <div className="p-12 text-center rounded-2xl bg-[#0c0d12] border border-dashed border-zinc-800 space-y-2">
-            <BookOpen className="w-7 h-7 mx-auto text-zinc-600" />
+            <BookOpen className="w-8 h-8 mx-auto text-zinc-600" />
             <h4 className="font-medium text-white text-sm">
               {assignmentFilterTab === 'pending'
                 ? 'Harika! Bekleyen hiçbir ödeviniz bulunmuyor.'
@@ -875,6 +694,13 @@ export function StudentView() {
                       <div className="text-xs text-zinc-400 mt-0.5">Konu: {a.folder}</div>
                     </div>
 
+                    {a.fileName && (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300">
+                        <FileText className="w-3 h-3 text-cyan-400" />
+                        <span className="truncate max-w-[180px]">{a.fileName}</span>
+                      </div>
+                    )}
+
                     {a.desc && (
                       <p className="text-xs text-zinc-400 leading-relaxed line-clamp-2">
                         {a.desc}
@@ -899,6 +725,7 @@ export function StudentView() {
                   <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between">
                     {isNote && (
                       <button
+                        type="button"
                         onClick={() => setViewingNote(a)}
                         className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
                       >
@@ -909,6 +736,7 @@ export function StudentView() {
 
                     {isBook && (
                       <button
+                        type="button"
                         onClick={() => setSubmitModalAssignment(a)}
                         className={cn(
                           'px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer',
@@ -932,6 +760,7 @@ export function StudentView() {
 
                     {isTest && !sub && (
                       <button
+                        type="button"
                         onClick={() => handleStartFocusTest(a)}
                         className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                       >
@@ -942,6 +771,7 @@ export function StudentView() {
 
                     {isTest && sub && (
                       <button
+                        type="button"
                         onClick={() => handleStartFocusTest(a)}
                         className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
                       >
@@ -957,64 +787,141 @@ export function StudentView() {
         )}
       </section>
 
-      {/* 6. Kişisel Çalışma Asistanı (Coach Chat) */}
+      {/* 5. Study Notes & Materials Archive Section */}
+      {studyMaterialsList.length > 0 && (
+        <section className="p-5 sm:p-6 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
+            <div className="flex items-center gap-2">
+              <BookMarked className="w-5 h-5 text-cyan-400" />
+              <div>
+                <h3 className="font-heading font-semibold text-base text-white">
+                  Ders Notları & Çalışma Dokümanları ({studyMaterialsList.length})
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Öğretmenleriniz tarafından paylaşılan tüm ders fasikülleri ve özet dokümanları.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {studyMaterialsList.map((m) => (
+              <div
+                key={m.id}
+                className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between gap-3 hover:border-zinc-700 transition-all"
+              >
+                <div className="min-w-0 space-y-1">
+                  <h4 className="font-semibold text-xs text-white truncate">{m.title}</h4>
+                  <div className="text-[10px] text-zinc-400 flex items-center gap-1.5">
+                    <span>{m.folder}</span>
+                    {m.classroomName && <span>• {m.classroomName}</span>}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setViewingNote(m)}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-cyan-400 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>İncele</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 6. Joined Classrooms Section */}
       <section className="p-5 sm:p-6 rounded-2xl bg-[#0c0d12] border border-zinc-800/80 space-y-4">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-zinc-800/80">
-          <MessageSquare className="w-4 h-4 text-emerald-400" />
-          <div>
-            <h3 className="font-heading font-semibold text-sm text-white">
-              Kişisel Soru & Konu Danışmanı
-            </h3>
-            <p className="text-xs text-zinc-400">
-              Takıldığınız soruları, formülleri ve konu özetlerini 7/24 sorabilirsiniz.
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
+          <div className="flex items-center gap-2.5">
+            <School className="w-5 h-5 text-emerald-400" />
+            <div>
+              <h3 className="font-heading font-semibold text-sm text-white">
+                Kayıtlı Olduğum Sınıflar ({state.joinedClassrooms.length})
+              </h3>
+              <p className="text-xs text-zinc-400">
+                Katıldığınız ders şubeleri ve öğretmen çalışma grupları.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsJoinClassModalOpen(true)}
+            className="px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Yeni Sınıfa Katıl</span>
+          </button>
+        </div>
+
+        {state.joinedClassrooms.length === 0 ? (
+          <div className="p-6 text-center rounded-xl bg-zinc-950/40 border border-dashed border-zinc-800 space-y-2">
+            <KeyRound className="w-7 h-7 mx-auto text-zinc-600" />
+            <h4 className="font-medium text-white text-xs">Henüz bir sınıfa katılmadınız</h4>
+            <p className="text-[11px] text-zinc-400 max-w-sm mx-auto">
+              Öğretmeninizin paylaştığı 6 haneli kodu girerek sınıfınıza dahil olabilirsiniz.
             </p>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {state.joinedClassrooms.map((c) => (
+              <div
+                key={c.id}
+                className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <h4 className="font-semibold text-xs text-white truncate">{c.name}</h4>
+                  <div className="text-[10px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
+                    <span>
+                      Kod: <b className="font-mono text-emerald-400">{c.joinCode}</b>
+                    </span>
+                    {c.subject && <span>• {c.subject}</span>}
+                  </div>
+                </div>
 
-        {/* Chat Messages */}
-        <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-          {coachMessages.map((m, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                'p-3.5 rounded-xl text-xs leading-relaxed max-w-[85%]',
-                m.role === 'user'
-                  ? 'ml-auto bg-emerald-500 text-zinc-950 font-medium'
-                  : 'bg-zinc-950 border border-zinc-800 text-zinc-200'
-              )}
-            >
-              {m.text}
-            </div>
-          ))}
-          {isCoachLoading && (
-            <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-400 flex items-center gap-2 w-fit">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Asistan yanıt hazırlıyor...</span>
-            </div>
-          )}
-        </div>
-
-        {/* Input */}
-        <form onSubmit={handleSendCoachMessage} className="flex gap-2 pt-2">
-          <input
-            type="text"
-            value={coachInput}
-            onChange={(e) => setCoachInput(e.target.value)}
-            placeholder="Sorunuzu buraya yazınız (örn: Fotosentez evrelerini kısaca özetler misin?)..."
-            className="flex-1 px-4 py-2.5 bg-zinc-950 border border-zinc-800 focus:border-emerald-400 rounded-xl text-white text-xs placeholder:text-zinc-500 focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={!coachInput.trim() || isCoachLoading}
-            className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>Gönder</span>
-          </button>
-        </form>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`"${c.name}" sınıfından ayrılmak istediğinize emin misiniz?`)) {
+                      leaveClassroom(c.id);
+                    }
+                  }}
+                  className="text-zinc-600 hover:text-red-400 text-xs transition-colors cursor-pointer"
+                  title="Sınıftan Ayrıl"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
-      {/* Focus Study Modal (Quizlet Engine) */}
+      {/* ========================================================================= */}
+      {/* 7. FLOATING AI COPILOT SLIDE-OVER DRAWER (STUDENT TUTOR)                  */}
+      {/* ========================================================================= */}
+      <StudentAiDrawer
+        isOpen={isAiDrawerOpen}
+        onClose={() => setIsAiDrawerOpen(false)}
+        onToggle={() => setIsAiDrawerOpen(!isAiDrawerOpen)}
+        currentGradeLevel={currentGradeLevel}
+        initialTab={aiDrawerInitialTab}
+        onStartFocusTest={(quizData) => {
+          setActiveStudyQuiz({
+            title: quizData.title,
+            folder: quizData.folder,
+            questions: quizData.questions,
+            timeLimit: quizData.timeLimit,
+          });
+        }}
+      />
+
+      {/* ========================================================================= */}
+      {/* 8. MODALS & SUB-VIEWS                                                     */}
+      {/* ========================================================================= */}
       {activeStudyQuiz && (
         <QuizStudyModal
           isOpen={!!activeStudyQuiz}
@@ -1027,7 +934,6 @@ export function StudentView() {
         />
       )}
 
-      {/* Additional Modals */}
       {isJoinClassModalOpen && (
         <JoinClassroomModal
           isOpen={isJoinClassModalOpen}
