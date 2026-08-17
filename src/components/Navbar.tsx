@@ -74,19 +74,17 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#0B0F17]/95 backdrop-blur-xl border-b border-slate-800/80">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between gap-2 sm:gap-4">
-        {/* Brand */}
+        {/* Brand Logo */}
         <div
           onClick={handleNavigateHome}
-          className="flex items-center gap-2.5 cursor-pointer select-none group shrink-0"
+          className="flex items-center gap-2 cursor-pointer select-none group shrink-0"
         >
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-400 p-[1px] shadow-sm group-hover:shadow-[0_0_24px_rgba(99,102,241,0.4)] transition-all">
-            <div className="w-full h-full bg-[#0B0F17] rounded-[11px] flex items-center justify-center text-indigo-400">
-              <GraduationCap className="w-5 h-5 text-indigo-300" />
-            </div>
-          </div>
-          <div className="font-heading font-extrabold text-lg sm:text-xl tracking-tight text-white flex items-center">
-            Edu<span className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">Flow</span>
-            <span className="text-[10px] sm:text-xs ml-1.5 px-1.5 sm:px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 font-mono">PRO</span>
+          <GraduationCap className="w-5 h-5 text-zinc-200 transition-transform group-hover:scale-105" />
+          <div className="font-heading font-semibold text-lg tracking-tight text-zinc-100 flex items-center">
+            <span>EduFlow</span>
+            <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium tracking-wider uppercase rounded-md bg-zinc-800/80 text-zinc-400 border border-zinc-700/50">
+              PRO
+            </span>
           </div>
         </div>
 
@@ -146,13 +144,11 @@ export function Navbar({ onOpenAiAssistant }: NavbarProps) {
 
         {/* Right Session & Actions Area */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Live Status Indicator (Hidden on ultra-small screens) */}
-          <div className="hidden lg:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md text-emerald-300 text-xs font-semibold select-none">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-            </span>
-            <span className="tracking-wide text-[11px]">Sistem Aktif · Akıllı Asistan Devrede</span>
+          {/* AI Model Status Badge */}
+          <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-zinc-300 text-xs select-none backdrop-blur-md">
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="text-[11px] font-medium text-zinc-300">Gemini 2.5 Pro • Devrede</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
           </div>
 
           {session ? (

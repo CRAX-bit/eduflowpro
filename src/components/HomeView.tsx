@@ -100,17 +100,17 @@ export function HomeView() {
         <div className="flex flex-wrap items-center justify-center gap-6 pt-3 text-xs text-zinc-400 font-normal">
           <span className="flex items-center gap-1.5">
             <Check className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Kredi Kartı Gerekmez</span>
-          </span>
-          <span className="text-zinc-700">·</span>
-          <span className="flex items-center gap-1.5">
-            <Check className="w-3.5 h-3.5 text-emerald-400" />
             <span>%100 Öğretmen Kontrolü</span>
           </span>
           <span className="text-zinc-700">·</span>
           <span className="flex items-center gap-1.5">
             <Check className="w-3.5 h-3.5 text-emerald-400" />
             <span>KVKK Uyumlu Altyapı</span>
+          </span>
+          <span className="text-zinc-700">·</span>
+          <span className="flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Anında Sınıf Kurulumu</span>
           </span>
         </div>
       </section>
