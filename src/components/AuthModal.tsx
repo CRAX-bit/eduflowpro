@@ -19,6 +19,8 @@ import {
   RefreshCw,
   ShieldCheck,
   Check,
+  ArrowLeft,
+  Key,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -65,10 +67,9 @@ export function AuthModal() {
     authModalInitialRole,
     loginSupabaseUser,
     showToast,
-    state,
   } = useEduFlow();
 
-  const [mode, setMode] = useState<'signin' | 'signup' | 'verification_sent'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'verification_sent' | 'forgot_password' | 'reset_sent'>('signin');
   const [role, setRole] = useState<'teacher' | 'student'>('teacher');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -79,7 +80,7 @@ export function AuthModal() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Email verification state
+  // Email verification & reset state
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendLoading, setResendLoading] = useState(false);
@@ -144,6 +145,45 @@ export function AuthModal() {
     }
   };
 
+  // Password Reset (Forgot Password) Action
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setErrorMessage('Lütfen e-posta adresinizi giriniz.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/` : undefined;
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: redirectUrl,
+      });
+
+      if (error) {
+        const trError = getTurkishAuthErrorMessage(error);
+        setErrorMessage(trError);
+        showToast(`Şifre sıfırlama hatası: ${trError}`, 'error');
+        return;
+      }
+
+      setSubmittedEmail(cleanEmail);
+      setMode('reset_sent');
+      showToast('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi! ✉️', 'success');
+    } catch (err: any) {
+      const trError = getTurkishAuthErrorMessage(err);
+      setErrorMessage(trError);
+      showToast(trError, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Switch back to Sign In
   const handleBackToSignIn = () => {
     setMode('signin');
@@ -151,6 +191,7 @@ export function AuthModal() {
     setErrorMessage(null);
   };
 
+  // Main Submit Handler (Sign In & Sign Up)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
@@ -160,7 +201,7 @@ export function AuthModal() {
     const cleanName = fullName.trim();
 
     if (!cleanEmail) {
-      setErrorMessage('Lütfen e-posta adresinizi veya kullanıcı adınızı giriniz.');
+      setErrorMessage('Lütfen e-posta adresinizi giriniz.');
       return;
     }
 
@@ -203,6 +244,21 @@ export function AuthModal() {
           return;
         }
 
+        // Try upserting to profiles table for data consistency
+        if (data.user?.id) {
+          try {
+            await supabase.from('profiles').upsert({
+              id: data.user.id,
+              full_name: cleanName,
+              role: role,
+              email: cleanEmail,
+              updated_at: new Date().toISOString(),
+            });
+          } catch (e) {
+            // non-blocking
+          }
+        }
+
         if (data.session && data.user) {
           loginSupabaseUser({
             role: role,
@@ -219,36 +275,7 @@ export function AuthModal() {
         setResendCooldown(60);
         showToast('Kayıt başarılı! Doğrulama e-postası gönderildi. ✉️', 'success');
       } else {
-        // Sign In Flow with Strict Role Guard
-
-        // 1. Check if student credentials match a classroom local account
-        const matchedStudent = state.students.find(
-          (s) =>
-            (s.username.toLowerCase() === cleanEmail.toLowerCase() ||
-              s.name.toLowerCase() === cleanEmail.toLowerCase()) &&
-            s.password === cleanPass
-        );
-
-        if (matchedStudent) {
-          if (role !== 'student') {
-            const mismatchMsg = '⚠️ Bu hesap bir Öğrenci hesabıdır. Lütfen Öğrenci Girişi sekmesini seçin.';
-            setErrorMessage(mismatchMsg);
-            showToast(mismatchMsg, 'warn');
-            setPassword('');
-            setLoading(false);
-            return;
-          }
-
-          loginSupabaseUser({
-            role: 'student',
-            name: matchedStudent.name,
-            email: cleanEmail.includes('@') ? cleanEmail : `${matchedStudent.username}@eduflow.pro`,
-            supabaseId: matchedStudent.id,
-          });
-          return;
-        }
-
-        // 2. Standard Supabase Sign In
+        // Direct Standard Supabase Sign In with Email & Password
         const { data, error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password: cleanPass,
@@ -267,7 +294,7 @@ export function AuthModal() {
             (data.user.user_metadata?.role as 'teacher' | 'student') || 'student';
           let userFullName: string = data.user.user_metadata?.full_name || '';
 
-          // Fetch verified role from profiles table
+          // Fetch verified role & full name from profiles table
           try {
             const { data: profile } = await supabase
               .from('profiles')
@@ -352,14 +379,12 @@ export function AuthModal() {
         {/* ==================================================================== */}
         {/* SCREEN 1: VERIFICATION EMAIL SENT NOTICE SCREEN                      */}
         {/* ==================================================================== */}
-        {mode === 'verification_sent' ? (
+        {mode === 'verification_sent' && (
           <div className="text-center py-2 space-y-5 animate-fade">
-            {/* Matte Clean Email Icon */}
             <div className="w-16 h-16 mx-auto rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-200 shadow-md">
               <Mail className="w-8 h-8 text-emerald-400" />
             </div>
 
-            {/* Title & Description */}
             <div className="space-y-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -378,7 +403,6 @@ export function AuthModal() {
               </p>
             </div>
 
-            {/* Security Callout Box */}
             <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 text-left flex items-start gap-3">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <p className="text-xs text-zinc-400 leading-relaxed">
@@ -386,7 +410,6 @@ export function AuthModal() {
               </p>
             </div>
 
-            {/* Error Message if Resend Fails */}
             {errorMessage && (
               <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center gap-2 text-left animate-fade">
                 <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
@@ -394,7 +417,6 @@ export function AuthModal() {
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="space-y-2 pt-2">
               <button
                 type="button"
@@ -422,10 +444,126 @@ export function AuthModal() {
               </button>
             </div>
           </div>
-        ) : (
-          /* ==================================================================== */
-          /* SCREEN 2: SIGN IN & SIGN UP FORMS (Matte Minimalist SaaS Style)       */
-          /* ==================================================================== */
+        )}
+
+        {/* ==================================================================== */}
+        {/* SCREEN 3: FORGOT PASSWORD FORM SCREEN                                */}
+        {/* ==================================================================== */}
+        {mode === 'forgot_password' && (
+          <div className="space-y-5 animate-fade">
+            <div className="text-center space-y-1.5">
+              <div className="w-11 h-11 mx-auto mb-2 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-200">
+                <Key className="w-5 h-5 text-emerald-400" />
+              </div>
+              <h3 id="auth-modal-title" className="font-heading font-bold text-xl text-white tracking-tight">
+                Şifremi Unuttum
+              </h3>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                Hesabınıza kayıtlı e-posta adresinizi giriniz. Size şifre sıfırlama bağlantısı ileteceğiz.
+              </p>
+            </div>
+
+            {errorMessage && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-start gap-2.5 animate-fade">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+                <span className="leading-relaxed">{errorMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleForgotPassword} className="space-y-3.5">
+              <div>
+                <label htmlFor="reset-email" className="block text-xs font-medium text-zinc-300 mb-1">
+                  E-posta Adresi
+                </label>
+                <input
+                  id="reset-email"
+                  type="email"
+                  required
+                  disabled={loading}
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
+                  placeholder="ornek@mail.com"
+                  className="w-full px-3.5 py-2.5 bg-zinc-950/60 border border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-xl text-zinc-100 placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none transition-all disabled:opacity-50"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-zinc-950" />
+                    <span>Bağlantı Gönderiliyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 text-zinc-950" />
+                    <span>Sıfırlama Bağlantısı Gönder</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={handleBackToSignIn}
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 font-medium cursor-pointer transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Giriş Ekranına Dön</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* SCREEN 4: PASSWORD RESET EMAIL SENT NOTICE                           */}
+        {/* ==================================================================== */}
+        {mode === 'reset_sent' && (
+          <div className="text-center py-2 space-y-5 animate-fade">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-200 shadow-md">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            </div>
+
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Bağlantı Gönderildi</span>
+              </div>
+
+              <h3 id="auth-modal-title" className="font-heading font-bold text-xl sm:text-2xl text-white tracking-tight">
+                Şifre Sıfırlama E-postası
+              </h3>
+
+              <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed px-2">
+                <span className="inline-block px-2.5 py-1 my-1 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-200 font-mono font-medium text-xs break-all">
+                  {submittedEmail}
+                </span>{' '}
+                adresine şifrenizi yenilemeniz için bir bağlantı gönderdik. Lütfen gelen kutunuzu kontrol edin.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleBackToSignIn}
+              className="w-full py-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-950 font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-4 h-4" />
+              <span>Giriş Ekranına Dön</span>
+            </button>
+          </div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* SCREEN 2: SIGN IN & SIGN UP FORMS (Matte Minimalist SaaS Style)       */}
+        {/* ==================================================================== */}
+        {(mode === 'signin' || mode === 'signup') && (
           <>
             {/* Header */}
             <div className="text-center mb-5 space-y-1.5">
@@ -526,18 +664,18 @@ export function AuthModal() {
                 </div>
               )}
 
-              {/* Email / Username Input */}
+              {/* Email Address Input */}
               <div>
                 <label
                   htmlFor="auth-email"
                   className="block text-xs font-medium text-zinc-300 mb-1"
                 >
-                  {mode === 'signup' ? 'E-posta Adresi' : 'E-posta veya Kullanıcı Adı'}
+                  E-posta Adresi
                 </label>
                 <input
                   id="auth-email"
                   name={mode === 'signup' ? 'eduflow_reg_email_field' : 'eduflow_auth_identity_field'}
-                  type={mode === 'signup' ? 'email' : 'text'}
+                  type="email"
                   autoComplete="off"
                   data-lpignore="true"
                   data-1p-ignore="true"
@@ -549,25 +687,34 @@ export function AuthModal() {
                     setEmail(e.target.value);
                     if (errorMessage) setErrorMessage(null);
                   }}
-                  placeholder={
-                    mode === 'signup'
-                      ? 'ornek@eduflow.com'
-                      : role === 'teacher'
-                      ? 'ornek@eduflow.com veya ogretmen'
-                      : 'ornek@eduflow.com veya ayse'
-                  }
+                  placeholder="ornek@mail.com"
                   className="w-full px-3.5 py-2 bg-zinc-950/60 border border-zinc-800 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 rounded-xl text-zinc-100 placeholder:text-zinc-500 text-xs sm:text-sm focus:outline-none transition-all disabled:opacity-50"
                 />
               </div>
 
-              {/* Password Input with Show/Hide Toggle */}
+              {/* Password Input with Show/Hide Toggle & Forgot Password Link */}
               <div>
-                <label
-                  htmlFor="auth-password"
-                  className="block text-xs font-medium text-zinc-300 mb-1"
-                >
-                  Şifre
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label
+                    htmlFor="auth-password"
+                    className="block text-xs font-medium text-zinc-300"
+                  >
+                    Şifre
+                  </label>
+                  {mode === 'signin' && (
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={() => {
+                        setMode('forgot_password');
+                        setErrorMessage(null);
+                      }}
+                      className="text-[11px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+                    >
+                      Şifremi unuttum?
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <input
                     id="auth-password"
