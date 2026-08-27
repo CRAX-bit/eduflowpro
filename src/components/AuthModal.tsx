@@ -17,6 +17,8 @@ import {
   CheckCircle2,
   ChevronDown,
   Target,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +44,9 @@ export function AuthModal() {
   const [role, setRole] = useState<'teacher' | 'student'>(authModalInitialRole || 'student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName] = useState('');
   const [gradeLevel, setGradeLevel] = useState<string>(GRADE_LEVEL_OPTIONS[0]);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,6 +93,12 @@ export function AuthModal() {
       } else {
         if (!name.trim()) {
           setErrorMsg('Lütfen adınızı ve soyadınızı giriniz.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (password !== confirmPassword) {
+          setErrorMsg('Şifreler eşleşmiyor. Lütfen kontrol ediniz.');
           setIsLoading(false);
           return;
         }
@@ -166,6 +177,7 @@ export function AuthModal() {
               onClick={() => {
                 setMode('login');
                 setErrorMsg(null);
+                setConfirmPassword('');
               }}
               className={cn(
                 'flex-1 py-2.5 rounded-lg text-xs sm:text-sm font-extrabold transition-all cursor-pointer min-h-[40px] active:scale-95',
@@ -181,6 +193,7 @@ export function AuthModal() {
               onClick={() => {
                 setMode('signup');
                 setErrorMsg(null);
+                setConfirmPassword('');
               }}
               className={cn(
                 'flex-1 py-2.5 rounded-lg text-xs sm:text-sm font-extrabold transition-all cursor-pointer min-h-[40px] active:scale-95',
@@ -305,15 +318,60 @@ export function AuthModal() {
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none min-h-[44px]"
+                  className="w-full pl-10 pr-12 py-2.5 bg-slate-50 border border-slate-300 focus:bg-white focus:border-blue-500 rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none min-h-[44px]"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-center active:scale-95"
+                  title={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                  aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
+
+            {mode === 'signup' && (
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5">
+                  Şifre Tekrarı
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className={cn(
+                      'w-full pl-10 pr-12 py-2.5 bg-slate-50 border focus:bg-white rounded-xl text-slate-950 text-sm font-medium placeholder:text-slate-500 focus:outline-none min-h-[44px]',
+                      confirmPassword && password !== confirmPassword
+                        ? 'border-rose-400 focus:border-rose-500'
+                        : 'border-slate-300 focus:border-blue-500'
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all cursor-pointer flex items-center justify-center active:scale-95"
+                    title={showConfirmPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                    aria-label={showConfirmPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-[11px] text-rose-600 font-semibold mt-1">Şifreler eşleşmiyor.</p>
+                )}
+              </div>
+            )}
 
             <div className="pt-2">
               <button
