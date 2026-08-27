@@ -65,6 +65,11 @@ body::before {
 
 h1, h2, h3, h4, .font-heading {
   font-family: 'Sora', sans-serif;
+}
+
+/* Renk sadece element seviyesinde: Tailwind text-* utility'leri (text-white vb.)
+   daha yuksek specificity ile ezebilsin diye .font-heading'e renk verilmiyor. */
+h1, h2, h3, h4 {
   color: #020617;
 }
 
