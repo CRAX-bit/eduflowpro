@@ -7,6 +7,48 @@ export interface Student {
   username: string;
   password?: string;
   gradeLevel?: string;
+  /** 6 haneli otomatik öğrenci numarası (profiles.student_no) */
+  studentNo?: string;
+  /** Öğrenci ekleme isteğinin id'si (student_requests.id) */
+  requestId?: string;
+  email?: string;
+}
+
+export type StudentRequestStatus = 'pending' | 'accepted' | 'rejected';
+
+/** Öğretmen tarafında görünen istek/öğrenci kaydı */
+export interface TeacherStudentRequest {
+  requestId: string;
+  studentId: string;
+  studentNo: string;
+  /** pending ise maskeli ("Z*** Ç***"), accepted ise tam ad */
+  displayName: string;
+  isMasked: boolean;
+  gradeLevel?: string | null;
+  email?: string | null;
+  status: StudentRequestStatus;
+  createdAt: number;
+  respondedAt?: number | null;
+}
+
+/** Öğrenci tarafında görünen gelen istek */
+export interface IncomingStudentRequest {
+  requestId: string;
+  teacherId: string;
+  teacherName: string;
+  teacherEmail?: string | null;
+  branch?: string | null;
+  status: StudentRequestStatus;
+  createdAt: number;
+}
+
+/** Numara sorgusu sonucu (isim maskeli döner) */
+export interface StudentLookupResult {
+  studentId: string;
+  maskedName: string;
+  gradeLevel?: string | null;
+  alreadySent: boolean;
+  requestStatus?: StudentRequestStatus | null;
 }
 
 export type AssignmentType = 'note' | 'test' | 'book';
@@ -98,6 +140,8 @@ export interface Assignment {
 export interface UserSession {
   role: Role;
   studentId?: string;
+  /** Öğrenci hesabının 6 haneli numarası */
+  studentNo?: string;
   email?: string;
   name?: string;
   supabaseId?: string;
@@ -110,6 +154,7 @@ export interface UserProfile {
   full_name: string;
   role: Role;
   email?: string;
+  student_no?: string;
   avatar_url?: string;
   grade_level?: string;
   branch?: string;

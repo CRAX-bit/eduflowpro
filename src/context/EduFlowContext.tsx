@@ -13,6 +13,9 @@ import {
   Role,
   Classroom,
   ClassroomMember,
+  TeacherStudentRequest,
+  IncomingStudentRequest,
+  StudentLookupResult,
 } from '@/types';
 import { STORAGE_KEY, AVATAR_COLORS, uid, slugUser, norm } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -53,11 +56,27 @@ interface EduFlowContextType {
     supabaseId?: string;
     gradeLevel?: string;
     branch?: string;
+    studentNo?: string;
   }) => void;
   updateStudentGradeLevel: (newGradeLevel: string) => Promise<boolean>;
   logout: () => void;
   addStudent: (name: string, password: string) => boolean;
   deleteStudent: (id: string) => void;
+  /** Öğretmen: numara ile öğrenci sorgula (isim maskeli döner) */
+  lookupStudentByNo: (studentNo: string) => Promise<StudentLookupResult | null>;
+  /** Öğretmen: numara ile öğrenci ekleme isteği gönder */
+  sendStudentRequest: (studentNo: string) => Promise<boolean>;
+  /** Öğretmen: gönderilen isteği / öğrenciyi listeden kaldır */
+  cancelStudentRequest: (requestId: string) => Promise<void>;
+  /** Öğrenci: gelen isteği kabul et / reddet */
+  respondStudentRequest: (requestId: string, accept: boolean) => Promise<boolean>;
+  /** Rol'e göre istek listelerini yeniler */
+  loadStudentRequests: () => Promise<void>;
+  /** Öğretmen tarafındaki istek + öğrenci kayıtları */
+  teacherStudentRequests: TeacherStudentRequest[];
+  /** Öğrenciye gelen istekler */
+  incomingStudentRequests: IncomingStudentRequest[];
+  isLoadingRequests: boolean;
   createClassroom: (name: string, subject?: string, description?: string) => Promise<Classroom | null>;
   deleteClassroom: (id: string) => Promise<void>;
   joinClassroom: (joinCode: string) => Promise<boolean>;
@@ -108,11 +127,11 @@ function getInitialState(): EduFlowState {
 }
 
 // Helper to fetch user profile from Supabase profiles table with fallback
-async function getUserProfile(userId: string, userMeta: any, userEmail?: string): Promise<{ name: string; role: Role; gradeLevel?: string; branch?: string }> {
+async function getUserProfile(userId: string, userMeta: any, userEmail?: string): Promise<{ name: string; role: Role; gradeLevel?: string; branch?: string; studentNo?: string }> {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('full_name, role, grade_level, branch')
+      .select('full_name, role, grade_level, branch, student_no')
       .eq('id', userId)
       .single();
 
@@ -122,6 +141,7 @@ async function getUserProfile(userId: string, userMeta: any, userEmail?: string)
         role: (data.role as Role) || (userMeta?.role as Role) || 'student',
         gradeLevel: data.grade_level || userMeta?.grade_level || undefined,
         branch: data.branch || userMeta?.branch || undefined,
+        studentNo: data.student_no || undefined,
       };
     }
   } catch (e) {
@@ -129,7 +149,7 @@ async function getUserProfile(userId: string, userMeta: any, userEmail?: string)
   }
 
   return {
-    name: userMeta?.full_name || userEmail?.split('@')[0] || 'Kullanıcı',
+    name: userMeta?.full_name || userMeta?.name || userEmail?.split('@')[0] || 'Kullanıcı',
     role: (userMeta?.role as Role) || 'student',
     gradeLevel: userMeta?.grade_level || undefined,
     branch: userMeta?.branch || undefined,
@@ -143,6 +163,9 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalInitialRole, setAuthModalInitialRole] = useState<'teacher' | 'student'>('teacher');
+  const [teacherStudentRequests, setTeacherStudentRequests] = useState<TeacherStudentRequest[]>([]);
+  const [incomingStudentRequests, setIncomingStudentRequests] = useState<IncomingStudentRequest[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
 
   const showToast = useCallback((message: string, type: 'success' | 'warn' | 'info' | 'error' = 'success') => {
     setToast({
@@ -221,6 +244,89 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (e) {
       console.warn('Student classrooms load notice:', e);
+    }
+  }, []);
+
+  // ------------------------------------------------------------------
+  // Öğrenci Numarası ile Ekleme İstekleri (student_requests)
+  // ------------------------------------------------------------------
+
+  // Öğretmen: gönderilen istekler + kabul edilmiş öğrenciler
+  const loadTeacherStudentRequests = useCallback(async () => {
+    setIsLoadingRequests(true);
+    try {
+      const { data, error } = await supabase.rpc('get_teacher_student_requests');
+      if (error) throw error;
+
+      const mapped: TeacherStudentRequest[] = (data || []).map((row: any) => ({
+        requestId: row.request_id,
+        studentId: row.student_id,
+        studentNo: row.student_no,
+        displayName: row.display_name || 'Öğrenci',
+        isMasked: !!row.is_masked,
+        gradeLevel: row.grade_level,
+        email: row.email,
+        status: row.status,
+        createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+        respondedAt: row.responded_at ? new Date(row.responded_at).getTime() : null,
+      }));
+
+      setTeacherStudentRequests(mapped);
+
+      // Kabul edilen öğrencileri roster'a (state.students) senkronla
+      const accepted = mapped.filter((r) => r.status === 'accepted');
+      setState((prev) => {
+        const acceptedIds = new Set(accepted.map((a) => a.studentId));
+        // İsteği kaldırılmış/artık kabul edilmemiş DB öğrencilerini temizle
+        const localOnly = prev.students.filter(
+          (st) => !st.requestId && !acceptedIds.has(st.id)
+        );
+
+        const dbStudents: Student[] = accepted.map((a, idx) => {
+          const existing = prev.students.find((st) => st.id === a.studentId);
+          return {
+            id: a.studentId,
+            name: a.displayName,
+            username: a.studentNo,
+            studentNo: a.studentNo,
+            requestId: a.requestId,
+            email: a.email || undefined,
+            gradeLevel: a.gradeLevel || undefined,
+            color: existing?.color || AVATAR_COLORS[idx % AVATAR_COLORS.length],
+          };
+        });
+
+        return { ...prev, students: [...dbStudents, ...localOnly] };
+      });
+    } catch (e) {
+      console.warn('Student requests load notice:', e);
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  }, []);
+
+  // Öğrenci: gelen istekler
+  const loadIncomingStudentRequests = useCallback(async () => {
+    setIsLoadingRequests(true);
+    try {
+      const { data, error } = await supabase.rpc('get_student_incoming_requests');
+      if (error) throw error;
+
+      const mapped: IncomingStudentRequest[] = (data || []).map((row: any) => ({
+        requestId: row.request_id,
+        teacherId: row.teacher_id,
+        teacherName: row.teacher_name || 'Öğretmen',
+        teacherEmail: row.teacher_email,
+        branch: row.branch,
+        status: row.status,
+        createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+      }));
+
+      setIncomingStudentRequests(mapped);
+    } catch (e) {
+      console.warn('Incoming requests load notice:', e);
+    } finally {
+      setIsLoadingRequests(false);
     }
   }, []);
 
@@ -390,6 +496,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
             email,
             name,
             supabaseId: session.user.id,
+            studentNo: profile.studentNo,
           },
           currentStudentId: role === 'student' ? (studentId || null) : null,
         };
@@ -399,8 +506,10 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       loadSupabaseAssignments(role, session.user.id);
       if (role === 'teacher') {
         loadTeacherClassrooms(session.user.id);
+        loadTeacherStudentRequests();
       } else {
         loadStudentJoinedClassrooms(session.user.id);
+        loadIncomingStudentRequests();
       }
     });
 
@@ -408,6 +517,8 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       if (!isMounted) return;
 
       if (event === 'SIGNED_OUT') {
+        setTeacherStudentRequests([]);
+        setIncomingStudentRequests([]);
         setState((prev) => {
           if (!prev.session && !prev.currentStudentId) return prev;
           return {
@@ -467,6 +578,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
                 supabaseId: session.user.id,
                 gradeLevel,
                 branch,
+                studentNo: profile.studentNo,
               },
               currentStudentId: role === 'student' ? (studentId || null) : null,
             };
@@ -475,8 +587,10 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
           loadSupabaseAssignments(role, session.user.id);
           if (role === 'teacher') {
             loadTeacherClassrooms(session.user.id);
+            loadTeacherStudentRequests();
           } else {
             loadStudentJoinedClassrooms(session.user.id);
+            loadIncomingStudentRequests();
           }
         }
       }
@@ -486,18 +600,42 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [loadSupabaseAssignments, loadTeacherClassrooms, loadStudentJoinedClassrooms]);
+  }, [
+    loadSupabaseAssignments,
+    loadTeacherClassrooms,
+    loadStudentJoinedClassrooms,
+    loadTeacherStudentRequests,
+    loadIncomingStudentRequests,
+  ]);
+
+  const loadStudentRequests = useCallback(async () => {
+    if (!state.session?.supabaseId) return;
+    if (state.session.role === 'teacher') {
+      await loadTeacherStudentRequests();
+    } else {
+      await loadIncomingStudentRequests();
+    }
+  }, [state.session, loadTeacherStudentRequests, loadIncomingStudentRequests]);
 
   const refreshData = useCallback(async () => {
     if (state.session?.supabaseId && state.session?.role) {
       await loadSupabaseAssignments(state.session.role, state.session.supabaseId);
       if (state.session.role === 'teacher') {
         await loadTeacherClassrooms(state.session.supabaseId);
+        await loadTeacherStudentRequests();
       } else {
         await loadStudentJoinedClassrooms(state.session.supabaseId);
+        await loadIncomingStudentRequests();
       }
     }
-  }, [state.session, loadSupabaseAssignments, loadTeacherClassrooms, loadStudentJoinedClassrooms]);
+  }, [
+    state.session,
+    loadSupabaseAssignments,
+    loadTeacherClassrooms,
+    loadStudentJoinedClassrooms,
+    loadTeacherStudentRequests,
+    loadIncomingStudentRequests,
+  ]);
 
   const openAuthModal = useCallback((role: 'teacher' | 'student' = 'teacher') => {
     setAuthModalInitialRole(role);
@@ -516,6 +654,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       supabaseId,
       gradeLevel,
       branch,
+      studentNo,
     }: {
       role: Role;
       name: string;
@@ -523,6 +662,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
       supabaseId?: string;
       gradeLevel?: string;
       branch?: string;
+      studentNo?: string;
     }) => {
       let studentId: string | undefined = undefined;
 
@@ -546,10 +686,12 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
               username,
               color,
               gradeLevel,
+              studentNo,
             };
             nextStudents.push(foundStudent);
-          } else if (gradeLevel) {
-            foundStudent.gradeLevel = gradeLevel;
+          } else {
+            if (gradeLevel) foundStudent.gradeLevel = gradeLevel;
+            if (studentNo) foundStudent.studentNo = studentNo;
           }
           studentId = foundStudent.id;
         }
@@ -565,6 +707,7 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
             supabaseId,
             gradeLevel,
             branch,
+            studentNo,
           },
           currentStudentId: role === 'student' ? (studentId || null) : null,
         };
@@ -706,6 +849,18 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
     const s = state.students.find((x) => x.id === id);
     if (!s) return;
 
+    // Supabase üzerinden gelen öğrenci ise bağlantı isteğini de kaldır
+    if (s.requestId) {
+      setTeacherStudentRequests((prev) => prev.filter((r) => r.requestId !== s.requestId));
+      supabase
+        .from('student_requests')
+        .delete()
+        .eq('id', s.requestId)
+        .then(({ error }) => {
+          if (error) console.warn('Student request delete notice:', error);
+        });
+    }
+
     setState((prev) => {
       const nextStudents = prev.students.filter((x) => x.id !== id);
       const nextAssignments = prev.assignments.map((a) => {
@@ -727,6 +882,151 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
 
     showToast(`${s.name} başarıyla silindi.`, 'info');
   }, [state.students, showToast]);
+
+  // Öğretmen: numara ile öğrenci sorgula — isim maskeli döner
+  const lookupStudentByNo = useCallback(
+    async (studentNo: string): Promise<StudentLookupResult | null> => {
+      const cleanNo = studentNo.trim();
+      if (!cleanNo) {
+        showToast('Lütfen öğrenci numarasını giriniz.', 'warn');
+        return null;
+      }
+
+      try {
+        const { data, error } = await supabase.rpc('lookup_student_by_no', {
+          p_student_no: cleanNo,
+        });
+        if (error) throw error;
+
+        const row = Array.isArray(data) ? data[0] : data;
+        if (!row) {
+          showToast('Bu numaraya sahip bir öğrenci bulunamadı.', 'error');
+          return null;
+        }
+
+        return {
+          studentId: row.student_id,
+          maskedName: row.masked_name || 'Ö***',
+          gradeLevel: row.grade_level,
+          alreadySent: !!row.already_sent,
+          requestStatus: row.request_status || null,
+        };
+      } catch (e: any) {
+        console.error('Student lookup error:', e);
+        const detail = e?.message || e?.hint || e?.details || '';
+        showToast(
+          detail ? `Sorgulama hatası: ${detail}` : 'Öğrenci sorgulanırken bir hata oluştu.',
+          'error'
+        );
+        return null;
+      }
+    },
+    [showToast]
+  );
+
+  // Öğretmen: numara ile ekleme isteği gönder
+  const sendStudentRequest = useCallback(
+    async (studentNo: string): Promise<boolean> => {
+      const cleanNo = studentNo.trim();
+      if (!cleanNo) return false;
+
+      if (state.session?.role !== 'teacher') {
+        showToast('Öğrenci eklemek için öğretmen oturumu gereklidir.', 'warn');
+        return false;
+      }
+
+      try {
+        const { data, error } = await supabase.rpc('create_student_request', {
+          p_student_no: cleanNo,
+        });
+        if (error) throw error;
+
+        const row = Array.isArray(data) ? data[0] : data;
+        await loadTeacherStudentRequests();
+
+        if (row?.status === 'accepted') {
+          showToast('Bu öğrenci zaten listenizde.', 'info');
+        } else {
+          showToast(
+            `İstek gönderildi. ${row?.masked_name || 'Öğrenci'} onayladığında tüm bilgileri görünür olacak.`,
+            'success'
+          );
+        }
+        return true;
+      } catch (e: any) {
+        const msg = String(e?.message || '');
+        if (msg.includes('bulunamadi')) {
+          showToast('Bu numaraya sahip bir öğrenci bulunamadı.', 'error');
+        } else if (msg.includes('kendinize') || msg.includes('Kendinize')) {
+          showToast('Kendinize istek gönderemezsiniz.', 'warn');
+        } else {
+          console.error('Send request error:', e);
+          showToast(msg ? `İstek gönderilemedi: ${msg}` : 'İstek gönderilemedi.', 'error');
+        }
+        return false;
+      }
+    },
+    [state.session, showToast, loadTeacherStudentRequests]
+  );
+
+  // Öğretmen: isteği iptal et / öğrenciyi listeden çıkar
+  const cancelStudentRequest = useCallback(
+    async (requestId: string) => {
+      const target = teacherStudentRequests.find((r) => r.requestId === requestId);
+      setTeacherStudentRequests((prev) => prev.filter((r) => r.requestId !== requestId));
+      if (target) {
+        setState((prev) => ({
+          ...prev,
+          students: prev.students.filter((st) => st.id !== target.studentId),
+        }));
+      }
+
+      try {
+        const { error } = await supabase.from('student_requests').delete().eq('id', requestId);
+        if (error) throw error;
+        showToast('İstek kaldırıldı.', 'info');
+      } catch (e) {
+        console.warn('Request cancel notice:', e);
+        showToast('İstek kaldırılamadı.', 'error');
+        await loadTeacherStudentRequests();
+      }
+    },
+    [teacherStudentRequests, showToast, loadTeacherStudentRequests]
+  );
+
+  // Öğrenci: gelen isteği kabul et / reddet
+  const respondStudentRequest = useCallback(
+    async (requestId: string, accept: boolean): Promise<boolean> => {
+      try {
+        const { data, error } = await supabase.rpc('respond_student_request', {
+          p_request_id: requestId,
+          p_accept: accept,
+        });
+        if (error) throw error;
+
+        setIncomingStudentRequests((prev) =>
+          prev.map((r) =>
+            r.requestId === requestId
+              ? { ...r, status: accept ? 'accepted' : 'rejected' }
+              : r
+          )
+        );
+
+        showToast(
+          accept
+            ? 'İstek onaylandı. Öğretmenin artık bilgilerini görebilir.'
+            : 'İstek reddedildi.',
+          accept ? 'success' : 'info'
+        );
+        return true;
+      } catch (e) {
+        console.warn('Respond request notice:', e);
+        showToast('İstek yanıtlanamadı. Lütfen tekrar deneyin.', 'error');
+        return false;
+      }
+    },
+    [showToast]
+  );
 
   const createClassroom = useCallback(
     async (name: string, subject?: string, description?: string): Promise<Classroom | null> => {
@@ -1417,6 +1717,14 @@ export function EduFlowProvider({ children }: { children: React.ReactNode }) {
         logout,
         addStudent,
         deleteStudent,
+        lookupStudentByNo,
+        sendStudentRequest,
+        cancelStudentRequest,
+        respondStudentRequest,
+        loadStudentRequests,
+        teacherStudentRequests,
+        incomingStudentRequests,
+        isLoadingRequests,
         createClassroom,
         deleteClassroom,
         joinClassroom,

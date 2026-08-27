@@ -36,7 +36,7 @@ export async function verifyServerAuth(req: NextRequest): Promise<AuthVerificati
               id: user.id,
               email: user.email,
               role: user.user_metadata?.role || 'user',
-              name: user.user_metadata?.full_name,
+              name: user.user_metadata?.full_name || user.user_metadata?.name,
             },
           };
         }
@@ -54,7 +54,7 @@ export async function verifyServerAuth(req: NextRequest): Promise<AuthVerificati
             id: user.id,
             email: user.email,
             role: user.user_metadata?.role || 'user',
-            name: user.user_metadata?.full_name,
+            name: user.user_metadata?.full_name || user.user_metadata?.name,
           },
         };
       }

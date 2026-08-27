@@ -44,11 +44,11 @@ module.exports = {
       keyframes: {
         fade: {
           "0%": { opacity: "0", transform: "translateY(10px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
+          "100%": { opacity: "1", transform: "none" },
         },
         rise: {
           "0%": { opacity: "0", transform: "translateY(20px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
+          "100%": { opacity: "1", transform: "none" },
         },
         pulseGlow: {
           "0%, 100%": { opacity: "0.2" },

@@ -3,6 +3,6 @@
 import React from 'react';
 import { TeacherView } from '@/components/TeacherView';
 
-export default function TeacherDashboardPage() {
-  return <TeacherView view="home" />;
+export default function TeacherStudentsPage() {
+  return <TeacherView view="students" />;
 }

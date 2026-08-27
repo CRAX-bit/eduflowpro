@@ -20,7 +20,7 @@ export async function getAuthHeaders(session?: UserSession | null): Promise<Reco
     const activeSession = session || (sbSession?.user ? {
       role: (sbSession.user.user_metadata?.role as any) || 'teacher',
       email: sbSession.user.email,
-      name: sbSession.user.user_metadata?.full_name || 'Kullanıcı',
+      name: sbSession.user.user_metadata?.full_name || sbSession.user.user_metadata?.name || 'Kullanıcı',
       supabaseId: sbSession.user.id,
       studentId: sbSession.user.id,
     } : null);

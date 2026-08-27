@@ -78,7 +78,8 @@ export function AuthModal() {
         } else if (data?.user) {
           const userMeta = data.user.user_metadata || {};
           const userRole = (userMeta.role as 'teacher' | 'student') || role;
-          const userName = userMeta.name || data.user.email?.split('@')[0] || 'Kullanıcı';
+          const userName =
+            userMeta.full_name || userMeta.name || data.user.email?.split('@')[0] || 'Kullanıcı';
           
           loginSupabaseUser({
             role: userRole,
@@ -108,6 +109,7 @@ export function AuthModal() {
           password,
           options: {
             data: {
+              full_name: name.trim(),
               name: name.trim(),
               role: role,
               grade_level: role === 'student' ? gradeLevel : undefined,
@@ -118,14 +120,51 @@ export function AuthModal() {
         if (error) {
           setErrorMsg(error.message || 'Kayıt işlemi tamamlanamadı.');
         } else if (data?.user) {
+          // Keep the profiles table in sync so the display name survives re-login
+          try {
+            await supabase.from('profiles').upsert(
+              {
+                id: data.user.id,
+                full_name: name.trim(),
+                role,
+                grade_level: role === 'student' ? gradeLevel : null,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'id' }
+            );
+          } catch (profileErr) {
+            console.warn('Could not sync profile row on signup', profileErr);
+          }
+
+          // Öğrenci hesabına DB tarafından atanan öğrenci numarasını çek
+          let assignedStudentNo: string | undefined;
+          if (role === 'student') {
+            try {
+              const { data: profileRow } = await supabase
+                .from('profiles')
+                .select('student_no')
+                .eq('id', data.user.id)
+                .single();
+              assignedStudentNo = profileRow?.student_no || undefined;
+            } catch (noErr) {
+              console.warn('Could not read student_no on signup', noErr);
+            }
+          }
+
           loginSupabaseUser({
             role,
             name: name.trim(),
             email: email.trim(),
             supabaseId: data.user.id,
             gradeLevel: role === 'student' ? gradeLevel : undefined,
+            studentNo: assignedStudentNo,
           });
-          showToast('Hesabınız başarıyla oluşturuldu ve oturum açıldı!', 'success');
+          showToast(
+            assignedStudentNo
+              ? `Hesabın oluşturuldu! Öğrenci numaran: ${assignedStudentNo} — öğretmenin seni bu numarayla ekler.`
+              : 'Hesabınız başarıyla oluşturuldu ve oturum açıldı!',
+            'success'
+          );
           closeAuthModal();
         }
       }
